@@ -21,8 +21,8 @@ func NewSchedulerCommand(registryOptions ...Option) *cobra.Command {
 	// explicitly register (if not already registered) the kube effective version and feature gate in DefaultComponentGlobalsRegistry,
 	// which will be used in NewOptions.
 	_, _ = featuregate.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
-		featuregate.DefaultKubeComponent, utilversion.DefaultBuildEffectiveVersion(), utilfeature.DefaultMutableFeatureGate)
-    // 初始化组件基本配置 返回一个Options结构体的指针
+		featuregate.DefaultKubeComponent, utilversion.DefaultBuildEffectiveVersion(), utilfeature.DefaultMutableFeatureGate) 
+	// 初始化组件基本配置 返回一个Options结构体的指针
 	opts := options.NewOptions()
 
 	cmd := &cobra.Command{
@@ -75,8 +75,8 @@ func NewSchedulerCommand(registryOptions ...Option) *cobra.Command {
 // Options has all the params needed to run a Scheduler
 type Options struct {
     // 调度器核心配置
-    ComponentConfig *kubeschedulerconfig.KubeSchedulerConfiguration
-	// 调度器与客户端通信配置
+    ComponentConfig *kubeschedulerconfig.KubeSchedulerConfiguration 
+    // 调度器与客户端通信配置
     SecureServing  *apiserveroptions.SecureServingOptionsWithLoopback
     // 认证配置
     Authentication *apiserveroptions.DelegatingAuthenticationOptions
@@ -90,15 +90,15 @@ type Options struct {
     Deprecated     *DeprecatedOptions
     // 选举配置
     LeaderElection *componentbaseconfig.LeaderElectionConfiguration
-	// 调度器配置文件路径
+    // 调度器配置文件路径
     ConfigFile string
-	// 配置写入路径
+    // 配置写入路径
     WriteConfigTo string
-	// api server地址
+    // api server地址
     Master string
-	// 特性门控配置
+    // 特性门控配置
     ComponentGlobalsRegistry featuregate.ComponentGlobalsRegistry
-	// 存储启动flag参数
+    // 存储启动flag参数
     Flags *cliflag.NamedFlagSets
 }
 ```
@@ -130,17 +130,18 @@ func runCommand(cmd *cobra.Command, opts *options.Options, registryOptions ...Op
 		return err
 	}
 	// add feature enablement metrics
-	fg.(featuregate.MutableFeatureGate).AddMetrics()
-    // 启动调度器
+	fg.(featuregate.MutableFeatureGate).AddMetrics() 
+	// 启动调度器
 	return Run(ctx, cc, sched)
 }
 ```
+### Setup函数
 
-`Setup`函数的实现如下
+`Setup`函数的实现如下，其中`scheduler.New`是调度器实例的创建点。
 
 ```go
 func Setup(ctx context.Context, opts *options.Options, outOfTreeRegistryOptions ...Option) (*schedulerserverconfig.CompletedConfig, *scheduler.Scheduler, error) {
-	// 创建cfg并注入到opt中
+    // 创建cfg并注入到opt中
     if cfg, err := latest.Default(); err != nil {
 		return nil, nil, err
 	} else {
@@ -150,11 +151,11 @@ func Setup(ctx context.Context, opts *options.Options, outOfTreeRegistryOptions 
 	if errs := opts.Validate(); len(errs) > 0 {
 		return nil, nil, utilerrors.NewAggregate(errs)
 	}
-	// 生成Config
-    // 其中包括两个客户端 一个用于对接api server 一个专门处理事件用于事件广播器中
-    // 创建informer工厂和Leader选举配置
+	// 生成Config 
+	// 其中包括两个客户端 一个用于对接api server 一个专门处理事件用于事件广播器中 
+	// 创建informer工厂和Leader选举配置
 	c, err := opts.Conf
-    ig(ctx)
+	ig(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -200,6 +201,148 @@ func Setup(ctx context.Context, opts *options.Options, outOfTreeRegistryOptions 
 	}
 	// 返回配置和实例
 	return &cc, sched, nil
+```
+
+### New函数
+
+在`New`函数中，完整地创建了一个调度器实例以及相关组件。
+
+```go
+func New(ctx context.Context,
+    client clientset.Interface,
+    informerFactory informers.SharedInformerFactory,
+    dynInformerFactory dynamicinformer.DynamicSharedInformerFactory,
+    recorderFactory profile.RecorderFactory,
+    opts ...Option) (*Scheduler, error) {
+
+    logger := klog.FromContext(ctx)
+    stopEverything := ctx.Done()
+
+    options := defaultSchedulerOptions
+    for _, opt := range opts {
+       opt(&options)
+    }
+
+    if options.applyDefaultProfile {
+       var versionedCfg configv1.KubeSchedulerConfiguration
+       scheme.Scheme.Default(&versionedCfg)
+       cfg := schedulerapi.KubeSchedulerConfiguration{}
+       if err := scheme.Scheme.Convert(&versionedCfg, &cfg, nil); err != nil {
+          return nil, err
+       }
+       options.profiles = cfg.Profiles
+    }
+    // registry是注册的in-tree插件列表
+    registry := frameworkplugins.NewInTreeRegistry()
+    // 合并in-tree和out-of-tree列表
+    if err := registry.Merge(options.frameworkOutOfTreeRegistry); err != nil {
+       return nil, err
+    }
+
+    metrics.Register()
+
+    extenders, err := buildExtenders(logger, options.extenders, options.profiles)
+    if err != nil {
+       return nil, fmt.Errorf("couldn't build extenders: %w", err)
+    }
+    // 通过Informer工厂 创建podLister和nodeLister
+    podLister := informerFactory.Core().V1().Pods().Lister()
+    nodeLister := informerFactory.Core().V1().Nodes().Lister()
+    // 初始化全局快照
+    snapshot := internalcache.NewEmptySnapshot()
+    metricsRecorder := metrics.NewMetricsAsyncRecorder(1000, time.Second, stopEverything)
+    // waitingPods holds all the pods that are in the scheduler and waiting in the permit stage
+    waitingPods := frameworkruntime.NewWaitingPodsMap()
+
+    var resourceClaimCache *assumecache.AssumeCache
+    var draManager framework.SharedDRAManager
+    // 如果动态资源分配的特性门控开启 创建资源申请的Informmer Cache和DRA Manager
+    if utilfeature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation) {
+       resourceClaimInformer := informerFactory.Resource().V1beta1().ResourceClaims().Informer()
+       resourceClaimCache = assumecache.NewAssumeCache(logger, resourceClaimInformer, "ResourceClaim", "", nil)
+       draManager = dynamicresources.NewDRAManager(ctx, resourceClaimCache, informerFactory)
+    }
+    // 根据上面的参数 创建一个完整的Profile
+    profiles, err := profile.NewMap(ctx, options.profiles, registry, recorderFactory,
+       frameworkruntime.WithComponentConfigVersion(options.componentConfigVersion),
+       frameworkruntime.WithClientSet(client),
+       frameworkruntime.WithKubeConfig(options.kubeConfig),
+       frameworkruntime.WithInformerFactory(informerFactory),
+       frameworkruntime.WithSharedDRAManager(draManager),
+       frameworkruntime.WithSnapshotSharedLister(snapshot),
+       frameworkruntime.WithCaptureProfile(frameworkruntime.CaptureProfile(options.frameworkCapturer)),
+       frameworkruntime.WithParallelism(int(options.parallelism)),
+       frameworkruntime.WithExtenders(extenders),
+       frameworkruntime.WithMetricsRecorder(metricsRecorder),
+       frameworkruntime.WithWaitingPods(waitingPods),
+    )
+    if err != nil {
+       return nil, fmt.Errorf("initializing profiles: %v", err)
+    }
+
+    if len(profiles) == 0 {
+       return nil, errors.New("at least one profile is required")
+    }
+    // 调度队列的相关配置
+    preEnqueuePluginMap := make(map[string][]framework.PreEnqueuePlugin)
+    queueingHintsPerProfile := make(internalqueue.QueueingHintMapPerProfile)
+    var returnErr error
+    for profileName, profile := range profiles {
+       preEnqueuePluginMap[profileName] = profile.PreEnqueuePlugins()
+       queueingHintsPerProfile[profileName], err = buildQueueingHintMap(ctx, profile.EnqueueExtensions())
+       if err != nil {
+          returnErr = errors.Join(returnErr, err)
+       }
+    }
+
+    if returnErr != nil {
+       return nil, returnErr
+    }
+    // 创建调度队列实例 PriorityQueue实例主要包括了activeQ/podBackoffQ/unschedulablePods、nsLister和nominator
+    podQueue := internalqueue.NewSchedulingQueue(
+       profiles[options.profiles[0].SchedulerName].QueueSortFunc(),
+       informerFactory,
+       internalqueue.WithPodInitialBackoffDuration(time.Duration(options.podInitialBackoffSeconds)*time.Second),
+       internalqueue.WithPodMaxBackoffDuration(time.Duration(options.podMaxBackoffSeconds)*time.Second),
+       internalqueue.WithPodLister(podLister),
+       internalqueue.WithPodMaxInUnschedulablePodsDuration(options.podMaxInUnschedulablePodsDuration),
+       internalqueue.WithPreEnqueuePluginMap(preEnqueuePluginMap),
+       internalqueue.WithQueueingHintMapPerProfile(queueingHintsPerProfile),
+       internalqueue.WithPluginMetricsSamplePercent(pluginMetricsSamplePercent),
+       internalqueue.WithMetricsRecorder(*metricsRecorder),
+    )
+    // 用创建出来的PQ给framework实例设置PodNominator和PodActivator
+    for _, fwk := range profiles {
+       fwk.SetPodNominator(podQueue)
+       fwk.SetPodActivator(podQueue)
+    }
+    // 创建调度器缓存
+    schedulerCache := internalcache.New(ctx, durationToExpireAssumedPod)
+
+    // cache debugger的作用包括比较Lister和Cache.Snapshot的数据一致性和记录缓存/调度队列信息
+    debugger := cachedebugger.New(nodeLister, podLister, schedulerCache, podQueue)
+    debugger.ListenForSignal(ctx)
+    // 实例创建
+    sched := &Scheduler{
+       Cache:                    schedulerCache,
+       client:                   client,
+       nodeInfoSnapshot:         snapshot,
+       percentageOfNodesToScore: options.percentageOfNodesToScore,
+       Extenders:                extenders,
+       StopEverything:           stopEverything,
+       SchedulingQueue:          podQueue,
+       Profiles:                 profiles,
+       logger:                   logger,
+    }
+    sched.NextPod = podQueue.Pop
+    sched.applyDefaultHandlers()
+    // 注册事件处理器
+    if err = addAllEventHandlers(sched, informerFactory, dynInformerFactory, resourceClaimCache, unionedGVKs(queueingHintsPerProfile)); err != nil {
+       return nil, fmt.Errorf("adding event handlers: %w", err)
+    }
+
+    return sched, nil
+}
 ```
 
 ## 调度器实例的启动
@@ -382,13 +525,15 @@ func Run(ctx context.Context, cc *schedulerserverconfig.CompletedConfig, sched *
 
 `Run`函数的实现非常简单，第一步先启动日志记录器，然后启动调度队列和调度循环，然后等待`ctx.Done()`信号使进程阻塞，如果收到了`ctx.Done()`信号就对调度队列和调度插件执行`Close()`操作释放资源，其中`ScheduleOne`是在一个协程中启动的，原因是为了避免在没有Pod需要调度时挂起状态的`ScheduleOne`阻塞了后续的信号接收，导致调度队列无法关闭造成的死锁情况。
 
-其中涉及到一个核心结构`SchedulingQueue`和核心方法`ScheduleOne`，在后面会进行详细说明。
+其中涉及到一个核心结构`SchedulingQueue`和核心方法`ScheduleOne`，先抛出一个官方文档中的流程图，在后面会进行详细说明。
+
+![SchedulingQueue](image/scheduling-framework-extensions.png)
 
 ```go
 // Run begins watching and scheduling. It starts scheduling and blocked until the context is done.
 func (sched *Scheduler) Run(ctx context.Context) {
-	logger := klog.FromContext(ctx)
-    // 启动调度队列
+	logger := klog.FromContext(ctx) 
+	// 启动调度队列
 	sched.SchedulingQueue.Run(logger)
 
 	// We need to start scheduleOne loop in a dedicated goroutine,
@@ -396,16 +541,16 @@ func (sched *Scheduler) Run(ctx context.Context) {
 	// from the SchedulingQueue.
 	// If there are no new pods to schedule, it will be hanging there
 	// and if done in this goroutine it will be blocking closing
-	// SchedulingQueue, in effect causing a deadlock on shutdown.
-    // 启动调度循环
+	// SchedulingQueue, in effect causing a deadlock on shutdown. 
+	//启动调度循环
 	go wait.UntilWithContext(ctx, sched.ScheduleOne, 0)
 	// 阻塞 等待关闭信号
-	<-ctx.Done()
-    // 关闭调度队列
+	<-ctx.Done() 
+	// 关闭调度队列
 	sched.SchedulingQueue.Close()
 
-	// If the plugins satisfy the io.Closer interface, they are closed.
-    // 关闭调度插件
+	// If the plugins satisfy the io.Closer interface, they are closed. 
+	//关闭调度插件
 	err := sched.Profiles.Close()
 	if err != nil {
 		logger.Error(err, "Failed to close plugins")
@@ -423,7 +568,7 @@ func (sched *Scheduler) Run(ctx context.Context) {
 
 ```go
 type QueuedPodInfo struct {
-    // Pod信息
+	// Pod信息
 	*PodInfo
 	// 本次入队时间
 	Timestamp time.Time
@@ -459,9 +604,9 @@ type PodInfo struct {
 
 ```go
 type SchedulingQueue interface {
-    // 调度过程中可能需要同步Pod状态给提名器 和队列没有直接关系
-	framework.PodNominator
-    // 向队列中添加待调度的Pod
+	// 调度过程中可能需要同步Pod状态给提名器 和队列没有直接关系
+	framework.PodNominator 
+	// 向队列中添加待调度的Pod
 	Add(logger klog.Logger, pod *v1.Pod)
 	// 添加Pod到ActiveQ
 	Activate(logger klog.Logger, pods map[string]*v1.Pod)
@@ -472,16 +617,16 @@ type SchedulingQueue interface {
 	// 从队头弹出Pod
 	Pop(logger klog.Logger) (*framework.QueuedPodInfo, error)
 	// 标记一个Pod处理完成
-	Done(types.UID)
-    // 更新Pod
-	Update(logger klog.Logger, oldPod, newPod *v1.Pod)
-    // 删除Pod
+	Done(types.UID) 
+	// 更新Pod
+	Update(logger klog.Logger, oldPod, newPod *v1.Pod) 
+	// 删除Pod
 	Delete(pod *v1.Pod)
 	// 把所有不可调度Pod移动到ActiveQ或BackoffQ
-	MoveAllToActiveOrBackoffQueue(logger klog.Logger, event framework.ClusterEvent, oldObj, newObj interface{}, preCheck PreEnqueueCheck)
-    // 关联Pod被添加
-	AssignedPodAdded(logger klog.Logger, pod *v1.Pod)
-    // 关联Pod被更新
+	MoveAllToActiveOrBackoffQueue(logger klog.Logger, event framework.ClusterEvent, oldObj, newObj interface{}, preCheck PreEnqueueCheck) 
+	// 关联Pod被添加
+	AssignedPodAdded(logger klog.Logger, pod *v1.Pod) 
+	// 关联Pod被更新
 	AssignedPodUpdated(logger klog.Logger, oldPod, newPod *v1.Pod, event framework.ClusterEvent)
 	// 关闭调度队列
 	Close()
@@ -500,7 +645,7 @@ type PriorityQueue struct {
 	*nominator
 	// 接收停止信号的通道
 	stop  chan struct{}
-    // 时钟
+	// 时钟
 	clock clock.Clock
 	// 锁
 	lock sync.RWMutex
@@ -550,7 +695,7 @@ type Heap[T any] struct {
 }
 ```
 
-再看堆元素是如何实现的，堆的设计天然维护了其中元素的顺序，所以`ActiveQ`和`BackoffQ`实际上是两个优先队列。
+再看堆元素`data`是如何实现的，堆的设计天然维护了其中元素的顺序，所以`ActiveQ`和`BackoffQ`实际上是两个优先队列。
 
 ```go
 type data[T any] struct {
@@ -571,7 +716,7 @@ type data[T any] struct {
 type UnschedulablePods struct {
 	// 记录Pod信息的表 key是Pod的full-name value是指针
 	podInfoMap map[string]*framework.QueuedPodInfo
-    // key生成函数
+	// key生成函数
 	keyFunc    func(*v1.Pod) string
 	// 指标记录器
 	unschedulableRecorder, gatedRecorder metrics.MetricRecorder
@@ -605,18 +750,18 @@ func (p *PriorityQueue) Run(logger klog.Logger) {
 // flushBackoffQCompleted Moves all pods from backoffQ which have completed backoff in to activeQ
 func (p *PriorityQueue) flushBackoffQCompleted(logger klog.Logger) {
 	p.lock.Lock()
-	defer p.lock.Unlock()
-    // 标志位 表示是否有Pod被移动
+	defer p.lock.Unlock() 
+	// 标志位 表示是否有Pod被移动
 	activated := false
 	for {
-        // 看队首是否有元素 如果空队列直接退出
+		// 看队首是否有元素 如果空队列直接退出
 		pInfo, ok := p.podBackoffQ.Peek()
 		if !ok || pInfo == nil {
 			break
 		}
-		pod := pInfo.Pod
-        // 比较backoffTime即(Timestamp+duration)和当前时间
-        // 没完成退避就退出 因为堆顶元素是退避完成时间最早的
+		pod := pInfo.Pod 
+		// 比较backoffTime即(Timestamp+duration)和当前时间 
+		//没完成退避就退出 因为堆顶元素是退避完成时间最早的
 		if p.isPodBackingoff(pInfo) {
 			break
 		}
@@ -625,27 +770,27 @@ func (p *PriorityQueue) flushBackoffQCompleted(logger klog.Logger) {
 			logger.Error(err, "Unable to pop pod from backoff queue despite backoff completion", "pod", klog.KObj(pod))
 			break
 		}
-        // 移动该Pod到ActiveQ
+		// 移动该Pod到ActiveQ
 		if added := p.moveToActiveQ(logger, pInfo, framework.BackoffComplete); added {
-            // 更新标志位
+			// 更新标志位
 			activated = true
 		}
 	}
 
 	if activated {
-        // 广播唤醒所有等待对ActiveQ执行Pop的goroutine
+		// 广播唤醒所有等待对ActiveQ执行Pop的goroutine
 		p.activeQ.broadcast()
 	}
 }
 
 func (p *PriorityQueue) moveToActiveQ(logger klog.Logger, pInfo *framework.QueuedPodInfo, event string) bool {
-	gatedBefore := pInfo.Gated
-    // 运行PreEnqueue插件
+	gatedBefore := pInfo.Gated 
+	// 运行PreEnqueue插件
 	pInfo.Gated = !p.runPreEnqueuePlugins(context.Background(), pInfo)
 	// 添加到ActiveQ的标志位
 	added := false
 	p.activeQ.underLock(func(unlockedActiveQ unlockedActiveQueuer) {
-        // 如果PreEnqueue插件运行没通过 加到unschedulablePods中
+		// 如果PreEnqueue插件运行没通过 加到unschedulablePods中
 		if pInfo.Gated {
 			// Add the Pod to unschedulablePods if it's not passing PreEnqueuePlugins.
 			if unlockedActiveQ.Has(pInfo) {
@@ -662,8 +807,8 @@ func (p *PriorityQueue) moveToActiveQ(logger klog.Logger, pInfo *framework.Queue
 			pInfo.InitialAttemptTimestamp = &now
 		}
 		// 运行通过了就加到ActiveQ
-		unlockedActiveQ.AddOrUpdate(pInfo)
-        // 更新标志位
+		unlockedActiveQ.AddOrUpdate(pInfo) 
+		// 更新标志位
 		added = true
 		// 从BackoffQ和unschedulablePods删除 保证Pod信息在队列中的唯一性
 		p.unschedulablePods.delete(pInfo.Pod, gatedBefore)
@@ -671,7 +816,7 @@ func (p *PriorityQueue) moveToActiveQ(logger klog.Logger, pInfo *framework.Queue
 		logger.V(5).Info("Pod moved to an internal scheduling queue", "pod", klog.KObj(pInfo.Pod), "event", event, "queue", activeQ)
 		metrics.SchedulerQueueIncomingPods.WithLabelValues("active", event).Inc()
 		if event == framework.EventUnscheduledPodAdd.Label() || event == framework.EventUnscheduledPodUpdate.Label() {
-            // 置空Pod的提名节点
+			// 置空Pod的提名节点
 			p.AddNominatedPod(logger, pInfo.PodInfo, nil)
 		}
 	})
@@ -685,8 +830,8 @@ func (p *PriorityQueue) flushUnschedulablePodsLeftover(logger klog.Logger) {
 	defer p.lock.Unlock()
 
 	var podsToMove []*framework.QueuedPodInfo
-	currentTime := p.clock.Now()
-    // 遍历unschedulablePods 找出所有超出最大停留时长的Pod
+	currentTime := p.clock.Now() 
+	// 遍历unschedulablePods 找出所有超出最大停留时长的Pod
 	for _, pInfo := range p.unschedulablePods.podInfoMap {
 		lastScheduleTime := pInfo.Timestamp
 		if currentTime.Sub(lastScheduleTime) > p.podMaxInUnschedulablePodsDuration {
@@ -695,7 +840,7 @@ func (p *PriorityQueue) flushUnschedulablePodsLeftover(logger klog.Logger) {
 	}
 
 	if len(podsToMove) > 0 {
-        // 把这些Pod更新到ActiveQ或BackoffQ
+		// 把这些Pod更新到ActiveQ或BackoffQ
 		p.movePodsToActiveOrBackoffQueue(logger, podsToMove, framework.EventUnschedulableTimeout, nil, nil)
 	}
 }
@@ -718,11 +863,11 @@ func (p *PriorityQueue) movePodsToActiveOrBackoffQueue(logger klog.Logger, podIn
 			continue
 		}
 		// 先从unschedulablePods删除
-		p.unschedulablePods.delete(pInfo.Pod, pInfo.Gated)
-        // 再根据schedulingHint执行入队操作 并返回新的队列
+		p.unschedulablePods.delete(pInfo.Pod, pInfo.Gated) 
+		// 再根据schedulingHint执行入队操作 并返回新的队列
 		queue := p.requeuePodViaQueueingHint(logger, pInfo, schedulingHint, event.Label())
-		logger.V(4).Info("Pod moved to an internal scheduling queue", "pod", klog.KObj(pInfo.Pod), "event", event.Label(), "queue", queue, "hint", schedulingHint)
-        // 如果进入activeQ 后续广播唤醒阻塞goroutine
+		logger.V(4).Info("Pod moved to an internal scheduling queue", "pod", klog.KObj(pInfo.Pod), "event", event.Label(), "queue", queue, "hint", schedulingHint) 
+		// 如果进入activeQ 后续广播唤醒阻塞goroutine
 		if queue == activeQ {
 			activated = true
 		}
@@ -754,8 +899,8 @@ func (p *PriorityQueue) Add(logger klog.Logger, pod *v1.Pod) {
     pInfo := p.newQueuedPodInfo(pod)
     // 加入到ActiveQ
     if added := p.moveToActiveQ(logger, pInfo, framework.EventUnscheduledPodAdd.Label()); added {
-        // 成功加入后唤醒其他协程
-       p.activeQ.broadcast()
+        // 成功加入后唤醒其他协程 
+        p.activeQ.broadcast()
     }
 }
 ```
@@ -835,7 +980,7 @@ func (p *PriorityQueue) Update(logger klog.Logger, oldPod, newPod *v1.Pod) {
              logger.V(5).Info("Pod moved to an internal scheduling queue", "pod", klog.KObj(pInfo.Pod), "event", framework.EventUnscheduledPodUpdate.Label(), "queue", backoffQ)
              return
           }
-		  // 否则尝试移动到ActiveQ
+          // 否则尝试移动到ActiveQ
           if added := p.moveToActiveQ(logger, pInfo, framework.BackoffComplete); added {
              p.activeQ.broadcast()
           }
@@ -857,7 +1002,7 @@ func (p *PriorityQueue) Update(logger klog.Logger, oldPod, newPod *v1.Pod) {
 // PodSchedulingPropertiesChange interprets the update of a pod and returns corresponding UpdatePodXYZ event(s).
 // Once we have other pod update events, we should update here as well.
 func PodSchedulingPropertiesChange(newPod *v1.Pod, oldPod *v1.Pod) (events []ClusterEvent) {
-    // 初始化并更新Pod状态
+	// 初始化并更新Pod状态
 	r := assignedPod
 	if newPod.Spec.NodeName == "" {
 		r = unschedulablePod
@@ -869,16 +1014,16 @@ func PodSchedulingPropertiesChange(newPod *v1.Pod, oldPod *v1.Pod) (events []Clu
 		extractPodSchedulingGateEliminatedChange,
 		extractPodTolerationChange,
 	}
-    // 如果DRA特性门控开启 增加一个相关函数
+	// 如果DRA特性门控开启 增加一个相关函数
 	if utilfeature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation) {
 		podChangeExtracters = append(podChangeExtracters, extractPodGeneratedResourceClaimChange)
 	}
     
 	// 遍历列表中的提取器
 	for _, fn := range podChangeExtracters {
-        // 获取每个提取器的事件event 并组装成ClusterEvent加入到events切片
+		// 获取每个提取器的事件event 并组装成ClusterEvent加入到events切片
 		if event := fn(newPod, oldPod); event != none {
-            // 注意下细节 events切片是在函数声明时就创建了的
+			// 注意下细节 events切片是在函数声明时就创建了的
 			events = append(events, ClusterEvent{Resource: r, ActionType: event})
 		}
 	}
@@ -897,9 +1042,9 @@ func (aq *activeQueue) update(newPod *v1.Pod, oldPodInfo *framework.QueuedPodInf
 	defer aq.lock.Unlock()
 	// 判断ActiveQ中是否存在oldPodInfo 如果存在就更新信息
 	if pInfo, exists := aq.queue.Get(oldPodInfo); exists {
-        // 更新Pod信息
-		_ = pInfo.Update(newPod)
-        // 更新ActiveQ堆中信息
+		// 更新Pod信息
+		_ = pInfo.Update(newPod) 
+		// 更新ActiveQ堆中信息
 		aq.queue.AddOrUpdate(pInfo)
 		return pInfo
 	}
@@ -913,7 +1058,7 @@ func (pi *PodInfo) Update(pod *v1.Pod) error {
 		pi.Pod = pod
 		return nil
 	}
-    // 如果没有 解析亲和性信息
+	// 如果没有 解析亲和性信息
 	var preferredAffinityTerms []v1.WeightedPodAffinityTerm
 	var preferredAntiAffinityTerms []v1.WeightedPodAffinityTerm
 	if affinity := pod.Spec.Affinity; affinity != nil {
@@ -974,19 +1119,19 @@ func (npm *nominator) UpdateNominatedPod(logger klog.Logger, oldPod *v1.Pod, new
 			}
 		}
 	}
-	// 先删除再添加
-    npm.deleteUnlocked(oldPod)
+	// 先删除再添加 
+	npm.deleteUnlocked(oldPod)
 	npm.addNominatedPodUnlocked(logger, newPodInfo, nominatingInfo)
 }
 
 // 删除NominatedPod
 func (npm *nominator) deleteUnlocked(p *v1.Pod) {
-    // 找到提名器中Pod对应的Node
+	// 找到提名器中Pod对应的Node
 	nnn, ok := npm.nominatedPodToNode[p.UID]
 	if !ok {
 		return
 	}
-    // 遍历这个Node上的提名节点 如果和当前一致则从Pod列表中删除
+	// 遍历这个Node上的提名节点 如果和当前一致则从Pod列表中删除
 	for i, np := range npm.nominatedPods[nnn] {
 		if np.uid == p.UID {
 			npm.nominatedPods[nnn] = append(npm.nominatedPods[nnn][:i], npm.nominatedPods[nnn][i+1:]...)
@@ -996,7 +1141,7 @@ func (npm *nominator) deleteUnlocked(p *v1.Pod) {
 			break
 		}
 	}
-    // 删除NominatedPod到Node的映射
+	// 删除NominatedPod到Node的映射
 	delete(npm.nominatedPodToNode, p.UID)
 }
 
@@ -1040,7 +1185,7 @@ func (npm *nominator) addNominatedPodUnlocked(logger klog.Logger, pi *framework.
 
 ##### Delete
 
-尝试从所有调度队列中删除该Pod的信息
+尝试从所有调度队列中删除该Pod的信息。
 
 ```go
 func (p *PriorityQueue) Delete(pod *v1.Pod) {
@@ -1060,7 +1205,7 @@ func (p *PriorityQueue) Delete(pod *v1.Pod) {
 
 ##### Activate
 
-激活一个Pod的集合，即移动到`ActiveQ`，
+激活一个Pod集合，即把它们全部移动到`ActiveQ`中。
 
 ```go
 func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
@@ -1079,7 +1224,7 @@ func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
        p.activeQ.addEventsIfPodInFlight(nil, pod, []framework.ClusterEvent{framework.EventForceActivate})
        p.moveRequestCycle = p.activeQ.schedulingCycle()
     }
-	// 如果激活成功 唤醒其他等待协程
+    // 如果激活成功 唤醒其他等待协程
     if activated {
        p.activeQ.broadcast()
     }
@@ -1088,6 +1233,10 @@ func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 
 #### 调度队列小结及流程图
 
-调度队列实际上都是`Map`，以`PodName_Namespace`为key，`PodInfo`的指针为value存储，区别在于是否通过`Slice`维护了优先顺序。
+1. 调度队列实际上都是`Map`，以`PodName_Namespace`为key，`PodInfo`的指针为value来进行存储，和`unschedulablePods`的区别在于是否通过`Slice`维护了优先顺序，`Map`的key和`Slice`的排序提高了查询和出队的速度。
+2. 每次有Pod加入`ActiveQ`，都会通过`broadcast()`去唤醒等待中的协程，因为如果一个进程要调用`Pop`方法时会先判断队列长度，如果队列为空时通过执行`cond.Wait()`挂起进程。
+3. 退避队列每秒刷新一次，失败队列每三十秒刷新一次。
+4. 在调度队列中的所有Pod都处于的是`Pending`状态。
+5. 如果一个Pod调度成功，会通过`AssignedPodAdded`方法尝试把`unschedulablePods`中相关的Pod移动到其他两个队列；如果一个Pod调度失败，会通过`AddUnschedulableIfNotPresent`方法把该Pod重新放回队列。
 
-![image-20250306001128343](C:\Users\18338\AppData\Roaming\Typora\typora-user-images\image-20250306001128343.png)
+![SchedulingQueue](image/SchedulingQueue.png)
