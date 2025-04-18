@@ -613,7 +613,7 @@ type Plugins struct {
 
 已经了解了`Framework`的由来以及插件扩展点，所谓`Framework`就是一份`kube-scheduler`在运行时用到的配置信息，改变了最初调度算法都硬编码在流程里对于程序扩展的限制，正如目前的大多数扩展性较好的项目如`PostgreSQL`，都是插件化的，调度器也通过`Scheduler Framework`实现了这一点。
 
-从上图中可以看出，在`Pod`加入调度队列以后，包含了两个`Cycle`，也就是说在整个调度的过程中，包含两个大的生命周期。在[调度器的创建和调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20%E8%B0%83%E5%BA%A6%E5%99%A8%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)提到过实例启动的最外层逻辑是`Run()`方法。
+从上图中可以看出，在`Pod`加入调度队列以后，包含了两个`Cycle`，也就是说在整个调度的过程中，包含两个大的生命周期。在[Scheduler创建流程与调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20%E8%B0%83%E5%BA%A6%E5%99%A8%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)提到过实例启动的最外层逻辑是`Run()`方法。
 
 ```Go
 // Run begins watching and scheduling. It starts scheduling and blocked until the context is done.
@@ -718,4 +718,4 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 }
 ```
 
-通过上面的代码可以看出，在一个`Pod`调度的的完整生命周期中，总共存在三个动作，即`Pod出队`、`调度`、`异步绑定`，其中`Pod出队`动作比较简单，经过[调度器的创建和调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20%E8%B0%83%E5%BA%A6%E5%99%A8%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)中调度队列部分的学习，可以知道`Pop()`动作就是弹出`ActiveQ`的队首元素，如果队列为空会阻塞等待唤醒。`调度`和`绑定`是两个清晰的生命周期，其中`调度`周期的扩展点以`ReservePlugins`，此时默认Pod会被调度成功，提前预留资源刷新调度缓存，Pod的内部状态为`Assumed`。绑定周期由于包括存储、网络等资源的设置而耗时较长所以异步执行，可以理解为在完成一个Pod的节点计算选择，就立刻进入了下一个Pod的调度。
+通过上面的代码可以看出，在一个`Pod`调度的的完整生命周期中，总共存在三个动作，即`Pod出队`、`调度`、`异步绑定`，其中`Pod出队`动作比较简单，经过[Scheduler创建流程与调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20%E8%B0%83%E5%BA%A6%E5%99%A8%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)中调度队列部分的学习，可以知道`Pop()`动作就是弹出`ActiveQ`的队首元素，如果队列为空会阻塞等待唤醒。`调度`和`绑定`是两个清晰的生命周期，其中`调度`周期的扩展点以`ReservePlugins`，此时默认Pod会被调度成功，提前预留资源刷新调度缓存，Pod的内部状态为`Assumed`。绑定周期由于包括存储、网络等资源的设置而耗时较长所以异步执行，可以理解为在完成一个Pod的节点计算选择，就立刻进入了下一个Pod的调度。
