@@ -353,7 +353,7 @@ func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.
 }
 ```
 
-#### Score扩展点与NormalizeScore扩展点
+#### Score扩展点与NormalizeScore评分归一化
 
 `RunScorePlugins()`的实现和`RunFilterPlugins()`类似。首先，`Filter`插件执行的过程中，状态被存储在`CycleState`对象并读写，过滤的行为属于责任链模式，如果一处不通过就直接失败退出，所以过滤阶段节点层面并行但插件层面是串行的。评分阶段也是节点层面串行和插件层面并行，如有疑问可以对比`Predicates`阶段的`findNodesThatPassFilters()`与`Priorities`阶段的`RunScorePlugins()`方法并加以详细对比。
 
@@ -485,15 +485,11 @@ type NodePluginScores struct {
 }
 ```
 
-##### 默认评分归一化方法
+##### NormalizeScore插件
 
-默认的归一化评分方法`DefaultNormalizeScore()`实现简单，仅注释不做过多说明。
+一些插件的`NormalizeScore()`实现是直接调用了默认的归一化评分方法`DefaultNormalizeScore()`，在文件`pkg/scheduler/framework/plugins/helper/normalize_score.go`中定义，仅注释不做过多说明。
 
 ```Go
-// DefaultNormalizeScore generates a Normalize Score function that can normalize the
-// scores from [0, max(scores)] to [0, maxPriority]. If reverse is set to true, it
-// reverses the scores by subtracting it from maxPriority.
-// Note: The input scores are always assumed to be non-negative integers.
 func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.NodeScoreList) *framework.Status {
     var maxCount int64
     // 获取所有节点中的最高分
@@ -527,3 +523,114 @@ func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.Nod
     return nil
 }
 ```
+
+对上面例如`TaintToleration`插件的了解，不难发现其实调度器的算法实现并不复杂，重点在于整体流程的设计，实际上在了解了`Scheduler Framework`后，Pod的整个调度流程就已经非常清晰了。到目前为止总共接触到了`PreFilter`、`Filter`、`PreScore`、`Score`这四个扩展点的插件(其中`NormalizeScore`在`Score`扩展点内部，不属于12个标准扩展点之一)。在结合流程图中，前面有三个扩展点没有看到，分别是`PreEnqueue`、`QueueSort`和`PostFilter`，其中`PreEnqueue`和`QueueSort`是调度队列相关的两个插件，所以没有出现在调度周期内，如果感兴趣可以回到调度队列的`runPreEnqueuePlugins()`方法中，在Pod添加到`ActiveQ`时调用。`QueueSort`调用点较为隐蔽，可以以`func (aq *activeQueue) update()`为入口，调用关系如下方所示，调度队列实例创建之初，就向其中注册了`Less()`方法，它的调用点不像其他的插件是`runXXXPlugin()`而是`Less()`，Pod的入队和出队都会调用`Less()`方法。`PostFilter`插件只与抢占流程有关，在后面会单独介绍。
+
+```Go
+// 入队的调用链 activeQueue.update->queue.AddOrUpdate->heap.Push->up
+func (aq *activeQueue) update(newPod *v1.Pod, oldPodInfo *framework.QueuedPodInfo) *framework.QueuedPodInfo {
+    aq.lock.Lock()
+    defer aq.lock.Unlock()
+
+    if pInfo, exists := aq.queue.Get(oldPodInfo); exists {
+        _ = pInfo.Update(newPod)
+        aq.queue.AddOrUpdate(pInfo)
+        return pInfo
+    }
+    return nil
+}
+
+func (h *Heap[T]) AddOrUpdate(obj T) {
+    key := h.data.keyFunc(obj)
+    if _, exists := h.data.items[key]; exists {
+        h.data.items[key].obj = obj
+        heap.Fix(h.data, h.data.items[key].index)
+    } else {
+        heap.Push(h.data, &itemKeyValue[T]{key, obj})
+        if h.metricRecorder != nil {
+            h.metricRecorder.Inc()
+        }
+    }
+}
+
+// golang的container/heap包
+func Push(h Interface, x any) {
+    h.Push(x)
+    up(h, h.Len()-1)
+}
+
+func up(h Interface, j int) {
+    for {
+        i := (j - 1) / 2 // parent
+        // 直接调用点
+        if i == j || !h.Less(j, i) {
+            break
+        }
+        h.Swap(i, j)
+        j = i
+    }
+}
+
+// 出队的调用链 activeQueue.pop->activeQueue.unlockedPop->queue.Pop->heap.Pop->down
+func (aq *activeQueue) pop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    aq.lock.Lock()
+    defer aq.lock.Unlock()
+
+    return aq.unlockedPop(logger)
+}
+
+func (aq *activeQueue) unlockedPop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    for aq.queue.Len() == 0 {
+        if aq.closed {
+            logger.V(2).Info("Scheduling queue is closed")
+            return nil, nil
+        }
+        aq.cond.Wait()
+    }
+    
+    pInfo, err := aq.queue.Pop()
+    ......
+}
+
+func (h *Heap[T]) Pop() (T, error) {
+    obj := heap.Pop(h.data)
+    if obj != nil {
+        if h.metricRecorder != nil {
+            h.metricRecorder.Dec()
+        }
+        return obj.(T), nil
+    }
+    var zero T
+    return zero, fmt.Errorf("heap is empty")
+}
+
+// golang的container/heap包
+func Pop(h Interface) any {
+    n := h.Len() - 1
+    h.Swap(0, n)
+    down(h, 0, n)
+    return h.Pop()
+}
+
+func down(h Interface, i0, n int) bool {
+    i := i0
+    for {
+        j1 := 2*i + 1
+        if j1 >= n || j1 < 0 { // j1 < 0 after int overflow
+            break
+        }
+        j := j1 // left child
+        // 直接调用点
+        if j2 := j1 + 1; j2 < n && h.Less(j2, j1) {
+            j = j2 // = 2*i + 2  // right child
+        }
+        if !h.Less(j, i) {
+            break
+        }
+        h.Swap(i, j)
+        i = j
+    }
+    return i > i0
+}
+```
+
