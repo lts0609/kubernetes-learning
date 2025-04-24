@@ -352,3 +352,178 @@ func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.
     return
 }
 ```
+
+#### Score扩展点与NormalizeScore扩展点
+
+`RunScorePlugins()`的实现和`RunFilterPlugins()`类似。首先，`Filter`插件执行的过程中，状态被存储在`CycleState`对象并读写，过滤的行为属于责任链模式，如果一处不通过就直接失败退出，所以过滤阶段节点层面并行但插件层面是串行的。评分阶段也是节点层面串行和插件层面并行，如有疑问可以对比`Predicates`阶段的`findNodesThatPassFilters()`与`Priorities`阶段的`RunScorePlugins()`方法并加以详细对比。
+
+```Go
+func (f *frameworkImpl) RunScorePlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) (ns []framework.NodePluginScores, status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Score, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    allNodePluginScores := make([]framework.NodePluginScores, len(nodes))
+    numPlugins := len(f.scorePlugins)
+    plugins := make([]framework.ScorePlugin, 0, numPlugins)
+    pluginToNodeScores := make(map[string]framework.NodeScoreList, numPlugins)
+    // 初始化Score扩展点使用的插件列表
+    for _, pl := range f.scorePlugins {
+        if state.SkipScorePlugins.Has(pl.Name()) {
+            continue
+        }
+        plugins = append(plugins, pl)
+        pluginToNodeScores[pl.Name()] = make(framework.NodeScoreList, len(nodes))
+    }
+    // 创建上下文对象
+    ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
+    errCh := parallelize.NewErrorChannel()
+    // Score插件列表不为空时
+    if len(plugins) > 0 {
+        logger := klog.FromContext(ctx)
+        verboseLogs := logger.V(4).Enabled()
+        if verboseLogs {
+            logger = klog.LoggerWithName(logger, "Score")
+        }
+        // 为每个节点并发执行评分操作
+        f.Parallelizer().Until(ctx, len(nodes), func(index int) {
+            nodeName := nodes[index].Node().Name
+            logger := logger
+            if verboseLogs {
+                logger = klog.LoggerWithValues(logger, "node", klog.ObjectRef{Name: nodeName})
+            }
+            // Score插件级别串行
+            for _, pl := range plugins {
+                ctx := ctx
+                if verboseLogs {
+                    logger := klog.LoggerWithName(logger, pl.Name())
+                    ctx = klog.NewContext(ctx, logger)
+                }
+                s, status := f.runScorePlugin(ctx, pl, state, pod, nodeName)
+                if !status.IsSuccess() {
+                    err := fmt.Errorf("plugin %q failed with: %w", pl.Name(), status.AsError())
+                    errCh.SendErrorWithCancel(err, cancel)
+                    return
+                }
+                // 记录评分信息到pluginToNodeScores
+                pluginToNodeScores[pl.Name()][index] = framework.NodeScore{
+                    Name:  nodeName,
+                    Score: s,
+                }
+            }
+        }, metrics.Score)
+        if err := errCh.ReceiveError(); err != nil {
+            return nil, framework.AsStatus(fmt.Errorf("running Score plugins: %w", err))
+        }
+    }
+
+    // NormalizeScore扩展点
+    // 为每个插件并发执行评分归一化
+    f.Parallelizer().Until(ctx, len(plugins), func(index int) {
+        pl := plugins[index]
+        // Score插件必须实现ScoreExtensions()方法 如果不需要归一化就在该方法中返回nil
+        if pl.ScoreExtensions() == nil {
+            return
+        }
+        nodeScoreList := pluginToNodeScores[pl.Name()]
+        // 有归一化需要的执行插件的NormalizeScore()方法并返回结果
+        status := f.runScoreExtension(ctx, pl, state, pod, nodeScoreList)
+        if !status.IsSuccess() {
+            err := fmt.Errorf("plugin %q failed with: %w", pl.Name(), status.AsError())
+            errCh.SendErrorWithCancel(err, cancel)
+            return
+        }
+    }, metrics.Score)
+    if err := errCh.ReceiveError(); err != nil {
+        return nil, framework.AsStatus(fmt.Errorf("running Normalize on Score plugins: %w", err))
+    }
+
+    // 按节点粒度并发执行 根据权重调整最终评分
+    f.Parallelizer().Until(ctx, len(nodes), func(index int) {
+        nodePluginScores := framework.NodePluginScores{
+            Name:   nodes[index].Node().Name,
+            Scores: make([]framework.PluginScore, len(plugins)),
+        }
+
+        for i, pl := range plugins {
+            weight := f.scorePluginWeight[pl.Name()]
+            nodeScoreList := pluginToNodeScores[pl.Name()]
+            score := nodeScoreList[index].Score
+            // 评分的范围如果不在1-100之间返回错误
+            if score > framework.MaxNodeScore || score < framework.MinNodeScore {
+                err := fmt.Errorf("plugin %q returns an invalid score %v, it should in the range of [%v, %v] after normalizing", pl.Name(), score, framework.MinNodeScore, framework.MaxNodeScore)
+                errCh.SendErrorWithCancel(err, cancel)
+                return
+            }
+            weightedScore := score * int64(weight)
+            // 记录单个插件最终评分到nodePluginScores
+            nodePluginScores.Scores[i] = framework.PluginScore{
+                Name:  pl.Name(),
+                Score: weightedScore,
+            }
+            // 累加记录节点总分
+            nodePluginScores.TotalScore += weightedScore
+        }
+        allNodePluginScores[index] = nodePluginScores
+    }, metrics.Score)
+    if err := errCh.ReceiveError(); err != nil {
+        return nil, framework.AsStatus(fmt.Errorf("applying score defaultWeights on Score plugins: %w", err))
+    }
+    // 返回节点评分结果列表
+    return allNodePluginScores, nil
+}
+
+// 节点评分结构
+type NodePluginScores struct {
+    // 节点名称
+    Name string
+    // 插件-评分 列表
+    Scores []PluginScore
+    // 总分
+    TotalScore int64
+}
+```
+
+##### 默认评分归一化方法
+
+默认的归一化评分方法`DefaultNormalizeScore()`实现简单，仅注释不做过多说明。
+
+```Go
+// DefaultNormalizeScore generates a Normalize Score function that can normalize the
+// scores from [0, max(scores)] to [0, maxPriority]. If reverse is set to true, it
+// reverses the scores by subtracting it from maxPriority.
+// Note: The input scores are always assumed to be non-negative integers.
+func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.NodeScoreList) *framework.Status {
+    var maxCount int64
+    // 获取所有节点中的最高分
+    for i := range scores {
+        if scores[i].Score > maxCount {
+            maxCount = scores[i].Score
+        }
+    }
+    // 如果所有节点评分都是0的情况
+    if maxCount == 0 {
+        if reverse {
+            for i := range scores {
+                scores[i].Score = maxPriority
+            }
+        }
+        return nil
+    }
+    // 正常情况
+    for i := range scores {
+        score := scores[i].Score
+        // 100*评分/最高分
+        score = maxPriority * score / maxCount
+        // reverse用于Score评分低表示更高优先级的情况 如TaintToleration插件
+        if reverse {
+            // 低分反转变成高分
+            score = maxPriority - score
+        }
+        // 记录归一化后的评分
+        scores[i].Score = score
+    }
+    return nil
+}
+```
