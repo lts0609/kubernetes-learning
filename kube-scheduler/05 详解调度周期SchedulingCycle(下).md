@@ -225,3 +225,130 @@ func prioritizeNodes(
 }
 ```
 
+`RunPreScorePlugins()`的实现和`RunPreFilterPlugins()`非常类似，同样是做了两大类事情：在遍历执行`PreScore`插件的过程中，调用`cycleState.Write()`记录信息到`cycleState`中，如污点容忍和亲和性等，并在遍历结束后把没有相关条件后续不需要执行的`Score`插件也记录到`cycleState`。
+
+```Go
+func (f *frameworkImpl) RunPreScorePlugins(
+    ctx context.Context,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) (status *framework.Status) {
+    startTime := time.Now()
+    skipPlugins := sets.New[string]()
+    // 最后把Score阶段不需要执行的插件记录到cycleState
+    defer func() {
+        state.SkipScorePlugins = skipPlugins
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreScore, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, "PreScore")
+    }
+    // 遍历执行PreScore插件逻辑
+    for _, pl := range f.preScorePlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runPreScorePlugin(ctx, pl, state, pod, nodes)
+        if status.IsSkip() {
+            skipPlugins.Insert(pl.Name())
+            continue
+        }
+        if !status.IsSuccess() {
+            return framework.AsStatus(fmt.Errorf("running PreScore plugin %q: %w", pl.Name(), status.AsError()))
+        }
+    }
+    return nil
+}
+```
+
+以Kubernetes的默认插件配置为例，分析`PreScore`和`Score`插件的行为，由于`Weight`权重字段一定是作用于`Score`相关的扩展点，所以选择`TaintToleration`插件作为分析对象。
+
+```Go
+func getDefaultPlugins() *v1.Plugins {
+    plugins := &v1.Plugins{
+        MultiPoint: v1.PluginSet{
+            Enabled: []v1.Plugin{
+                {Name: names.SchedulingGates},
+                {Name: names.PrioritySort},
+                {Name: names.NodeUnschedulable},
+                {Name: names.NodeName},
+                {Name: names.TaintToleration, Weight: ptr.To[int32](3)},
+                {Name: names.NodeAffinity, Weight: ptr.To[int32](2)},
+                {Name: names.NodePorts},
+                {Name: names.NodeResourcesFit, Weight: ptr.To[int32](1)},
+                {Name: names.VolumeRestrictions},
+                {Name: names.NodeVolumeLimits},
+                {Name: names.VolumeBinding},
+                {Name: names.VolumeZone},
+                {Name: names.PodTopologySpread, Weight: ptr.To[int32](2)},
+                {Name: names.InterPodAffinity, Weight: ptr.To[int32](2)},
+                {Name: names.DefaultPreemption},
+                {Name: names.NodeResourcesBalancedAllocation, Weight: ptr.To[int32](1)},
+                {Name: names.ImageLocality, Weight: ptr.To[int32](1)},
+                {Name: names.DefaultBinder},
+            },
+        },
+    }
+    applyFeatureGates(plugins)
+
+    return plugins
+}
+```
+
+在经过从`算法硬编码`到`Scheduler Framework`的重构后，插件都在路径`pkg/scheduler/framework/plugins`下定义。`TaintToleration`插件可以在该路径下找到，一般每个插件目录下都是由算法实现和单元测试两个文件组成。
+
+在`taint_toleration.go`文件中，可以看到该插件实现了`Filter、PreScore、Score、NormalizeScore`接口，其中的逻辑比较简单，`PreScore`扩展点时使用`cycleState.Write()`记录污点容忍信息到`cycleState`，到`Score`扩展点时`TaintToleration`根据写入时的key使用`cycleState.Read()`读出`PreScore`阶段记录的数据，如果不能容忍软性污点就计数加一，最后返回结果。`NormalizeScore`扩展点调用了默认的归一化逻辑。
+
+```Go
+func (pl *TaintToleration) PreScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) *framework.Status {
+    if len(nodes) == 0 {
+        return nil
+    }
+    tolerationsPreferNoSchedule := getAllTolerationPreferNoSchedule(pod.Spec.Tolerations)
+    state := &preScoreState{
+        tolerationsPreferNoSchedule: tolerationsPreferNoSchedule,
+    }
+    cycleState.Write(preScoreStateKey, state)
+    return nil
+}
+
+func (pl *TaintToleration) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+    nodeInfo, err := pl.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+    if err != nil {
+        return 0, framework.AsStatus(fmt.Errorf("getting node %q from Snapshot: %w", nodeName, err))
+    }
+    node := nodeInfo.Node()
+
+    s, err := getPreScoreState(state)
+    if err != nil {
+        return 0, framework.AsStatus(err)
+    }
+
+    score := int64(countIntolerableTaintsPreferNoSchedule(node.Spec.Taints, s.tolerationsPreferNoSchedule))
+    return score, nil
+}
+
+func (pl *TaintToleration) NormalizeScore(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+    return helper.DefaultNormalizeScore(framework.MaxNodeScore, true, scores)
+}
+
+func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.Toleration) (intolerableTaints int) {
+    for _, taint := range taints {
+        // 仅处理软性污点
+        if taint.Effect != v1.TaintEffectPreferNoSchedule {
+            continue
+        }
+        // 不能容忍该污点时计数+1
+        if !v1helper.TolerationsTolerateTaint(tolerations, &taint) {
+            intolerableTaints++
+        }
+    }
+    // 返回不能容忍污点计数结果
+    return
+}
+```
