@@ -634,3 +634,141 @@ func down(h Interface, i0, n int) bool {
 }
 ```
 
+#### SelectHost
+
+此时已经得到了每个节点和其评分的对应关系，还需要进行`Priorities`阶段的最后一步，那就是从上一步的结果中选出最优先的那个，然后以`ScheduleResult`结构的形式返回给上层。
+
+```Go
+host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+return ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  len(feasibleNodes),
+    }, err
+```
+
+其中的一个输入参数是`numberOfHighestScoredNodesToReport`，它的值为3，可以覆盖`一主两备`的场景并避免记录过多信息的内存占用，同时用于抢占流程和错误记录，该数值是信息完整性和性能之间的平衡点。
+
+```Go
+    // numberOfHighestScoredNodesToReport is the number of node scores
+    // to be included in ScheduleResult.
+    numberOfHighestScoredNodesToReport = 3
+```
+
+下面分析`selectHost()`函数，首先是对长度做例行的判断，然后开始提取前三评分的节点，这里的设计采用了蓄水池抽样法。首先初始化了一个列表，并把`nodeScoreHeap`堆中的第一个元素`Pop`出来加入到列表中，因为`nodeScoreHeap`是按`TotalScore`从高到低来排序的。然后开始循环添加元素，在切片实际长度小于容量时，先拿当前节点的`TotalScore`和第一个元素的`TotalScore`做比较，如果值相等就根据蓄水池抽样法，以`1/相同分数节点数量`的概率替换第一个元素，以`selectedIndex`动态记录其位置，然后在元素加满之后交换列表中两个索引位置的值，最终返回第一个元素的节点名称和分数前三的节点列表，至此`Priorities`阶段完全结束。
+
+```Go
+func (h nodeScoreHeap) Less(i, j int) bool { return h[i].TotalScore > h[j].TotalScore }
+
+func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, []framework.NodePluginScores, error) {
+    if len(nodeScoreList) == 0 {
+        return "", nil, errEmptyPriorityList
+    }
+    // 初始化堆结构的节点评分列表
+    var h nodeScoreHeap = nodeScoreList
+    heap.Init(&h)
+    cntOfMaxScore := 1
+    selectedIndex := 0
+    // 先提取第一个节点 必然是最高分
+    sortedNodeScoreList := make([]framework.NodePluginScores, 0, count)
+    sortedNodeScoreList = append(sortedNodeScoreList, heap.Pop(&h).(framework.NodePluginScores))
+
+    // 循环添加节点
+    for ns := heap.Pop(&h).(framework.NodePluginScores); ; ns = heap.Pop(&h).(framework.NodePluginScores) {
+        // 当前节点分数和最高分不同 且节点列表已满时退出循环
+        if ns.TotalScore != sortedNodeScoreList[0].TotalScore && len(sortedNodeScoreList) == count {
+            break
+        }
+        // 最高同分节点的选择 蓄水池抽样法
+        if ns.TotalScore == sortedNodeScoreList[0].TotalScore {
+            // 最高分同分节点数量计数+1
+            cntOfMaxScore++
+            if rand.Intn(cntOfMaxScore) == 0 {
+                // 同分节点有1/cntOfMaxScore的概率替代最优节点
+                selectedIndex = cntOfMaxScore - 1
+            }
+        }
+
+        sortedNodeScoreList = append(sortedNodeScoreList, ns)
+        // 堆为空时退出循环
+        if h.Len() == 0 {
+            break
+        }
+    }
+    // 如果最高分同分节点替换了0号元素
+    if selectedIndex != 0 {
+        // 在sortedNodeScoreList中交换元素位置
+        previous := sortedNodeScoreList[0]
+        sortedNodeScoreList[0] = sortedNodeScoreList[selectedIndex]
+        sortedNodeScoreList[selectedIndex] = previous
+    }
+    // 保证只有count个元素
+    if len(sortedNodeScoreList) > count {
+        sortedNodeScoreList = sortedNodeScoreList[:count]
+    }
+    // 返回第一个节点的名称和整个列表
+    return sortedNodeScoreList[0].Name, sortedNodeScoreList, nil
+}
+```
+
+`schedulePod()`方法返回的`ScheduleResult`中包括最后要尝试绑定的节点`SuggestedHost`，本次总共评估过的节点总数`EvaluatedNodes`，其值是过滤阶段返回的`feasibleNodes`长度与已知不可调度节点列表`NodeToStatus`的长度总和，还有可用节点数量`FeasibleNodes`。
+
+```Go
+    return ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  len(feasibleNodes),
+    }, err
+```
+
+### Assume阶段
+
+`ScheduleResult`对象返回以后，`schedulingCycle()`方法中的第一个逻辑终于结束了，先不纠结于失败处理，继续分析标准的成功流程。
+
+在`SchedulePod()`方法返回了成功以后，`Kubernetes`调度器对此有乐观的预期，认为经过精密而又保守的计算逻辑以后，这个Pod最终会被成功绑定，而绑定周期又是异步进行的，所以此时Pod会进入一个`Assumed`的中间状态，它会存在于调度缓存`Cache`中。
+
+```Go
+func (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    logger := klog.FromContext(ctx)
+    pod := podInfo.Pod
+    scheduleResult, err := sched.SchedulePod(ctx, fwk, state, pod)
+    // err不为空的处理 暂且忽略
+    // ......
+    // 深拷贝PodInfo
+    assumedPodInfo := podInfo.DeepCopy()
+    assumedPod := assumedPodInfo.Pod
+    // 在缓存中对Pod的预期状态做更新
+    err = sched.assume(logger, assumedPod, scheduleResult.SuggestedHost)
+    ......
+}
+```
+
+调用`assume()`方法更新调度缓存中的内容，其中的`Cache.AssumePod()`在第一篇调度队列部分有过简单说明，这一步实际就是更新缓存一遍下一个Pod的计算能够考虑到处于`Assume`状态的Pod，不至于因为资源冲突导致绑定失败。
+
+```Go
+func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string) error {
+    // 修改NodeName字段
+    assumed.Spec.NodeName = host
+    // 添加到调度缓存中
+    if err := sched.Cache.AssumePod(logger, assumed); err != nil {
+        logger.Error(err, "Scheduler cache AssumePod failed")
+        return err
+    }
+    // if "assumed" is a nominated pod, we should remove it from internal cache
+    if sched.SchedulingQueue != nil {
+        // 更新清除提名器中的信息
+        sched.SchedulingQueue.DeleteNominatedPodIfExists(assumed)
+    }
+
+    return nil
+}
+```
+
+### Reserve扩展点
