@@ -772,3 +772,282 @@ func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string)
 ```
 
 ### Reserve扩展点
+
+在`Assume`阶段后，调度周期还剩下两个扩展点，此时关于调度的选择已经结束了，所做的内容是要为绑定和下次调度做准备，接下来的扩展点是资源预留`Reserve`扩展点和准入`Permit`扩展点。
+
+```Go
+func (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    ......
+    // Run the Reserve method of reserve plugins.
+    if sts := fwk.RunReservePluginsReserve(ctx, state, assumedPod, scheduleResult.SuggestedHost); !sts.IsSuccess() {
+        // trigger un-reserve to clean up state associated with the reserved Pod
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+            logger.Error(forgetErr, "Scheduler cache ForgetPod failed")
+        }
+
+        if sts.IsRejected() {
+            fitErr := &framework.FitError{
+                NumAllNodes: 1,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, sts)
+            fitErr.Diagnosis.AddPluginStatus(sts)
+            return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(sts.Code()).WithError(fitErr)
+        }
+        return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, sts
+    }
+    // Run "permit" plugins.
+    runPermitStatus := fwk.RunPermitPlugins(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+    if !runPermitStatus.IsWait() && !runPermitStatus.IsSuccess() {
+        // trigger un-reserve to clean up state associated with the reserved Pod
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+            logger.Error(forgetErr, "Scheduler cache ForgetPod failed")
+        }
+
+        if runPermitStatus.IsRejected() {
+            fitErr := &framework.FitError{
+                NumAllNodes: 1,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, runPermitStatus)
+            fitErr.Diagnosis.AddPluginStatus(runPermitStatus)
+            return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(runPermitStatus.Code()).WithError(fitErr)
+        }
+
+        return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, runPermitStatus
+    }
+
+    // At the end of a successful scheduling cycle, pop and move up Pods if needed.
+    if len(podsToActivate.Map) != 0 {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        // Clear the entries after activation.
+        podsToActivate.Map = make(map[string]*v1.Pod)
+    }
+
+    return scheduleResult, assumedPodInfo, nil
+}
+```
+
+下面看资源预留的逻辑`RunReservePluginsReserve()`和`runReservePluginReserve()`方法，外层和之前的几个`RunXXXPlugin()`没有什么区别。
+
+```Go
+func (f *frameworkImpl) RunReservePluginsReserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Reserve, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, "Reserve")
+        logger = klog.LoggerWithValues(logger, "node", klog.ObjectRef{Name: nodeName})
+    }
+    for _, pl := range f.reservePlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runReservePluginReserve(ctx, pl, state, pod, nodeName)
+        if !status.IsSuccess() {
+            if status.IsRejected() {
+                logger.V(4).Info("Pod rejected by plugin", "pod", klog.KObj(pod), "plugin", pl.Name(), "status", status.Message())
+                status.SetPlugin(pl.Name())
+                return status
+            }
+            err := status.AsError()
+            logger.Error(err, "Plugin failed", "plugin", pl.Name(), "pod", klog.KObj(pod))
+            return framework.AsStatus(fmt.Errorf("running Reserve plugin %q: %w", pl.Name(), err))
+        }
+    }
+    return nil
+}
+
+func (f *frameworkImpl) runReservePluginReserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+    if !state.ShouldRecordPluginMetrics() {
+        return pl.Reserve(ctx, state, pod, nodeName)
+    }
+    startTime := time.Now()
+    status := pl.Reserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Reserve, pl.Name(), status.Code().String(), metrics.SinceInSeconds(startTime))
+    return status
+}
+```
+
+那么看一个具体的资源预留插件`VolumeBinding`实现，
+
+```Go
+func (pl *VolumeBinding) Reserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+    // 从CycleState中获取信息
+    state, err := getStateData(cs)
+    if err != nil {
+        return framework.AsStatus(err)
+    }
+    // we don't need to hold the lock as only one node will be reserved for the given pod
+    podVolumes, ok := state.podVolumesByNode[nodeName]
+    if ok {
+        allBound, err := pl.Binder.AssumePodVolumes(klog.FromContext(ctx), pod, nodeName, podVolumes)
+        if err != nil {
+            return framework.AsStatus(err)
+        }
+        // 有卷需要绑定时 值设置为allBound返回的bool值
+        state.allBound = allBound
+    } else {
+        // 没有卷需要绑定时 值直接设置为true
+        state.allBound = true
+    }
+    return nil
+}
+```
+
+其中调用了`AssumePodVolumes()`方法，更新了`AssumeCache`缓存和原`PodVolumes`对象中的信息，其中的`pvcCache`、`pvcCache`和Pod的`Assume`原理类似，都是对预期将会存在的对象做一份在缓存中的记录。
+
+```Go
+// AssumePodVolumes will take the matching PVs and PVCs to provision in pod's
+// volume information for the chosen node, and:
+// 1. Update the pvCache with the new prebound PV.
+// 2. Update the pvcCache with the new PVCs with annotations set
+// 3. Update PodVolumes again with cached API updates for PVs and PVCs.
+func (b *volumeBinder) AssumePodVolumes(logger klog.Logger, assumedPod *v1.Pod, nodeName string, podVolumes *PodVolumes) (allFullyBound bool, err error) {
+    logger.V(4).Info("AssumePodVolumes", "pod", klog.KObj(assumedPod), "node", klog.KRef("", nodeName))
+    defer func() {
+        if err != nil {
+            metrics.VolumeSchedulingStageFailed.WithLabelValues("assume").Inc()
+        }
+    }()
+    // 检查Pod需要的所有卷是否都已经被绑定
+    // 如果已经绑定了就直接返回
+    if allBound := b.arePodVolumesBound(logger, assumedPod); allBound {
+        logger.V(4).Info("AssumePodVolumes: all PVCs bound and nothing to do", "pod", klog.KObj(assumedPod), "node", klog.KRef("", nodeName))
+        return true, nil
+    }
+
+    // 静态卷预占 PV
+    newBindings := []*BindingInfo{}
+    for _, binding := range podVolumes.StaticBindings {
+        newPV, dirty, err := volume.GetBindVolumeToClaim(binding.pv, binding.pvc)
+        logger.V(5).Info("AssumePodVolumes: GetBindVolumeToClaim",
+            "pod", klog.KObj(assumedPod),
+            "PV", klog.KObj(binding.pv),
+            "PVC", klog.KObj(binding.pvc),
+            "newPV", klog.KObj(newPV),
+            "dirty", dirty,
+        )
+        if err != nil {
+            logger.Error(err, "AssumePodVolumes: fail to GetBindVolumeToClaim")
+            b.revertAssumedPVs(newBindings)
+            return false, err
+        }
+        // TODO: can we assume every time?
+        if dirty {
+            // 缓存更新
+            err = b.pvCache.Assume(newPV)
+            if err != nil {
+                b.revertAssumedPVs(newBindings)
+                return false, err
+            }
+        }
+        newBindings = append(newBindings, &BindingInfo{pv: newPV, pvc: binding.pvc})
+    }
+
+    // 动态卷预占 PVC
+    newProvisionedPVCs := []*v1.PersistentVolumeClaim{}
+    for _, claim := range podVolumes.DynamicProvisions {
+        // The claims from method args can be pointing to watcher cache. We must not
+        // modify these, therefore create a copy.
+        claimClone := claim.DeepCopy()
+        metav1.SetMetaDataAnnotation(&claimClone.ObjectMeta, volume.AnnSelectedNode, nodeName)
+        // 缓存更新
+        err = b.pvcCache.Assume(claimClone)
+        if err != nil {
+            b.revertAssumedPVs(newBindings)
+            b.revertAssumedPVCs(newProvisionedPVCs)
+            return
+        }
+
+        newProvisionedPVCs = append(newProvisionedPVCs, claimClone)
+    }
+    // PodVolumes对象更新
+    podVolumes.StaticBindings = newBindings
+    podVolumes.DynamicProvisions = newProvisionedPVCs
+    return
+}
+```
+
+#### 失败后的状态回滚
+
+仍以`VolumeBinding`为例，失败后的`Unreserve`插件获取调度开始时从`ApiServer`中获取到的对象信息，并借助`Restore()`方法向`FIFO`中发送更新事件，使本地缓存中的数据回滚到最初状态。
+
+```Go
+func (f *frameworkImpl) runReservePluginUnreserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName string) {
+    if !state.ShouldRecordPluginMetrics() {
+        pl.Unreserve(ctx, state, pod, nodeName)
+        return
+    }
+    startTime := time.Now()
+    pl.Unreserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Unreserve, pl.Name(), framework.Success.String(), metrics.SinceInSeconds(startTime))
+}
+
+func (pl *VolumeBinding) Unreserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) {
+    s, err := getStateData(cs)
+    if err != nil {
+        return
+    }
+    // we don't need to hold the lock as only one node may be unreserved
+    podVolumes, ok := s.podVolumesByNode[nodeName]
+    if !ok {
+        return
+    }
+    pl.Binder.RevertAssumedPodVolumes(podVolumes)
+}
+
+func (b *volumeBinder) RevertAssumedPodVolumes(podVolumes *PodVolumes) {
+    b.revertAssumedPVs(podVolumes.StaticBindings)
+    b.revertAssumedPVCs(podVolumes.DynamicProvisions)
+}
+
+func (b *volumeBinder) revertAssumedPVs(bindings []*BindingInfo) {
+    for _, BindingInfo := range bindings {
+        b.pvCache.Restore(BindingInfo.pv.Name)
+    }
+}
+
+func (c *AssumeCache) Restore(objName string) {
+    defer c.emitEvents()
+    c.rwMutex.Lock()
+    defer c.rwMutex.Unlock()
+
+    objInfo, err := c.getObjInfo(objName)
+    if err != nil {
+        // This could be expected if object got deleted
+        c.logger.V(5).Info("Restore object", "description", c.description, "cacheKey", objName, "err", err)
+    } else {
+        if objInfo.latestObj != objInfo.apiObj {
+            c.pushEvent(objInfo.latestObj, objInfo.apiObj)
+            objInfo.latestObj = objInfo.apiObj
+        }
+        c.logger.V(4).Info("Restored object", "description", c.description, "cacheKey", objName)
+    }
+}
+```
+
+然后调用`Cache.ForgetPod()`方法，把Pod的信息从本地缓存的`cache.podStates`以及`cache.assumedPods`集合中删除。`Permit`扩展点的失败处理与之完全相同。
+
+### Permit扩展点
+
