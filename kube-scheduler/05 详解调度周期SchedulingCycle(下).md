@@ -1051,3 +1051,203 @@ func (c *AssumeCache) Restore(objName string) {
 
 ### Permit扩展点
 
+`Reserve`扩展点之后紧接着就是`Permit`扩展点，通过代码逻辑可以看出，在执行完具体插件之后会对返回的状态`status`做出判断，这里和其他插件返回状态相比，多了一个`Wait`状态，如果没有返回`Success`而是`Wait`时，根据返回值设置插件等待的超时时长(最大不超过`15分钟`)，并修改`statusCode`标识位，在遍历执行完所有的插件之后，如果是需要等待的，就将其加入到等待队列中。
+
+```Go
+func (f *frameworkImpl) RunPermitPlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Permit, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    pluginsWaitTime := make(map[string]time.Duration)
+    statusCode := framework.Success
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, "Permit")
+        logger = klog.LoggerWithValues(logger, "node", klog.ObjectRef{Name: nodeName})
+    }
+    for _, pl := range f.permitPlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status, timeout := f.runPermitPlugin(ctx, pl, state, pod, nodeName)
+        // 返回状态判断
+        if !status.IsSuccess() {
+            if status.IsRejected() {
+                logger.V(4).Info("Pod rejected by plugin", "pod", klog.KObj(pod), "plugin", pl.Name(), "status", status.Message())
+                return status.WithPlugin(pl.Name())
+            }
+            if status.IsWait() {
+                // 返回状态是Wait 设置超时时间
+                // 最大是15分钟
+                if timeout > maxTimeout {
+                    timeout = maxTimeout
+                }
+                // 设置插件等待超时时长并修改标statusCode识位
+                pluginsWaitTime[pl.Name()] = timeout
+                statusCode = framework.Wait
+            } else {
+                err := status.AsError()
+                logger.Error(err, "Plugin failed", "plugin", pl.Name(), "pod", klog.KObj(pod))
+                return framework.AsStatus(fmt.Errorf("running Permit plugin %q: %w", pl.Name(), err)).WithPlugin(pl.Name())
+            }
+        }
+    }
+    // 如果遍历结束后最终状态是Wait
+    if statusCode == framework.Wait {
+        waitingPod := newWaitingPod(pod, pluginsWaitTime)
+        f.waitingPods.add(waitingPod)
+        msg := fmt.Sprintf("one or more plugins asked to wait and no plugin rejected pod %q", pod.Name)
+        logger.V(4).Info("One or more plugins asked to wait and no plugin rejected pod", "pod", klog.KObj(pod))
+        return framework.NewStatus(framework.Wait, msg)
+    }
+    return nil
+}
+```
+
+在`frameworkImpl`中包含一个等待队列`waitingPods`的结构，其类型是`waitingPodsMap`，由`waitingPod`的集合和一个读写锁组成。
+
+```Go
+type waitingPodsMap struct {
+    pods map[types.UID]*waitingPod
+    mu   sync.RWMutex
+}
+
+type waitingPod struct {
+    pod            *v1.Pod
+    // 定时器
+    pendingPlugins map[string]*time.Timer
+    // 接收结果
+    s              chan *framework.Status
+    mu             sync.RWMutex
+}
+```
+
+这里很好理解了，就是组装一个`waitingPod`结构，为每个其中要等待的插件设置一下定时器，然后把这个`waitingPod`对象加入集合中，如果时间到了就会自动执行`Reject()`方法。
+
+```Go
+func newWaitingPod(pod *v1.Pod, pluginsMaxWaitTime map[string]time.Duration) *waitingPod {
+    // 组装waitingPod结构
+    wp := &waitingPod{
+        pod: pod,
+        s: make(chan *framework.Status, 1),
+    }
+
+    wp.pendingPlugins = make(map[string]*time.Timer, len(pluginsMaxWaitTime))
+    wp.mu.Lock()
+    defer wp.mu.Unlock()
+    // 遍历等待结果的插件 分别设置定时器
+    for k, v := range pluginsMaxWaitTime {
+        plugin, waitTime := k, v
+        wp.pendingPlugins[plugin] = time.AfterFunc(waitTime, func() {
+            msg := fmt.Sprintf("rejected due to timeout after waiting %v at plugin %v",
+                waitTime, plugin)
+            // 如果超时会执行Reject方法
+            wp.Reject(plugin, msg)
+        })
+    }
+
+    return wp
+}
+```
+
+如果插件返回成功会调用`Allow()`方法，从`pendingPlugins`的集合中获取插件的信息，然后停止定时器并删除当前元素。通过对集合长度的判断，在长度为0时表示所有的`Permit`插件都已经允许这个Pod的调度了，就向`waitingPod`的`s`通道中发送一个`framework.Success`的信号，该信号会在绑定周期被接收并判断。
+
+```Go
+func (w *waitingPod) Allow(pluginName string) {
+    w.mu.Lock()
+    defer w.mu.Unlock()
+    if timer, exist := w.pendingPlugins[pluginName]; exist {
+        // 停止当前定时器
+        timer.Stop()
+        // 从插件列表中删除当前插件
+        delete(w.pendingPlugins, pluginName)
+    }
+
+    // 还需要等待其他插件的结果
+    if len(w.pendingPlugins) != 0 {
+        return
+    }
+
+    // pendingPlugins中已经没有元素了 向channel中发送成功信号
+    select {
+    case w.s <- framework.NewStatus(framework.Success, ""):
+    default:
+    }
+}
+```
+
+`Permit`扩展点运行之后，也就是在整个`SchedulingCycle`结束之前，会激活`podsToActivate`集合中的Pod，把它们重新加入到`ActiveQ`里，为下一次调度的`SchedulingCycle`做好准备。
+
+```Go
+    // At the end of a successful scheduling cycle, pop and move up Pods if needed.
+    if len(podsToActivate.Map) != 0 {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        // Clear the entries after activation.
+        podsToActivate.Map = make(map[string]*v1.Pod)
+    }
+    return scheduleResult, assumedPodInfo, nil
+}
+```
+
+#### Permit扩展点的延伸
+
+在调度周期中，`Permit`阶段如果返回的是`Wait`状态，调度器不会因为等待它返回的结果而去影响其他Pod调度的效率，而是在异步执行绑定周期`BindingCycle`的开始处确认`waitingPod`的最终结果是`Success`还是`Rejected`。
+
+```Go
+    // Run "permit" plugins.
+    if status := fwk.WaitOnPermit(ctx, assumedPod); !status.IsSuccess() {
+        if status.IsRejected() {
+            fitErr := &framework.FitError{
+                NumAllNodes: 1,
+                Pod:         assumedPodInfo.Pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus:         framework.NewDefaultNodeToStatus(),
+                    UnschedulablePlugins: sets.New(status.Plugin()),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, status)
+            return framework.NewStatus(status.Code()).WithError(fitErr)
+        }
+        return status
+    }
+```
+
+先判断要绑定的Pod是否是`waitingPod`，如果不存在就直接进入后面的流程。
+
+```Go
+func (f *frameworkImpl) WaitOnPermit(ctx context.Context, pod *v1.Pod) *framework.Status {
+    // 从waitingPods集合中获取当前Pod
+    waitingPod := f.waitingPods.get(pod.UID)
+    // 集合中不存在这个对象直接返回
+    if waitingPod == nil {
+        return nil
+    }
+    // WaitOnPermit流程的最后从waitingPods集合中移除当前对象
+    defer f.waitingPods.remove(pod.UID)
+
+    logger := klog.FromContext(ctx)
+    logger.V(4).Info("Pod waiting on permit", "pod", klog.KObj(pod))
+
+    startTime := time.Now()
+    // waitingPod的s是一个channel 用于接收最终的Permit结果
+    s := <-waitingPod.s
+    metrics.PermitWaitDuration.WithLabelValues(s.Code().String()).Observe(metrics.SinceInSeconds(startTime))
+    // 错误处理
+    if !s.IsSuccess() {
+        if s.IsRejected() {
+            logger.V(4).Info("Pod rejected while waiting on permit", "pod", klog.KObj(pod), "status", s.Message())
+            return s
+        }
+        err := s.AsError()
+        logger.Error(err, "Failed waiting on permit for pod", "pod", klog.KObj(pod))
+        return framework.AsStatus(fmt.Errorf("waiting on permit for pod: %w", err)).WithPlugin(s.Plugin())
+    }
+    return nil
+}
+```
+
+至此，调度周期的标准逻辑完全结束，关于失败处理逻辑`FailureHandler`会放到关于`Preemption`的章节里一起说明。
