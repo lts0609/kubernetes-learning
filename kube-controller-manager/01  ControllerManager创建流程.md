@@ -1,5 +1,7 @@
 # ControllerManager创建流程
 
+### 控制器创建入口函数
+
 根据在之前调度器学习过程中对`Cobra`框架构建组件的了解，首先就会想到`kube-controller- manager`的创建入口也在`cmd/kube-controller-manager/controller-manager.go`中，其中同样也只包含简单的三行代码。
 
 ```Go
@@ -464,6 +466,8 @@ func StartControllers(ctx context.Context, controllerCtx ControllerContext, cont
     return nil
 }
 ```
+
+#### ServiceAccountToken控制器的创建
 
 看一下`ServiceAccountTokenController`是如何启动的，`StartController()`是该控制器启动的直接步骤。经过一系列的检查后，调用此前在`ControllerDescriptor`对象中注册的`InitFunc`初始化函数创建控制器实例，并注册调试接口和创建健康检查器。
 
