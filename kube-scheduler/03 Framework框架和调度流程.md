@@ -343,7 +343,7 @@ func NewFramework(ctx context.Context, r Registry, profile *config.KubeScheduler
 
 ### 配置相关的类型梳理
 
-总结配置中的一些核心结构，最顶层的配置结构是`Options`，是进程级别的参数配置，在`NewOptions()`函数中解析**命令行参数**并初始化，主要承载了启动参数。
+总结配置中的一些核心结构，最顶层的配置结构是`Options`，是进程级别的全局配置参数，在`NewOptions()`函数中解析**命令行参数**并初始化，如`--kubeconfig`和`--port`等，主要承载了调度器组件的启动参数。
 
 ```Go
 type Options struct {

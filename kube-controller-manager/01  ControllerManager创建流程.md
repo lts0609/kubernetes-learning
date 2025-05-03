@@ -532,3 +532,5 @@ func StartController(ctx context.Context, controllerCtx ControllerContext, contr
     return check, nil
 }
 ```
+
+在这里先不关注各种控制器初始化函数的具体实现，后续会在分析每种具体控制器时一并说明，其他控制器也都通过`StartController`创建出来后，继续回到闭包函数`run()`中，剩下的最后一个步骤就是通过工厂启动`ControllerContext`中的两类`Informer`，所有`Informer`实例都启动后关闭控制器上下文中的`ControllerContext.InformersStarted`通道，最后通过常见的方式`<-ctx.Done()`挂起主线程，直至收到停止信号后优雅退出。
