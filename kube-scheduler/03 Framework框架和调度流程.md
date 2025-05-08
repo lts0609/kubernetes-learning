@@ -1,4 +1,4 @@
-# 调度框架与流程
+# Framework框架和调度流程
 
 由于生产环境中Kubernetes系统的复杂性越来越高，原生`default- scheduler`无法满足复杂的调度需求，为了避免代码过于庞大和复杂，Kubernetes通过扩展插件`Scheduler Extender`和多调度器`Multiple Schedulers`的方式来增强调度器的可扩展性。在1.21版本GA了`Scheduler Framework`，调度框架解耦了核心流程与插件、通过`profile`配置支持插件配置和多调度器。
 
