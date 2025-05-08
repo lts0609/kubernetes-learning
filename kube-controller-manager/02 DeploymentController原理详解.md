@@ -95,6 +95,37 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
 }
 ```
 
+最后就返回了一个完整的`DeploymentController`对象，其结构如下。
+
+```Go
+type DeploymentController struct {
+    // 用于操作replicaset对象
+    rsControl controller.RSControlInterface
+    // Kubernetes客户端
+    client    clientset.Interface
+    // 事件广播器
+    eventBroadcaster record.EventBroadcaster
+    // 事件记录器
+    eventRecorder    record.EventRecorder
+    // 同步函数
+    syncHandler func(ctx context.Context, dKey string) error
+    // 单测使用 入队函数
+    enqueueDeployment func(deployment *apps.Deployment)
+    // deployments资源的Lister
+    dLister appslisters.DeploymentLister
+    // replicaset资源的Lister
+    rsLister appslisters.ReplicaSetLister
+    // pod资源的Lister
+    podLister corelisters.PodLister
+    // 缓存状态检查函数
+    dListerSynced cache.InformerSynced
+    rsListerSynced cache.InformerSynced
+    podListerSynced cache.InformerSynced
+    // 限速队列
+    queue workqueue.TypedRateLimitingInterface[string]
+}
+```
+
 ### 启动逻辑
 
 
