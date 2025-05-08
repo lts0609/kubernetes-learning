@@ -551,11 +551,11 @@ func (sched *Scheduler) Run(ctx context.Context) {
 }
 ```
 
-### 调度队列详解
+## 调度队列详解
 
 上一节说到启动调度器包括：`启动调度队列`和`启动调度循环`，在此详细解释调度队列的实现，如果不关注调度队列的实现可以先跳过本节。
 
-#### Pod在队列中的类型
+### Pod在队列中的类型
 
 调度队列中的Pod结构是`QueuedPodInfo`，它是由`PodInfo`加上了`Pod`在队列中的一些属性，包括入队时间戳、尝试次数、首次入队时间和导致调度失败的插件集合所共同组成，类型定义如下，在路径`pkg/scheduler/framework/types.go`下。
 
@@ -591,7 +591,7 @@ type PodInfo struct {
 }
 ```
 
-#### 调度队列
+### 调度队列
 
 调度队列`SchedulingQueue`是一个接口类型
 
@@ -628,7 +628,7 @@ type SchedulingQueue interface {
 }
 ```
 
-#### 优先队列
+### 优先队列
 
 在`Kubernetes`中实现了`SchedulingQueue`的类型是`PriorityQueue`优先队列，从它直接实现了`SchedulingQueue`接口，又通过`SchedulingQueue`间接实现了`PodActivator`，`PodNominator`两种接口，以上可以看出优先队列具有的能力包括：调度队列的基本能力、把一个Pod加入`ActiveQ`的能力和处理`NominatedPod`的能力。
 
@@ -721,9 +721,9 @@ func GetPodFullName(pod *v1.Pod) string {
 }
 ```
 
-#### 调度队列的几种方法
+### 调度队列的几种方法
 
-##### Run
+#### Run
 
 `Run`方法的作用是启动两个`goroutine`，一个`goroutine`每秒执行一次把`BackoffQ`中超过退避时间的Pod移动到`ActiveQ`中，另一个`goroutine`每30秒执行一次把`unschedulablePods`中已到期的Pod根据一定的策略刷新其在调度队列中的位置。
 
@@ -880,7 +880,7 @@ func (p *PriorityQueue) movePodsToActiveOrBackoffQueue(logger klog.Logger, podIn
 }
 ```
 
-##### Add
+#### Add
 
 有新的Pod创建时是一个`v1.Pod`类型的指针，`Add`方法把它转换为`PodInfo`在调度队列中的形态`QueuedPodInfo`，并通过`QueuedPodInfo`方法把该Pod信息加入到`ActiveQ`。
 
@@ -898,7 +898,7 @@ func (p *PriorityQueue) Add(logger klog.Logger, pod *v1.Pod) {
 }
 ```
 
-##### Update
+#### Update
 
 如果Pod属性发生变化，考虑几种场景：是否开启`SchedulingQueueHint`，`oldPod`是否存在于在调度队列中(`ActiveQ`/`BackoffQ`/`unschedulablePods`)。从`unschedulablePods`中尝试移动时，`SchedulingQueueHint`特性门控的`开`/`关`分别是两个逻辑路径，如果特性门控开启则根据`SchedulingQueueHint`的值决定入队方式，否则一般依次尝试。
 
@@ -1176,7 +1176,7 @@ func (npm *nominator) addNominatedPodUnlocked(logger klog.Logger, pi *framework.
 }
 ```
 
-##### Delete
+#### Delete
 
 尝试从所有调度队列中删除该Pod的信息。
 
@@ -1196,7 +1196,7 @@ func (p *PriorityQueue) Delete(pod *v1.Pod) {
 }
 ```
 
-##### Activate
+#### Activate
 
 激活一个Pod集合，即把它们全部移动到`ActiveQ`中。
 
@@ -1224,7 +1224,7 @@ func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 }
 ```
 
-#### 调度队列小结及流程图
+### 调度队列小结及流程图
 
 1. 调度队列实际上都是`Map`，以`PodName_Namespace`为key，`PodInfo`的指针为value来进行存储，和`unschedulablePods`的区别在于是否通过`Slice`维护了优先顺序，`Map`的key和`Slice`的排序提高了查询和出队的速度。
 2. 每次有Pod加入`ActiveQ`，都会通过`broadcast()`去唤醒等待中的协程，因为如果一个线程要调用`Pop`方法时会先判断队列长度，如果队列为空时通过执行`cond.Wait()`挂起进程。
