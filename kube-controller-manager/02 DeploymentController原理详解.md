@@ -460,5 +460,149 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 
 ### Deployment下属资源的获取
 
-#### 
+#### ReplicaSet的获取
+
+`getReplicaSetsForDeployment()`方法用于获取`Deployment`下属的`ReplicaSet`实例，首先获取命名空间下的所有`ReplocaSet`对象，然后把`Deployment`对象的标签解析为内部形式。基于`rsControl`、`Selector`等封装出一个`ReplicaSetControllerRefManager`结构对象用于处理该`Deployment`与`ReplicaSet`之间的从属关系，最后调用其`ClaimReplicaSets()`方法认领属于当前`Deployment`的`ReplicaSet`对象。
+
+```Go
+func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context, d *apps.Deployment) ([]*apps.ReplicaSet, error) {
+    // 获取命名空间下所有replicaset
+    rsList, err := dc.rsLister.ReplicaSets(d.Namespace).List(labels.Everything())
+    if err != nil {
+        return nil, err
+    }
+    // deployment标签转换
+    deploymentSelector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
+    if err != nil {
+        return nil, fmt.Errorf("deployment %s/%s has invalid label selector: %v", d.Namespace, d.Name, err)
+    }
+    // 认领replicaset前会再次检查 避免List和Adopt之间的deployment对象的变更
+    canAdoptFunc := controller.RecheckDeletionTimestamp(func(ctx context.Context) (metav1.Object, error) {
+        //直接从ApiServer获取最新对象 并通过UID进行一致性确认
+        fresh, err := dc.client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+        if err != nil {
+            return nil, err
+        }
+        if fresh.UID != d.UID {
+            return nil, fmt.Errorf("original Deployment %v/%v is gone: got uid %v, wanted %v", d.Namespace, d.Name, fresh.UID, d.UID)
+        }
+        return fresh, nil
+    })
+    // 创建Replicaset对象的引用管理器
+    cm := controller.NewReplicaSetControllerRefManager(dc.rsControl, d, deploymentSelector, controllerKind, canAdoptFunc)
+    // 认领replicaset
+    return cm.ClaimReplicaSets(ctx, rsList)
+}
+```
+
+`ReplicaSet`的认领逻辑在`ClaimReplicaSets()`方法中实现，其中定义了三个函数，分别对应`标签选择`、`认领`和`释放`。遍历`ReplicaSet`列表，然后把认领的对象加入`claimed`变量并返回给上层。
+
+```Go
+func (m *ReplicaSetControllerRefManager) ClaimReplicaSets(ctx context.Context, sets []*apps.ReplicaSet) ([]*apps.ReplicaSet, error) {
+    var claimed []*apps.ReplicaSet
+    var errlist []error
+    // 三个辅助函数
+    match := func(obj metav1.Object) bool {
+        return m.Selector.Matches(labels.Set(obj.GetLabels()))
+    }
+    adopt := func(ctx context.Context, obj metav1.Object) error {
+        return m.AdoptReplicaSet(ctx, obj.(*apps.ReplicaSet))
+    }
+    release := func(ctx context.Context, obj metav1.Object) error {
+        return m.ReleaseReplicaSet(ctx, obj.(*apps.ReplicaSet))
+    }
+    // 遍历处理
+    for _, rs := range sets {
+        ok, err := m.ClaimObject(ctx, rs, match, adopt, release)
+        if err != nil {
+            errlist = append(errlist, err)
+            continue
+        }
+        if ok {
+            claimed = append(claimed, rs)
+        }
+    }
+    return claimed, utilerrors.NewAggregate(errlist)
+}
+```
+
+具体的处理逻辑体现在`ClaimObkect()`方法中，其中包含很多的`if-else`，下面进行分析。
+
+拿到`RepicaSet`对象的第一步是获取它的`OwnerReferences`对象，判断逻辑如下：
+
+* 第一种情况：所属控制器存在
+    * 其所属控制器存在，但不是当前的控制器，跳过处理；
+    * 其所属控制器存在，是当前的控制器，还需要检查一次标签选择，避免由于`Selector`动态修改导致的不匹配；
+    * 其所属控制器存在，是当前的控制器，但标签不匹配，如果当前控制器正在删除中，也跳过处理；
+    * 其所属控制器存在，是当前的控制器，但标签不匹配，控制器正常，尝试释放对象；
+* 第二种情况：所属控制器不存在，孤儿对象
+    * 控制器被删除或标签不匹配，跳过处理；
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正在被删除，跳过处理；
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间不匹配，跳过处理；
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间匹配，尝试认领；
+
+```Go
+func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.Object, match func(metav1.Object) bool, adopt, release func(context.Context, metav1.Object) error) (bool, error) {
+    controllerRef := metav1.GetControllerOfNoCopy(obj)
+    // 有所属控制器
+    if controllerRef != nil {
+        // 不属于当前控制器
+        if controllerRef.UID != m.Controller.GetUID() {
+            // 忽略
+            return false, nil
+        }
+        // 属于当前控制器
+        if match(obj) {
+            // 标签匹配 返回
+            return true, nil
+        }
+        // 属于当前控制器 标签不匹配
+        if m.Controller.GetDeletionTimestamp() != nil {
+            // 控制器在被删除 忽略
+            return false, nil
+        }
+        // 控制器没被删除 释放
+        if err := release(ctx, obj); err != nil {
+            // 对象以及不存在了 忽略
+            if errors.IsNotFound(err) {
+                return false, nil
+            }
+            // 可能被其他人释放 忽略
+            return false, err
+        }
+        // 成功释放
+        return false, nil
+    }
+
+    // 另一种情况 没有所属控制器：孤儿对象
+    if m.Controller.GetDeletionTimestamp() != nil || !match(obj) {
+        // 控制器正在被删除或标签不匹配 忽略
+        return false, nil
+    }
+    // 控制器没被删除 标签也匹配
+    if obj.GetDeletionTimestamp() != nil {
+        // 目标对象正在被删除 忽略
+        return false, nil
+    }
+
+    if len(m.Controller.GetNamespace()) > 0 && m.Controller.GetNamespace() != obj.GetNamespace() {
+        // 命名空间不匹配 忽略
+        return false, nil
+    }
+
+    // 控制器正常 标签匹配 命名空间匹配 尝试认领
+    if err := adopt(ctx, obj); err != nil {
+        // 对象以及被删除 忽略
+        if errors.IsNotFound(err) {
+            return false, nil
+        }
+        // 已被其他人认领 忽略
+        return false, err
+    }
+    // 认领成功
+    return true, nil
+}
+```
+
+#### Pod
 
