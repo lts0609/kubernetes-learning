@@ -164,7 +164,7 @@ func (dc *DeploymentController) Run(ctx context.Context, workers int) {
 }
 ```
 
-## 调谐和事件处理
+## 调谐基本流程
 
 循环执行的逻辑是`worker()`方法，根据其中方法的命名，很明显它要做的就是不停地处理下一个元素。
 
@@ -195,8 +195,6 @@ func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
     return true
 }
 ```
-
-### 调谐过程
 
 下面就是控制器中最核心的逻辑了，一般来说会叫做`reconciler()`，此处仅命名不同。在队列中取出`key`的格式为`namespcae/deploymentname`，调谐时会先切分出`namespace`和`name`，然后通过`Lister`从缓存中获取到具体的`Deployment`对象并拷贝，在调度器的学习过程中对于Pod的处理也是要拷贝的，因为缓存中是反映系统实际状态的信息，避免在处理过程中影响原始内容，所以后续操作都要用深拷贝的对象。在开始调谐逻辑之前会先检查`Deployment`对象的`Selector`字段是否为空，如果是则记录错误并跳过当前对象的调谐。
 
@@ -641,6 +639,8 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
     return podMap, nil
 }
 ```
+
+## 调谐的具体动作
 
 
 
