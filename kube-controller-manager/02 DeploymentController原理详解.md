@@ -196,7 +196,7 @@ func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
 }
 ```
 
-## 调谐过程
+### 调谐过程
 
 下面就是控制器中最核心的逻辑了，一般来说会叫做`reconciler()`，此处仅命名不同。在队列中取出`key`的格式为`namespcae/deploymentname`，调谐时会先切分出`namespace`和`name`，然后通过`Lister`从缓存中获取到具体的`Deployment`对象并拷贝，在调度器的学习过程中对于Pod的处理也是要拷贝的，因为缓存中是反映系统实际状态的信息，避免在处理过程中影响原始内容，所以后续操作都要用深拷贝的对象。在开始调谐逻辑之前会先检查`Deployment`对象的`Selector`字段是否为空，如果是则记录错误并跳过当前对象的调谐。
 
@@ -289,5 +289,176 @@ func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) 
 }
 ```
 
-### 获取Deployment下的ReplicaSet
+## 下属资源对象的获取
+
+我们知道资源对象归属关系的匹配是基于标签选择的，在一个`yaml`文件的声明中，上层资源如`Deployment`、
+
+`StatefulSet`等对下层资源如`Pod`的标签选择常有以下的表示形式：
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  selector:
+    matchLabels:
+      component: redis
+    matchExpressions:
+      - { key: tier, operator: In, values: [cache] }
+      - { key: environment, operator: NotIn, values: [dev] }
+  template:
+    metadata:
+      labels:
+        component: redis
+        tier: cache
+        environment: test
+    spec:
+      containers:
+      ......
+```
+
+标签的选择规则定义在字段`spec.selector`下，在和下层资源匹配时必须全部满足，所以在内部匹配时会进行一个非常重要的阶段，也就是把规则或一组规则的集合转换为统一的标识方法，然后在所有下层资源中过滤符合所有条件的，即认为两者具有从属关系。
+
+### API资源的描述
+
+根据`Deployment`类型为开始层层分析，首先`Deployment`结构体中包含`DeploymentSpec`类型的描述信息，后面如果学习`Operator`开发会了解到，一般定义一个`API`对象，通常会包含`metav1.TypeMeta`、`metav1.ObjectMeta`、`Spec`以及`Status`四个字段。
+
+```Go
+type Deployment struct {
+    metav1.TypeMeta
+    // +optional
+    metav1.ObjectMeta
+
+    // Specification of the desired behavior of the Deployment.
+    // +optional
+    Spec DeploymentSpec
+
+    // Most recently observed status of the Deployment.
+    // +optional
+    Status DeploymentStatus
+}
+```
+
+在一个`yaml`文件中，`apiVersion`和`kind`这两个字段属于`TypeMeta`，说明了`API`的版本和类型信息(GVK)，`metadata`字段属于`ObjectMeta`，描述了对象元数据，包括名称、命名空间、标签和注解，`spec`字段属于类型的`Spec`，表示该资源对象的期望状态，包括副本数量和容器配置等。
+
+```yaml
+# TypeMeta
+apiVersion: apps/v1
+kind: Deployment
+----------------------------------------------------------
+# ObjectMeta
+metadata:
+  name: my-deployment
+  namespace: default
+  labels:
+    app: my-app
+    tier: frontend
+  annotations:
+    description: This is my deployment
+----------------------------------------------------------
+# Spec
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: my-image
+```
+
+回到`DeploymentSpec`类型中，其`Selector`字段为`metav1.LabelSelector`类型的指针。
+
+```Go
+type DeploymentSpec struct {
+    Replicas int32
+    Selector *metav1.LabelSelector
+    Template api.PodTemplateSpec
+    Strategy DeploymentStrategy
+    MinReadySeconds int32
+    RevisionHistoryLimit *int32
+    Paused bool
+    RollbackTo *RollbackConfig
+    ProgressDeadlineSeconds *int32
+}
+```
+
+继续看`LabelSelector`类型的定义，它正符合在一个`yaml`文件中对于标签选择的定义规范，即：1.选择标签与某个值是匹配的；2.标签和某些值存在`In/NotIn/Exists/DoesNotExist`的关系。
+
+```Go
+type LabelSelector struct {
+    // matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+    // map is equivalent to an element of matchExpressions, whose key field is "key", the
+    // operator is "In", and the values array contains only "value". The requirements are ANDed.
+    // +optional
+    MatchLabels map[string]string `json:"matchLabels,omitempty" protobuf:"bytes,1,rep,name=matchLabels"`
+    // matchExpressions is a list of label selector requirements. The requirements are ANDed.
+    // +optional
+    // +listType=atomic
+    MatchExpressions []LabelSelectorRequirement `json:"matchExpressions,omitempty" protobuf:"bytes,2,rep,name=matchExpressions"`
+}
+```
+
+### 标签选择的转换
+
+上面说到过，在控制器内部进行从属资源选择时，会对上层资源进行标签的转换以匹配所属资，`metav1.LabelSelectorAsSelector()`方法实现了这一逻辑，把`metav1.LabelSelector`类型转换为`labels.Selector`对象，下面来看它的实现。
+
+首先对传入的`LabelSelector`对象进行检查，如果是空则表示不匹配标签，不为空但长度是0表示匹配所有标签。首先处理`MatchLabels`字段，这一部分都是期望标签与目标值一致的，所以操作符使用`Equals`。然后遍历处理`MatchExpressions`字段，根据其中`Operator`的值进行转换，然后初始化一个`labels.Selector`接口，然后调用`Add()`方法添加之前处理好的标签，最终`Api`对象中的标签会以`labelkey--operator--labelvalue`切片的内部标签形式统一存在。
+
+```Go
+func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
+    // 对象检查
+    if ps == nil {
+        return labels.Nothing(), nil
+    }
+    if len(ps.MatchLabels)+len(ps.MatchExpressions) == 0 {
+        return labels.Everything(), nil
+    }
+    requirements := make([]labels.Requirement, 0, len(ps.MatchLabels)+len(ps.MatchExpressions))
+    // 处理MatchLabels字段
+    for k, v := range ps.MatchLabels {
+        r, err := labels.NewRequirement(k, selection.Equals, []string{v})
+        if err != nil {
+            return nil, err
+        }
+        requirements = append(requirements, *r)
+    }
+    // 处理MatchExpressions字段
+    for _, expr := range ps.MatchExpressions {
+        var op selection.Operator
+        switch expr.Operator {
+        case LabelSelectorOpIn:
+            op = selection.In
+        case LabelSelectorOpNotIn:
+            op = selection.NotIn
+        case LabelSelectorOpExists:
+            op = selection.Exists
+        case LabelSelectorOpDoesNotExist:
+            op = selection.DoesNotExist
+        default:
+            return nil, fmt.Errorf("%q is not a valid label selector operator", expr.Operator)
+        }
+        r, err := labels.NewRequirement(expr.Key, op, append([]string(nil), expr.Values...))
+        if err != nil {
+            return nil, err
+        }
+        requirements = append(requirements, *r)
+    }
+    // 初始化一个internalSelector类型
+    selector := labels.NewSelector()
+    // 添加requirements
+    selector = selector.Add(requirements...)
+    return selector, nil
+}
+```
+
+### Deployment下属资源的获取
+
+#### 
 
