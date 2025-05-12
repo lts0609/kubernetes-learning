@@ -606,5 +606,43 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 
 #### Pod的获取
 
+确认了`Deployment`下属的`ReplicaSet`列表后，使用`getPodMapForDeployment()`方法获取`Pod`的列表。根据函数签名，入参是`Deployment`和`ReplicaSet`列表，返回的是一个以`ReplicaSet`的`UID`为key，`Pod`对象为value的列表。
+
+首先进行控制器的标签转换，再获取到同一命名空间下标签匹配的`Pod`列表。在滚动更新过程中，可能存在多个`ReplicaSet`实例，并且每个实例下都还包含`Pod`，所以会先以`ReplicaSet`实例的`UID`为key初始化一个Map，然后遍历所有`Pod`，
+
+```Go
+func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsList []*apps.ReplicaSet) (map[types.UID][]*v1.Pod, error) {
+    // 标签转换
+    selector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
+    if err != nil {
+        return nil, err
+    }
+    // 列出命名空间下所有标签匹配Pod
+    pods, err := dc.podLister.Pods(d.Namespace).List(selector)
+    if err != nil {
+        return nil, err
+    }
+    // 以UID为key初始化空集合
+    podMap := make(map[types.UID][]*v1.Pod, len(rsList))
+    for _, rs := range rsList {
+        podMap[rs.UID] = []*v1.Pod{}
+    }
+    // 遍历Pod 根据其OwnerReference的UID加入对应集合
+    for _, pod := range pods {
+        controllerRef := metav1.GetControllerOf(pod)
+        if controllerRef == nil {
+            continue
+        }
+        // Only append if we care about this UID.
+        if _, ok := podMap[controllerRef.UID]; ok {
+            podMap[controllerRef.UID] = append(podMap[controllerRef.UID], pod)
+        }
+    }
+    return podMap, nil
+}
+```
+
+
+
 
 
