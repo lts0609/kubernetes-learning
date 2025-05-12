@@ -604,5 +604,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 }
 ```
 
-#### Pod
+#### Pod的获取
+
+
 
