@@ -642,7 +642,110 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 
 ## 调谐的具体动作
 
+根据不同的场景会有不同的调谐动作，场景大概可以分为几类：
 
+* `Deployment`对象正在删除中
+* `Deployment`对象手动暂停
+* `Deployment`对象需要回滚
+* `Deployment`对象副本扩缩容
+* `Deployment`对象滚动更新
+
+下面根据几种场景，结合代码分别进行详细的说明。
+
+### Deployment对象正在删除中
+
+在这种情况下，仅会同步状态，但不做任何可能影响资源状态的操作。
+
+```Go
+func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    // 获取新就版本的replicaset
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    // 合并replicaset
+    allRSs := append(oldRSs, newRS)
+    // 同步deployment的status
+    return dc.syncDeploymentStatus(ctx, allRSs, newRS, d)
+}
+```
+
+其中`getAllReplicaSetsAndSyncRevision()`方法用于获取所有新旧版本的`ReplicaSet`对象，是`Deployment Controller`调谐过程中的一个通用方法，在`rolling\rollback\recreate`过程中也被使用。
+
+```Go
+func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, []*apps.ReplicaSet, error) {
+   // 找到所有旧的replicaset
+    _, allOldRSs := deploymentutil.FindOldReplicaSets(d, rsList)
+
+    // 获取新的replicaset并更新版本号
+    newRS, err := dc.getNewReplicaSet(ctx, d, rsList, allOldRSs, createIfNotExisted)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    return newRS, allOldRSs, nil
+}
+```
+
+#### 获取旧的ReplicaSet对象
+
+这部分的逻辑也比较简单，首先获取新的`ReplicaSet`对象，然后遍历所有`ReplicaSet`并根据`UID`判断是否是旧的对象，并且如果旧的`ReplicaSet`还关联`Pod`，单独存放一份到`requiredRSs`中，返回的两个列表分别是：有`Pod`存在的旧`ReplicaSet`和旧`ReplicaSet`全集。
+
+```Go
+func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) ([]*apps.ReplicaSet, []*apps.ReplicaSet) {
+    var requiredRSs []*apps.ReplicaSet
+    var allRSs []*apps.ReplicaSet
+    newRS := FindNewReplicaSet(deployment, rsList)
+    for _, rs := range rsList {
+        // Filter out new replica set
+        if newRS != nil && rs.UID == newRS.UID {
+            continue
+        }
+        allRSs = append(allRSs, rs)
+        if *(rs.Spec.Replicas) != 0 {
+            requiredRSs = append(requiredRSs, rs)
+        }
+    }
+    return requiredRSs, allRSs
+}
+```
+
+#### 获取新的ReplicaSet对象
+
+来看新的对象是如何获取的，`ReplicaSetsByCreationTimestamp`类型是`[]*apps.ReplicaSet`类型的别名，专门为了实现`ReplicaSet`对象基于创建时间戳的排序而存在。第一步是先对所有的`ReplicaSet`进行排序，按照创建时间戳升序排列。第二步会遍历所有的对象，返回和最新`ReplicaSet`对象的`Template`描述完全一致的最早版本，这是Kubernetes中**确定性原则**的体现：避免了随机选择，并且避免了集群信息中存在多个相同`Template`的`ReplicaSet`情况下的处理异常。
+
+```Go
+func FindNewReplicaSet(deployment *apps.Deployment, rsList []*apps.ReplicaSet) *apps.ReplicaSet {
+  // 按创建时间升序排列replicaset
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(rsList))
+    for i := range rsList {
+        if EqualIgnoreHash(&rsList[i].Spec.Template, &deployment.Spec.Template) {
+            // In rare cases, such as after cluster upgrades, Deployment may end up with
+            // having more than one new ReplicaSets that have the same template as its template,
+            // see https://github.com/kubernetes/kubernetes/issues/40415
+            // We deterministically choose the oldest new ReplicaSet.
+            return rsList[i]
+        }
+    }
+    // new ReplicaSet does not exist.
+    return nil
+}
+```
+
+`Template`字段的比较函数如下，先对两个对象做深拷贝，然后删除`ReplicaSet`对象的`pod-template-hash`标签，该标签是在`ReplicaSet`创建时自动添加的根据Pod模板哈希而来的一个`Label`，用于帮助`ReplicaSet`选择并隔离不同版本的`Pod`，此处的一致性判断逻辑关注于用户的配置，删除该标签避免了用户配置相同但哈希结果不同的特殊情况。
+
+```Go
+func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
+    t1Copy := template1.DeepCopy()
+    t2Copy := template2.DeepCopy()
+    // Remove hash labels from template.Labels before comparing
+    delete(t1Copy.Labels, apps.DefaultDeploymentUniqueLabelKey)
+    delete(t2Copy.Labels, apps.DefaultDeploymentUniqueLabelKey)
+    return apiequality.Semantic.DeepEqual(t1Copy, t2Copy)
+}
+```
+
+#### 处理新的ReplicaSet对象
 
 
 
