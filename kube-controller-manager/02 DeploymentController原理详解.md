@@ -747,5 +747,234 @@ func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
 
 #### 处理新的ReplicaSet对象
 
+在`getAllReplicaSetsAndSyncRevision()`方法中，新`ReplicaSet`对象是由`getNewReplicaSet()`方法返回的，用于生成和管理滚动更新过程中的`ReplicaSet`新对象。
+
+首先尝试获取最新的`ReplicaSet`对象和最新对象的预期版本号`Revision`，如果该`ReplicaSet`对象存在检查其是否需要更新，如果要更新就向`ApiServer`发送一个更新请求并返回，然后检查`Deployment`对象是否需要更新，如果需要更新同样向`ApiServer`请求。如果`ReplicaSet`更新使函数返回，不用担心`Deployment`对象无法被更新，因为`ReplicaSet`的更新可以触发控制器的调谐动作，如果`Deployment`对象需要更新也会在下个调谐周期被处理。
+
+如果预期的`ReplicaSet`对象不存在，就需要去创建它，然后更新`Deployment`对象，最后返回新的`ReplicaSet`对象。
+
+```Go
+func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.Deployment, rsList, oldRSs []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, error) {
+    logger := klog.FromContext(ctx)
+    // 获取最新replicaset
+    existingNewRS := deploymentutil.FindNewReplicaSet(d, rsList)
+
+    // 获取旧replicaset的最大版本号
+    maxOldRevision := deploymentutil.MaxRevision(logger, oldRSs)
+    // 新replicaset的版本号设置为maxOldRevision+1
+    newRevision := strconv.FormatInt(maxOldRevision+1, 10)
+
+    // 最新的replicaset已经存在时
+    if existingNewRS != nil {
+        rsCopy := existingNewRS.DeepCopy()
+
+        // replicaset对象的注解是否更新
+        annotationsUpdated := deploymentutil.SetNewReplicaSetAnnotations(ctx, d, rsCopy, newRevision, true, maxRevHistoryLengthInChars)
+        // MinReadySeconds字段是否更新
+        minReadySecondsNeedsUpdate := rsCopy.Spec.MinReadySeconds != d.Spec.MinReadySeconds
+        // 如果需要更新 向ApiServer发送更新请求
+        if annotationsUpdated || minReadySecondsNeedsUpdate {
+            rsCopy.Spec.MinReadySeconds = d.Spec.MinReadySeconds
+            return dc.client.AppsV1().ReplicaSets(rsCopy.ObjectMeta.Namespace).Update(ctx, rsCopy, metav1.UpdateOptions{})
+        }
+
+        // deployment对象的版本号是否要更新
+        needsUpdate := deploymentutil.SetDeploymentRevision(d, rsCopy.Annotations[deploymentutil.RevisionAnnotation])
+        // deployment对象是否有进度状态条件信息
+        cond := deploymentutil.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
+        // 如果设置了进度截止时间但没有状态条件信息
+        if deploymentutil.HasProgressDeadline(d) && cond == nil {
+            msg := fmt.Sprintf("Found new replica set %q", rsCopy.Name)
+            // 更新deployment状态条件信息字段和标识位needsUpdate
+            condition := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, deploymentutil.FoundNewRSReason, msg)
+            deploymentutil.SetDeploymentCondition(&d.Status, *condition)
+            needsUpdate = true
+        }
+        // 如果deployment需要更新 同样向ApiServer发送更新请求
+        if needsUpdate {
+            var err error
+            if _, err = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{}); err != nil {
+                return nil, err
+            }
+        }
+        // 返回最终的新replicaset对象
+        return rsCopy, nil
+    }
+    // 如果最新replicaset不存在 但是不允许创建
+    if !createIfNotExisted {
+        return nil, nil
+    }
+
+    // 如果最新replicaset不存在 需要创建
+    newRSTemplate := *d.Spec.Template.DeepCopy()
+    podTemplateSpecHash := controller.ComputeHash(&newRSTemplate, d.Status.CollisionCount)
+    newRSTemplate.Labels = labelsutil.CloneAndAddLabel(d.Spec.Template.Labels, apps.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+    // Selector中也需要pod-template-hash
+    newRSSelector := labelsutil.CloneSelectorAndAddLabel(d.Spec.Selector, apps.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+
+    // 组装ReplicaSet对象
+    newRS := apps.ReplicaSet{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:            d.Name + "-" + podTemplateSpecHash,
+            Namespace:       d.Namespace,
+            OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(d, controllerKind)},
+            Labels:          newRSTemplate.Labels,
+        },
+        Spec: apps.ReplicaSetSpec{
+            Replicas:        new(int32),
+            MinReadySeconds: d.Spec.MinReadySeconds,
+            Selector:        newRSSelector,
+            Template:        newRSTemplate,
+        },
+    }
+    allRSs := append(oldRSs, &newRS)
+    // 获取目标副本数
+    newReplicasCount, err := deploymentutil.NewRSNewReplicas(d, allRSs, &newRS)
+    if err != nil {
+        return nil, err
+    }
+    // 更新副本数
+    *(newRS.Spec.Replicas) = newReplicasCount
+    // 设置ReplicaSet对象的注解
+    deploymentutil.SetNewReplicaSetAnnotations(ctx, d, &newRS, newRevision, false, maxRevHistoryLengthInChars)
+    // 创建ReplicaSet对象并处理异常
+    alreadyExists := false
+    createdRS, err := dc.client.AppsV1().ReplicaSets(d.Namespace).Create(ctx, &newRS, metav1.CreateOptions{})
+    switch {
+    // ReplicaSet对象已经存在(哈希冲突)
+    case errors.IsAlreadyExists(err):
+        alreadyExists = true
+        rs, rsErr := dc.rsLister.ReplicaSets(newRS.Namespace).Get(newRS.Name)
+        if rsErr != nil {
+            return nil, rsErr
+        }
+
+        controllerRef := metav1.GetControllerOf(rs)
+        if controllerRef != nil && controllerRef.UID == d.UID && deploymentutil.EqualIgnoreHash(&d.Spec.Template, &rs.Spec.Template) {
+            createdRS = rs
+            err = nil
+            break
+        }
+
+        if d.Status.CollisionCount == nil {
+            d.Status.CollisionCount = new(int32)
+        }
+        preCollisionCount := *d.Status.CollisionCount
+        *d.Status.CollisionCount++
+        // Update the collisionCount for the Deployment and let it requeue by returning the original
+        // error.
+        _, dErr := dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+        if dErr == nil {
+            logger.V(2).Info("Found a hash collision for deployment - bumping collisionCount to resolve it", "deployment", klog.KObj(d), "oldCollisionCount", preCollisionCount, "newCollisionCount", *d.Status.CollisionCount)
+        }
+        return nil, err
+  // 命名空间正在删除导致的异常  
+    case errors.HasStatusCause(err, v1.NamespaceTerminatingCause):
+        // if the namespace is terminating, all subsequent creates will fail and we can safely do nothing
+        return nil, err
+    case err != nil:
+        msg := fmt.Sprintf("Failed to create new replica set %q: %v", newRS.Name, err)
+        if deploymentutil.HasProgressDeadline(d) {
+            cond := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionFalse, deploymentutil.FailedRSCreateReason, msg)
+            deploymentutil.SetDeploymentCondition(&d.Status, *cond)
+            _, _ = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+        }
+        dc.eventRecorder.Eventf(d, v1.EventTypeWarning, deploymentutil.FailedRSCreateReason, msg)
+        return nil, err
+    }
+    // 创建成功记录事件
+    if !alreadyExists && newReplicasCount > 0 {
+        dc.eventRecorder.Eventf(d, v1.EventTypeNormal, "ScalingReplicaSet", "Scaled up replica set %s from 0 to %d", createdRS.Name, newReplicasCount)
+    }
+    // 检查Deployment是否需要更新
+    needsUpdate := deploymentutil.SetDeploymentRevision(d, newRevision)
+    if !alreadyExists && deploymentutil.HasProgressDeadline(d) {
+        msg := fmt.Sprintf("Created new replica set %q", createdRS.Name)
+        condition := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, deploymentutil.NewReplicaSetReason, msg)
+        deploymentutil.SetDeploymentCondition(&d.Status, *condition)
+        needsUpdate = true
+    }
+    // 更新Deployment对象
+    if needsUpdate {
+        _, err = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+    }
+    return createdRS, err
+}
+```
+
+##### 给新的ReplicaSet对象设置注解
+
+`SetNewReplicaSetAnnotations()`方法返回一个`bool`值来表示注解是否被修改。
+
+```Go
+func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, newRevision string, exists bool, revHistoryLimitInChars int) bool {
+    logger := klog.FromContext(ctx)
+    // 基于deployment对象更新注解
+    annotationChanged := copyDeploymentAnnotationsToReplicaSet(deployment, newRS)
+    // 更新注解部分的版本号Revision
+    if newRS.Annotations == nil {
+        newRS.Annotations = make(map[string]string)
+    }
+    // 获取replicaset对象当前的版本号
+    oldRevision, ok := newRS.Annotations[RevisionAnnotation]
+    oldRevisionInt, err := strconv.ParseInt(oldRevision, 10, 64)
+    if err != nil {
+        if oldRevision != "" {
+            logger.Info("Updating replica set revision OldRevision not int", "err", err)
+            return false
+        }
+        //If the RS annotation is empty then initialise it to 0
+        oldRevisionInt = 0
+    }
+    newRevisionInt, err := strconv.ParseInt(newRevision, 10, 64)
+    if err != nil {
+        logger.Info("Updating replica set revision NewRevision not int", "err", err)
+        return false
+    }
+    // 比较replicaset对象当前版本号和目标版本号是否相等
+    if oldRevisionInt < newRevisionInt {
+        // 需要更新
+        newRS.Annotations[RevisionAnnotation] = newRevision
+        // 修改标识位
+        annotationChanged = true
+        logger.V(4).Info("Updating replica set revision", "replicaSet", klog.KObj(newRS), "newRevision", newRevision)
+    }
+    // 如果版本号不一致表明此处发生更新动作 需要记录信息
+    if ok && oldRevisionInt < newRevisionInt {
+        revisionHistoryAnnotation := newRS.Annotations[RevisionHistoryAnnotation]
+        oldRevisions := strings.Split(revisionHistoryAnnotation, ",")
+        // 第一个元素是空字符串表示之前没有记录过revision信息
+        if len(oldRevisions[0]) == 0 {
+            newRS.Annotations[RevisionHistoryAnnotation] = oldRevision
+        } else {
+            // 计算一个新的总长度
+            // 例如revisionHistoryAnnotation的值是"1,2,3" 长度5 oldRevision是"4" 那么新的例如revisionHistoryAnnotation的值是应该是"1,2,3,4" 长度7
+            totalLen := len(revisionHistoryAnnotation) + len(oldRevision) + 1
+            // 避免RevisionHistoryAnnotation字符串长度超过最大限制
+            start := 0
+            // 如果超过限制 每次减去一个Revision数值和一个逗号
+            for totalLen > revHistoryLimitInChars && start < len(oldRevisions) {
+                totalLen = totalLen - len(oldRevisions[start]) - 1
+                start++
+            }
+            // 长度符合限制时 把oldRevision加入切片 并Join新的字符串替换原有注解
+            if totalLen <= revHistoryLimitInChars {
+                oldRevisions = append(oldRevisions[start:], oldRevision)
+                newRS.Annotations[RevisionHistoryAnnotation] = strings.Join(oldRevisions, ",")
+            } else {
+                logger.Info("Not appending revision due to revision history length limit reached", "revisionHistoryLimit", revHistoryLimitInChars)
+            }
+        }
+    }
+    // 如果新replicaset不存在(本次传入的事false) 需要创建新的对象 此时标识位也直为true
+    if !exists && SetReplicasAnnotations(newRS, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+MaxSurge(*deployment)) {
+        annotationChanged = true
+    }
+    return annotationChanged
+}
+```
+
+
+
 
 
