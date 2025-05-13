@@ -25,7 +25,7 @@ func startDeploymentController(ctx context.Context, controllerContext Controller
 }
 ```
 
-`DeploymentController`的实现逻辑都在`pkg/controller/deployment`路径下，`NewDeploymentController()`方法创建了一个控制器实例，根据函数签名来看，它接收上下文参数`ctx`，三种`Informer`对象用来监测`deployment/replicaset/pod`资源的变化，以及客户端`client`。照惯例先创建事件广播器和日志记录器，然后初始化`DeploymentController`对象，其中包括客户端、事件广播器、事件记录器、限速工作队列、和用于对`replicaset`对象进行`Patch`的操作器`rsControl`。再通过`AddEventHandler()`注册事件的处理函数，并初始化各种资源的`Lister`
+`DeploymentController`的实现逻辑都在`pkg/controller/deployment`路径下，`NewDeploymentController()`方法创建了一个控制器实例，根据函数签名来看，它接收上下文参数`ctx`，三种`Informer`对象用来监测`Deployment/ReplicaSet/Pod`资源的变化，以及客户端`client`。照惯例先创建事件广播器和日志记录器，然后初始化`DeploymentController`对象，其中包括客户端、事件广播器、事件记录器、限速工作队列、和用于对`ReplicaSet`对象进行`Patch`的操作器`rsControl`。再通过`AddEventHandler()`注册事件的处理函数，并初始化各种资源的`Lister`
 
 ```Go
 func NewDeploymentController(ctx context.Context, dInformer appsinformers.DeploymentInformer, rsInformer appsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, client clientset.Interface) (*DeploymentController, error) {
@@ -48,7 +48,7 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
         KubeClient: client,
         Recorder:   dc.eventRecorder,
     }
-    // 注册deployment资源变化处理函数
+    // 注册Deployment资源变化处理函数
     dInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
         AddFunc: func(obj interface{}) {
             dc.addDeployment(logger, obj)
@@ -61,7 +61,7 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
             dc.deleteDeployment(logger, obj)
         },
     })
-    // 注册replicaset资源变化处理函数
+    // 注册ReplicaSet资源变化处理函数
     rsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
         AddFunc: func(obj interface{}) {
             dc.addReplicaSet(logger, obj)
@@ -73,7 +73,7 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
             dc.deleteReplicaSet(logger, obj)
         },
     })
-    // 注册pod资源变化处理函数
+    // 注册Pod资源变化处理函数
     podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
         DeleteFunc: func(obj interface{}) {
             dc.deletePod(logger, obj)
@@ -99,7 +99,7 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
 
 ```Go
 type DeploymentController struct {
-    // 用于操作replicaset对象
+    // 用于操作ReplicaSet对象
     rsControl controller.RSControlInterface
     // Kubernetes客户端
     client    clientset.Interface
@@ -111,11 +111,11 @@ type DeploymentController struct {
     syncHandler func(ctx context.Context, dKey string) error
     // 单测使用 入队函数
     enqueueDeployment func(deployment *apps.Deployment)
-    // deployments资源的Lister
+    // Deployments资源的Lister
     dLister appslisters.DeploymentLister
-    // replicaset资源的Lister
+    // ReplicaSet资源的Lister
     rsLister appslisters.ReplicaSetLister
-    // pod资源的Lister
+    // Pod资源的Lister
     podLister corelisters.PodLister
     // 缓存状态检查函数
     dListerSynced cache.InformerSynced
@@ -128,7 +128,7 @@ type DeploymentController struct {
 
 ## 启动逻辑
 
-运行控制器实例的代码如下，另起一个协程，传入上下文控制生命周期，还有一个参数表示允许并发同步的`deployment`对象数量。
+运行控制器实例的代码如下，另起一个协程，传入上下文控制生命周期，还有一个参数表示允许并发同步的`Deployment`对象数量。
 
 ```Go
 go dc.Run(ctx, int(controllerContext.ComponentConfig.DeploymentController.ConcurrentDeploymentSyncs))
@@ -214,7 +214,7 @@ func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) 
     defer func() {
         logger.V(4).Info("Finished syncing deployment", "deployment", klog.KRef(namespace, name), "duration", time.Since(startTime))
     }()
-    // 通过Lister获取deployment
+    // 通过Lister获取Deployment
     deployment, err := dc.dLister.Deployments(namespace).Get(name)
     if errors.IsNotFound(err) {
         logger.V(2).Info("Deployment has been deleted", "deployment", klog.KRef(namespace, name))
@@ -464,17 +464,17 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 
 ```Go
 func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context, d *apps.Deployment) ([]*apps.ReplicaSet, error) {
-    // 获取命名空间下所有replicaset
+    // 获取命名空间下所有ReplicaSet
     rsList, err := dc.rsLister.ReplicaSets(d.Namespace).List(labels.Everything())
     if err != nil {
         return nil, err
     }
-    // deployment标签转换
+    // Deployment标签转换
     deploymentSelector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
     if err != nil {
         return nil, fmt.Errorf("deployment %s/%s has invalid label selector: %v", d.Namespace, d.Name, err)
     }
-    // 认领replicaset前会再次检查 避免List和Adopt之间的deployment对象的变更
+    // 认领ReplicaSet前会再次检查 避免List和Adopt之间的Deployment对象的变更
     canAdoptFunc := controller.RecheckDeletionTimestamp(func(ctx context.Context) (metav1.Object, error) {
         //直接从ApiServer获取最新对象 并通过UID进行一致性确认
         fresh, err := dc.client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
@@ -488,7 +488,7 @@ func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context,
     })
     // 创建Replicaset对象的引用管理器
     cm := controller.NewReplicaSetControllerRefManager(dc.rsControl, d, deploymentSelector, controllerKind, canAdoptFunc)
-    // 认领replicaset
+    // 认领ReplicaSet
     return cm.ClaimReplicaSets(ctx, rsList)
 }
 ```
@@ -658,14 +658,14 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 
 ```Go
 func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
-    // 获取新就版本的replicaset
+    // 获取新就版本的ReplicaSet
     newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
     if err != nil {
         return err
     }
-    // 合并replicaset
+    // 合并ReplicaSet
     allRSs := append(oldRSs, newRS)
-    // 同步deployment的status
+    // 同步Deployment的status
     return dc.syncDeploymentStatus(ctx, allRSs, newRS, d)
 }
 ```
@@ -674,10 +674,10 @@ func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Depl
 
 ```Go
 func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, []*apps.ReplicaSet, error) {
-   // 找到所有旧的replicaset
+   // 找到所有旧的ReplicaSet
     _, allOldRSs := deploymentutil.FindOldReplicaSets(d, rsList)
 
-    // 获取新的replicaset并更新版本号
+    // 获取新的ReplicaSet并更新版本号
     newRS, err := dc.getNewReplicaSet(ctx, d, rsList, allOldRSs, createIfNotExisted)
     if err != nil {
         return nil, nil, err
@@ -716,7 +716,7 @@ func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) 
 
 ```Go
 func FindNewReplicaSet(deployment *apps.Deployment, rsList []*apps.ReplicaSet) *apps.ReplicaSet {
-  // 按创建时间升序排列replicaset
+  // 按创建时间升序排列ReplicaSet
     sort.Sort(controller.ReplicaSetsByCreationTimestamp(rsList))
     for i := range rsList {
         if EqualIgnoreHash(&rsList[i].Spec.Template, &deployment.Spec.Template) {
@@ -756,19 +756,19 @@ func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
 ```Go
 func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.Deployment, rsList, oldRSs []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, error) {
     logger := klog.FromContext(ctx)
-    // 获取最新replicaset
+    // 获取最新ReplicaSet
     existingNewRS := deploymentutil.FindNewReplicaSet(d, rsList)
 
-    // 获取旧replicaset的最大版本号
+    // 获取旧ReplicaSet的最大版本号
     maxOldRevision := deploymentutil.MaxRevision(logger, oldRSs)
-    // 新replicaset的版本号设置为maxOldRevision+1
+    // 新ReplicaSet的版本号设置为maxOldRevision+1
     newRevision := strconv.FormatInt(maxOldRevision+1, 10)
 
-    // 最新的replicaset已经存在时
+    // 最新的ReplicaSet已经存在时
     if existingNewRS != nil {
         rsCopy := existingNewRS.DeepCopy()
 
-        // replicaset对象的注解是否更新
+        // ReplicaSet对象的注解是否更新
         annotationsUpdated := deploymentutil.SetNewReplicaSetAnnotations(ctx, d, rsCopy, newRevision, true, maxRevHistoryLengthInChars)
         // MinReadySeconds字段是否更新
         minReadySecondsNeedsUpdate := rsCopy.Spec.MinReadySeconds != d.Spec.MinReadySeconds
@@ -778,34 +778,34 @@ func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.De
             return dc.client.AppsV1().ReplicaSets(rsCopy.ObjectMeta.Namespace).Update(ctx, rsCopy, metav1.UpdateOptions{})
         }
 
-        // deployment对象的版本号是否要更新
+        // Deployment对象的版本号是否要更新
         needsUpdate := deploymentutil.SetDeploymentRevision(d, rsCopy.Annotations[deploymentutil.RevisionAnnotation])
-        // deployment对象是否有进度状态条件信息
+        // Deployment对象是否有进度状态条件信息
         cond := deploymentutil.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
         // 如果设置了进度截止时间但没有状态条件信息
         if deploymentutil.HasProgressDeadline(d) && cond == nil {
             msg := fmt.Sprintf("Found new replica set %q", rsCopy.Name)
-            // 更新deployment状态条件信息字段和标识位needsUpdate
+            // 更新Deployment状态条件信息字段和标识位needsUpdate
             condition := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, deploymentutil.FoundNewRSReason, msg)
             deploymentutil.SetDeploymentCondition(&d.Status, *condition)
             needsUpdate = true
         }
-        // 如果deployment需要更新 同样向ApiServer发送更新请求
+        // 如果Deployment需要更新 同样向ApiServer发送更新请求
         if needsUpdate {
             var err error
             if _, err = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{}); err != nil {
                 return nil, err
             }
         }
-        // 返回最终的新replicaset对象
+        // 返回最终的新ReplicaSet对象
         return rsCopy, nil
     }
-    // 如果最新replicaset不存在 但是不允许创建
+    // 如果最新ReplicaSet不存在 但是不允许创建
     if !createIfNotExisted {
         return nil, nil
     }
 
-    // 如果最新replicaset不存在 需要创建
+    // 如果最新ReplicaSet不存在 需要创建
     newRSTemplate := *d.Spec.Template.DeepCopy()
     podTemplateSpecHash := controller.ComputeHash(&newRSTemplate, d.Status.CollisionCount)
     newRSTemplate.Labels = labelsutil.CloneAndAddLabel(d.Spec.Template.Labels, apps.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
@@ -909,13 +909,13 @@ func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.De
 ```Go
 func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, newRevision string, exists bool, revHistoryLimitInChars int) bool {
     logger := klog.FromContext(ctx)
-    // 基于deployment对象更新注解
+    // 基于Deployment对象更新注解
     annotationChanged := copyDeploymentAnnotationsToReplicaSet(deployment, newRS)
     // 更新注解部分的版本号Revision
     if newRS.Annotations == nil {
         newRS.Annotations = make(map[string]string)
     }
-    // 获取replicaset对象当前的版本号
+    // 获取ReplicaSet对象当前的版本号
     oldRevision, ok := newRS.Annotations[RevisionAnnotation]
     oldRevisionInt, err := strconv.ParseInt(oldRevision, 10, 64)
     if err != nil {
@@ -931,7 +931,7 @@ func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deploymen
         logger.Info("Updating replica set revision NewRevision not int", "err", err)
         return false
     }
-    // 比较replicaset对象当前版本号和目标版本号是否相等
+    // 比较ReplicaSet对象当前版本号和目标版本号是否相等
     if oldRevisionInt < newRevisionInt {
         // 需要更新
         newRS.Annotations[RevisionAnnotation] = newRevision
@@ -966,7 +966,7 @@ func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deploymen
             }
         }
     }
-    // 如果新replicaset不存在(本次传入的事false) 需要创建新的对象 此时标识位也直为true
+    // 如果新ReplicaSet不存在(本次传入的事false) 需要创建新的对象 此时标识位也直为true
     if !exists && SetReplicasAnnotations(newRS, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+MaxSurge(*deployment)) {
         annotationChanged = true
     }
