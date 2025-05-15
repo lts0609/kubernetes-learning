@@ -175,13 +175,13 @@ func (dc *DeploymentController) worker(ctx context.Context) {
 }
 ```
 
-来看元素是如何被处理的，首先从工作队列中取出一个元素，返回的是一个字符串类型的对象名称，然后交给调谐方法也就是`syncHandler()`去处理。如果获取元素时发现队列以及关闭了就返回一个`false`，`worker`协程也随之关闭。
+来看元素是如何被处理的，首先从工作队列中取出一个元素，返回的是一个字符串类型的对象名称，然后交给调谐方法也就是`syncHandler()`去处理。如果获取元素时发现队列已经关闭了就返回一个`false`，`worker`协程也随之关闭。
 
 ```Go
 func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
     // 取出一个元素
     key, quit := dc.queue.Get()
-    // 如果队列为空且以及调用过shutdown关闭 quit会返回true
+    // 如果队列为空且已经调用过shutdown关闭 quit会返回true
     if quit {
         return false
     }
@@ -561,7 +561,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
         }
         // 控制器没被删除 释放
         if err := release(ctx, obj); err != nil {
-            // 对象以及不存在了 忽略
+            // 对象已经不存在了 忽略
             if errors.IsNotFound(err) {
                 return false, nil
             }
@@ -590,7 +590,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 
     // 控制器正常 标签匹配 命名空间匹配 尝试认领
     if err := adopt(ctx, obj); err != nil {
-        // 对象以及被删除 忽略
+        // 对象已经被删除 忽略
         if errors.IsNotFound(err) {
             return false, nil
         }
@@ -1051,7 +1051,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 ```Go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
     ......
-    // 场景二：新ReplicaSet以及饱和 需要缩容旧ReplicaSet
+    // 场景二：新ReplicaSet已经饱和 需要缩容旧ReplicaSet
     if deploymentutil.IsSaturated(deployment, newRS) {
         // 找到旧ReplicaSet中实例不为0的
         for _, old := range controller.FilterActiveReplicaSets(oldRSs) {
@@ -1066,7 +1066,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 }
 ```
 
-新的`ReplicaSet`已经饱和(副本数量达到`Deployment`的期望)，需要把剩余旧的`ReplicaSet`管理的副本数量缩至0。判断依据是`ReplicaSet`中三个字段的值要和`Deployment`的`Spec.Replicas`中设置相同：1.`Spec.Replicas`；2.`Annotations`中`desired-replicas`的值；3.`Status.AvailableReplicas`。此处可能会有疑问，为什么要同时确认`Spec`和`Annotations`中的值，其实他们表示的语义是不同的，`Spec`只能表示一个当前的期望状态，可能会动态变化，而`Annotations`是在创建`ReplicaSet`对象注入的`Deployment`最终期望。
+清理阶段，新的`ReplicaSet`已经饱和(副本数量达到`Deployment`的期望)，需要把剩余旧的`ReplicaSet`管理的副本数量缩至0。判断依据是`ReplicaSet`中三个字段的值要和`Deployment`的`Spec.Replicas`中设置相同：1.`Spec.Replicas`；2.`Annotations`中`desired-replicas`的值；3.`Status.AvailableReplicas`。此处可能会有疑问，为什么要同时确认`Spec`和`Annotations`中的值，其实他们表示的语义是不同的，`Spec`只能表示一个当前的期望状态，可能会动态变化，而`Annotations`是在创建`ReplicaSet`对象注入的`Deployment`最终期望。
 
 执行的动作就是找出旧的`ReplicaSet`中副本数不为0的对象，然后调用`scaleReplicaSetAndRecordEvent()`方法把它们的期望值更新为0，和场景一的处理方式基本相同。
 
