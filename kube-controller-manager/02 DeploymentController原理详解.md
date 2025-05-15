@@ -1072,7 +1072,168 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 ##### 场景三(核心场景)
 
+此为多`ReplicaSet`共存的滚动更新中间场景，首先确定策略是否为滚动更新，然后获取所有当前副本数大于0的`ReplicaSet`对象，根据`Replicas`和`MaxSurge`计算本次进行调整的副本总数。需要注意的是，在该滚动更新操作中，扩/缩容的动作是**单向**的，不会有一个对象扩容的同时另一个对象缩容的情况。通过反复`扩容-缩容`的动作，再经过场景二的收尾，最终实际的副本数与期望值相同，并且由新`ReplicaSet`替换了旧的对象。
 
+```Go
+func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    ......
+    // 场景三：滚动更新进行中
+    // 判断策略是否为RollingUpdate
+    if deploymentutil.IsRollingUpdate(deployment) {
+        // 获取所有存在副本的ReplicaSet以及对应的副本数量
+        allRSs := controller.FilterActiveReplicaSets(append(oldRSs, newRS))
+        allRSsReplicas := deploymentutil.GetReplicaCountForReplicaSets(allRSs)
+
+        allowedSize := int32(0)
+        // 计算允许最大存在副本数
+        if *(deployment.Spec.Replicas) > 0 {
+            allowedSize = *(deployment.Spec.Replicas) + deploymentutil.MaxSurge(*deployment)
+        }
+        // 根据当前总副本数判断下一步是扩容新ReplicaSet还是缩容旧ReplicaSet
+        deploymentReplicasToAdd := allowedSize - allRSsReplicas
+
+        switch {
+        case deploymentReplicasToAdd > 0:
+            // 扩容优先处理新的ReplicaSet对象
+            sort.Sort(controller.ReplicaSetsBySizeNewer(allRSs))
+        case deploymentReplicasToAdd < 0:
+            // 缩容优先处理旧的ReplicaSet对象
+            sort.Sort(controller.ReplicaSetsBySizeOlder(allRSs))
+        }
+        // 初始化变量 表示要调整的副本总数
+        deploymentReplicasAdded := int32(0)
+        nameToSize := make(map[string]int32)
+        logger := klog.FromContext(ctx)
+        // 遍历所有有副本数的ReplicaSet
+        for i := range allRSs {
+            rs := allRSs[i]
+            if deploymentReplicasToAdd != 0 {
+                // 计算调整的数量
+                proportion := deploymentutil.GetReplicaSetProportion(logger, rs, *deployment, deploymentReplicasToAdd, deploymentReplicasAdded)
+                // 记录每个RepicaSet的新期望副本数
+                nameToSize[rs.Name] = *(rs.Spec.Replicas) + proportion
+                // 累加调整的副本数 影响下一个对象变化量的上限
+                // 如deploymentReplicasToAdd=5 当前ReplicaSet计算调整的数量是3 下一个ReplicaSet调整的上限为5-3=2
+                deploymentReplicasAdded += proportion
+            } else {
+                nameToSize[rs.Name] = *(rs.Spec.Replicas)
+            }
+        }
+
+        // 再次遍历ReplicaSet并执行扩缩容
+        for i := range allRSs {
+            rs := allRSs[i]
+            // Deployment的最大调整数量和计算后的调整总数可能不一致
+            // 对第一个ReplicaSet对象进行差额处理
+            if i == 0 && deploymentReplicasToAdd != 0 {
+                // 以deploymentReplicasToAdd的值为调整的数量标准
+                leftover := deploymentReplicasToAdd - deploymentReplicasAdded
+                nameToSize[rs.Name] = nameToSize[rs.Name] + leftover
+                if nameToSize[rs.Name] < 0 {
+                    nameToSize[rs.Name] = 0
+                }
+            }
+
+            // 更新副本数
+            if _, _, err := dc.scaleReplicaSet(ctx, rs, nameToSize[rs.Name], deployment); err != nil {
+                // 如果更新失败Deployment对象会重新入队
+                return err
+            }
+        }
+    }
+    return nil
+}
+```
+
+##### 扩缩容调整ReplicaSet对象的比例
+
+先根据`Deployment`对象检查副本数和注释信息是否有需要调整的，如果需要调整就深拷贝一份最新`ReplicaSet`对象，然后先向`ApiServer`发注释信息的更新请求，然后判断是否有扩/缩容的需要，记录并将标识位返回给上层。
+
+```Go
+func (dc *DeploymentController) scaleReplicaSet(ctx context.Context, rs *apps.ReplicaSet, newScale int32, deployment *apps.Deployment) (bool, *apps.ReplicaSet, error) {
+    // 检查副本数是否需要调整
+    sizeNeedsUpdate := *(rs.Spec.Replicas) != newScale
+    // 检查注释信息是否需要调整
+    annotationsNeedUpdate := deploymentutil.ReplicasAnnotationsNeedUpdate(rs, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+deploymentutil.MaxSurge(*deployment))
+
+    scaled := false
+    var err error
+    // 需要更新时
+    if sizeNeedsUpdate || annotationsNeedUpdate {
+        oldScale := *(rs.Spec.Replicas)
+        // 深拷贝保证对象信息最新
+        rsCopy := rs.DeepCopy()
+        *(rsCopy.Spec.Replicas) = newScale
+        // 设置ReplicaSet对象注释信息
+        deploymentutil.SetReplicasAnnotations(rsCopy, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+deploymentutil.MaxSurge(*deployment))
+        // 发起更新请求
+        rs, err = dc.client.AppsV1().ReplicaSets(rsCopy.Namespace).Update(ctx, rsCopy, metav1.UpdateOptions{})
+        if err == nil && sizeNeedsUpdate {
+            var scalingOperation string
+            // 判断后续动作是扩容还是缩容
+            if oldScale < newScale {
+                scalingOperation = "up"
+            } else {
+                scalingOperation = "down"
+            }
+            scaled = true
+            // 记录事件和缩放类型
+            dc.eventRecorder.Eventf(deployment, v1.EventTypeNormal, "ScalingReplicaSet", "Scaled %s replica set %s from %d to %d", scalingOperation, rs.Name, oldScale, newScale)
+        }
+    }
+    // 返回是否需要扩缩容
+    return scaled, rs, err
+}
+```
+
+##### 滚动更新数量计算规则
+
+由`GetReplicaSetProportion()`函数返回给外层一个整数，这个数值的绝对值不超过允许值。
+
+```Go
+func GetReplicaSetProportion(logger klog.Logger, rs *apps.ReplicaSet, d apps.Deployment, deploymentReplicasToAdd, deploymentReplicasAdded int32) int32 {
+    if rs == nil || *(rs.Spec.Replicas) == 0 || deploymentReplicasToAdd == 0 || deploymentReplicasToAdd == deploymentReplicasAdded {
+        return int32(0)
+    }
+    // 计算调整比例
+    rsFraction := getReplicaSetFraction(logger, *rs, d)
+    allowed := deploymentReplicasToAdd - deploymentReplicasAdded
+    // 限制调整的绝对值不超过allowed限制
+    if deploymentReplicasToAdd > 0 {
+        return min(rsFraction, allowed)
+    }
+    return max(rsFraction, allowed)
+}
+```
+
+期望更新副本的差额计算逻辑在`getReplicaSetFraction()`函数中实现，如果`Deployment`要把副本数缩容到0，就直接返回当前`ReplicaSet`副本数作为差额。然后检查`ReplicaSet`注释中的最大容量，然后根据公式`期望容量=当前副本数*当前最大容量/上一轮最大容量`，返回本轮要扩/缩容的数量。
+
+```Go
+func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deployment) int32 {
+    // 如果想要缩容至0 直接返回当前的副本数
+    if *(d.Spec.Replicas) == int32(0) {
+        return -*(rs.Spec.Replicas)
+    }
+    // 获取Deployment的当前最大容量和上一轮为ReplicaSet对象注入的最大容量
+    deploymentMaxReplicas := *(d.Spec.Replicas) + MaxSurge(d)
+    deploymentMaxReplicasBeforeScale, ok := getMaxReplicasAnnotation(logger, &rs)
+    // 如果ReplicaSet对象的最大容量注解缺失或值为0
+    if !ok || deploymentMaxReplicasBeforeScale == 0 {
+        // 用当前Deployment的副本数重新写入
+        deploymentMaxReplicasBeforeScale = d.Status.Replicas
+        // 异常情况 返回0给上层 避免后续计算出无效比例0
+        if deploymentMaxReplicasBeforeScale == 0 {
+            return 0
+        }
+    }
+    // 获取ReplicaSet当前副本数
+    scaleBase := *(rs.Spec.Replicas)
+    // 计算规则为 当前副本数*当前最大容量/上一轮最大容量
+    newRSsize := (float64(scaleBase * deploymentMaxReplicas)) / float64(deploymentMaxReplicasBeforeScale)
+    // 返回差额
+    return integer.RoundToInt32(newRSsize) - *(rs.Spec.Replicas)
+}
+```
 
 
 
