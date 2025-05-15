@@ -974,6 +974,104 @@ func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deploymen
 }
 ```
 
+#### 同步Deployment对象的状态
+
+该流程的最后一步是同步`Deployment`对象的状态，逻辑很简单，首先计算一个预期的`Status`，然后和原始数据做比较，如果不同就向`ApiServer`发送一个更新请求。
+
+```Go
+func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
+    newStatus := calculateStatus(allRSs, newRS, d)
+
+    if reflect.DeepEqual(d.Status, newStatus) {
+        return nil
+    }
+
+    newDeployment := d
+    newDeployment.Status = newStatus
+    _, err := dc.client.AppsV1().Deployments(newDeployment.Namespace).UpdateStatus(ctx, newDeployment, metav1.UpdateOptions{})
+    return err
+}
+```
+
+### Deployment对象手动暂停
+
+在`d.Spec.Paused`的值为`true`时，表示`Deployment`对象被手动暂停，触发控制器的`sync()`方法。对比`syncStatusOnly()`方法，此处多了两个步骤，一个是执行扩缩容操作`scale()`，另一个是判断如果是暂停状态且没有回滚目标，就清理旧的`ReplicaSet`对象。
+
+```Go
+func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    if err := dc.scale(ctx, d, newRS, oldRSs); err != nil {
+        // If we get an error while trying to scale, the deployment will be requeued
+        // so we can abort this resync
+        return err
+    }
+
+    // Clean up the deployment when it's paused and no rollback is in flight.
+    if d.Spec.Paused && getRollbackTo(d) == nil {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+
+    allRSs := append(oldRSs, newRS)
+    return dc.syncDeploymentStatus(ctx, allRSs, newRS, d)
+}
+```
+
+#### 扩缩容逻辑
+
+`scale()`是管理`ReplicaSet`副本数的核心方法，其中包含三个实际场景以及处理逻辑。
+
+##### 场景一
+
+```Go
+func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    // 场景一：单ReplicaSet活跃
+    if activeOrLatest := deploymentutil.FindActiveOrLatest(newRS, oldRSs); activeOrLatest != nil {
+        if *(activeOrLatest.Spec.Replicas) == *(deployment.Spec.Replicas) {
+            return nil
+        }
+        // 实际副本数和期望副本数不一致 对其进行调节
+        _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, activeOrLatest, *(deployment.Spec.Replicas), deployment)
+        return err
+    }
+    ......
+}
+```
+
+只有一个`ReplicaSet`实例存在`Pod`，具体情况包括：1.新的`ReplicaSet`被创建；2.回滚后只剩下旧`ReplicaSet`；3.滚动更新时旧`ReplicaSet`副本已经归零。
+
+首先获取活跃的`ReplicaSet`对象，所谓活跃就是副本数大于0。其内部逻辑是在所有的`ReplicaSet`中查找副本数大于0的对象，如果结果是1个直接返回；如果是0个，先看最新的`ReplicaSet`对象是否存在，如果存在就返回它，不存在就返回列表中第一个旧的`ReplicaSet`对象；如果超过1个表示正在滚动更新过程中，返回`nil`。如果`activeOrLatest`不为空，对比活跃`ReplicaSet`对象的副本数和`Deployment`对象中是否是一致的，如果一致则不做处理。数量不一致则调用`scaleReplicaSetAndRecordEvent()`方法调整副本数，保证在后续逻辑开始前`ReplicaSet`副本实际状态和预期状态的一致性。
+
+##### 场景二
+
+```Go
+func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    ......
+    // 场景二：新ReplicaSet以及饱和 需要缩容旧ReplicaSet
+    if deploymentutil.IsSaturated(deployment, newRS) {
+        // 找到旧ReplicaSet中实例不为0的
+        for _, old := range controller.FilterActiveReplicaSets(oldRSs) {
+            // 以0为期望值进行更新
+            if _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, old, 0, deployment); err != nil {
+                return err
+            }
+        }
+        return nil
+    }
+  ......
+}
+```
+
+新的`ReplicaSet`已经饱和(副本数量达到`Deployment`的期望)，需要把剩余旧的`ReplicaSet`管理的副本数量缩至0。判断依据是`ReplicaSet`中三个字段的值要和`Deployment`的`Spec.Replicas`中设置相同：1.`Spec.Replicas`；2.`Annotations`中`desired-replicas`的值；3.`Status.AvailableReplicas`。此处可能会有疑问，为什么要同时确认`Spec`和`Annotations`中的值，其实他们表示的语义是不同的，`Spec`只能表示一个当前的期望状态，可能会动态变化，而`Annotations`是在创建`ReplicaSet`对象注入的`Deployment`最终期望。
+
+执行的动作就是找出旧的`ReplicaSet`中副本数不为0的对象，然后调用`scaleReplicaSetAndRecordEvent()`方法把它们的期望值更新为0，和场景一的处理方式基本相同。
+
+##### 场景三(核心场景)
+
 
 
 
