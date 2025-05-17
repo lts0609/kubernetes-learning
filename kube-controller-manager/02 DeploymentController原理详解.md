@@ -1235,5 +1235,59 @@ func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deploy
 }
 ```
 
+### Deployment对象需要回滚
+
+根据`Deployment`对象`Annotation`中`"deprecated.deployment.rollback.to"`的值来显式指定回滚的版本，会在未来被逐渐弃用并使用`kubectl rollback`命令控制回滚，修改资源对象是不被推荐的行为，该回滚逻辑的代码在`rollback()`方法中实现。
+
+首先获取`ReplicaSet`的信息，然后从注解信息中找出期望回滚的`Revision`版本号，如果是0尝试回滚到最近的一个版本。正常情况下遍历所有的`ReplicaSet`对象，并尝试根据`Revision`进行匹配，然后用`ReplicaSet`的Pod描述也就是`Template`字段更新当前`Deployment`中的内容，同时也更新注释信息，最后向`ApiServer`发送对`Deployment`对象的更新请求并请求回滚注解。
+
+```Go
+func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    logger := klog.FromContext(ctx)
+    // 获取ReplicaSet对象
+    newRS, allOldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+    if err != nil {
+        return err
+    }
+
+    allRSs := append(allOldRSs, newRS)
+    // 获取目标版本号
+    rollbackTo := getRollbackTo(d)
+    // 特殊情况处理
+    if rollbackTo.Revision == 0 {
+    // Revision为0时尝试回滚到上一个版本
+        if rollbackTo.Revision = deploymentutil.LastRevision(logger, allRSs); rollbackTo.Revision == 0 {
+            dc.emitRollbackWarningEvent(d, deploymentutil.RollbackRevisionNotFound, "Unable to find last revision.")
+            // 清除rollbackto注解
+            return dc.updateDeploymentAndClearRollbackTo(ctx, d)
+        }
+    }
+    for _, rs := range allRSs {
+        v, err := deploymentutil.Revision(rs)
+        if err != nil {
+            logger.V(4).Info("Unable to extract revision from deployment's replica set", "replicaSet", klog.KObj(rs), "err", err)
+            continue
+        }
+        // 匹配Revision
+        if v == rollbackTo.Revision {
+            logger.V(4).Info("Found replica set with desired revision", "replicaSet", klog.KObj(rs), "revision", v)
+            // 更新Template和注解并向ApiServer发送更新请求
+            performedRollback, err := dc.rollbackToTemplate(ctx, d, rs)
+            if performedRollback && err == nil {
+                dc.emitRollbackNormalEvent(d, fmt.Sprintf("Rolled back deployment %q to revision %d", d.Name, rollbackTo.Revision))
+            }
+            return err
+        }
+    }
+    dc.emitRollbackWarningEvent(d, deploymentutil.RollbackRevisionNotFound, "Unable to find the revision to rollback to.")
+    // 清理rollbackto注解
+    return dc.updateDeploymentAndClearRollbackTo(ctx, d)
+}
+```
+
+### Deployment对象副本扩缩容
+
+和手动暂停的处理流程完全相同，都是直接调用`sync()`方法。
+
 
 
