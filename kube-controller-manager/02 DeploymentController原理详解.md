@@ -993,9 +993,10 @@ func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs
 }
 ```
 
-### Deployment对象手动暂停
+### Deployment对象需要扩缩容或被手动暂停
 
-在`d.Spec.Paused`的值为`true`时，表示`Deployment`对象被手动暂停，触发控制器的`sync()`方法。对比`syncStatusOnly()`方法，此处多了两个步骤，一个是执行扩缩容操作`scale()`，另一个是判断如果是暂停状态且没有回滚目标，就清理旧的`ReplicaSet`对象。
+在`d.Spec.Paused`的值为`true`时，表示`Deployment`对象被手动暂停，`isScalingEvent()`方法根据`Deployment`对象的`Spec.Replicas`与注释信息`"desired-replicas"`的值是否一致来判断是否要进行扩缩容操作。两种情况的结果都是直接调用`sync()`方法。
+扩缩容的入口`sync()`方法对比`syncStatusOnly()`方法多了两个步骤，一个是执行扩缩容操作`scale()`，另一个差别是判断如果是暂停状态且没有回滚目标，就需要清理旧的`ReplicaSet`对象。
 
 ```Go
 func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
@@ -1285,9 +1286,13 @@ func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment
 }
 ```
 
-### Deployment对象副本扩缩容
+### Deployment对象滚动更新
 
-和手动暂停的处理流程完全相同，都是直接调用`sync()`方法。
+#### Recreate策略
+
+
+
+#### RollingUpdate策略
 
 
 
