@@ -1230,7 +1230,7 @@ func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deploy
     scaleBase := *(rs.Spec.Replicas)
     // 计算规则为 当前副本数*当前最大容量/上一轮最大容量
     newRSsize := (float64(scaleBase * deploymentMaxReplicas)) / float64(deploymentMaxReplicasBeforeScale)
-    // 返回期望调整的数量
+    // 返回期望调整的副本数量
     return integer.RoundToInt32(newRSsize) - *(rs.Spec.Replicas)
 }
 ```
