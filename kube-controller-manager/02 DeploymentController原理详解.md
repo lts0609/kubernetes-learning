@@ -1290,6 +1290,60 @@ func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment
 
 #### Recreate策略
 
+如果经过判断，滚动更新的策略为`Recreate`，其更新的处理方式为先终止旧的`Pod`，再启动新的`Pod`，在代码中由`rolloutRecreate()`方法为入口进入后续逻辑，一些核心的逻辑在之前的扩缩容部分已经有所涉及，下面分析该部分代码。
+
+在一开始先获取新旧`ReplicaSet`对象，值得注意的是`getAllReplicaSetsAndSyncRevision()`方法传入一个`false`，因为`Recreate`逻辑严格要求先把旧的实例删掉才能创建新的，如果缩容操作前创建新`ReplicaSet`会导致新旧版本实例共存。然后获取旧版本中有`Pod`实例存在的`ReplicaSet`对象，并修改它们的`Spec.Replicas`为0，然后在直到没有旧版本的`Pod`运行前都对`Deployment`的状态进行同步，缩容操作完成后如果新的`ReplicaSet`不存在，再次调用`getAllReplicaSetsAndSyncRevision()`方法传入`true`，创建该对象。扩容新`ReplicaSet`，扩容完成后清理旧版本对象并同步`Deployment`状态。
+
+```Go
+func (dc *DeploymentController) rolloutRecreate(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) error {
+    // 第四个入参表示如果ReplicaSet不存在是否创建
+    // 在缩容阶段避免新旧Pod共存 此处不直接创建
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    allRSs := append(oldRSs, newRS)
+    // 获取活跃的旧ReplicaSet对象
+    activeOldRSs := controller.FilterActiveReplicaSets(oldRSs)
+    // 把所有活跃的旧ReplicaSet副本数设置为0
+    scaledDown, err := dc.scaleDownOldReplicaSetsForRecreate(ctx, activeOldRSs, d)
+    if err != nil {
+        return err
+    }
+    // 缩容旧的ReplicaSet
+    if scaledDown {
+        // 同步Deployment状态
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // 等待缩容结束
+    if oldPodsRunning(newRS, oldRSs, podMap) {
+        // 同步Deployment状态
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // 如果新的ReplicaSet对象不存在 自动创建它
+    if newRS == nil {
+        newRS, oldRSs, err = dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+        if err != nil {
+            return err
+        }
+        // 记录对象
+        allRSs = append(oldRSs, newRS)
+    }
+    // 扩容新的ReplicaSet
+    if _, err := dc.scaleUpNewReplicaSetForRecreate(ctx, newRS, d); err != nil {
+        return err
+    }
+    // 清理旧的ReplicaSet
+    if util.DeploymentComplete(d, &d.Status) {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+    // 同步Deployment状态
+    return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+}
+```
+
 
 
 #### RollingUpdate策略
