@@ -1344,7 +1344,111 @@ func (dc *DeploymentController) rolloutRecreate(ctx context.Context, d *apps.Dep
 }
 ```
 
+`oldPodsRunning()`函数用来检查是否有`Pod`实例在运行中，首先获取所有的`Pod`集合，然后检查其`Status.Phase`字段，该字段表示`Pod`的状态，包括`Pending/Running/Running/Failed/Unknown`，对应各生命周期状态。对于属于新版本`ReplicaSet`管理的跳过处理，该逻辑只确认旧版本的`Pod`是否有仍处于或可能处于运行状态的。
 
+```Go
+func oldPodsRunning(newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) bool {
+    if oldPods := util.GetActualReplicaCountForReplicaSets(oldRSs); oldPods > 0 {
+        return true
+    }
+    // 遍历Pod
+    for rsUID, podList := range podMap {
+        // 跳过属于新ReplicaSet管理的Pod
+        if newRS != nil && newRS.UID == rsUID {
+            continue
+        }
+        for _, pod := range podList {
+            switch pod.Status.Phase {
+            case v1.PodFailed, v1.PodSucceeded:
+                // 退出状态
+                continue
+            case v1.PodUnknown:
+                // 异常状态
+                return true
+            default:
+                // 其他运行状态
+                return true
+            }
+        }
+    }
+    return false
+}
+```
+
+`syncRolloutStatus()`方法用来同步缩容的状态，首先会根据当前观测到的`Generation`、`Replicas`、`UpdatedReplicas`、`ReadyReplicas`、`AvailableReplicas`等副本数量信息，判断当前`Deployment`对象的状态是否达成了最低的可用条件，然后更新`CondType`为`DeploymentAvailable`的状态并组装一个最新的`DeploymentStatus`类型的状态信息。然后尝试获取`DeploymentProgressing`的状态信息，并对`Deployment`状态进行判断，如果副本数和新版本副本数相等且状态信息为新`ReplicaSet`可用(`NewReplicaSetAvailable`)表示部署完成。如果结果表示未完成部署，则对结果进行确认并向`ApiServer`发送更新`Deployment`的请求。
+
+```Go
+func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
+    // 计算Deployment最新状态
+    newStatus := calculateStatus(allRSs, newRS, d)
+    // 如果没有配置截止时间 就删除CondType为DeploymentProgressing为状态信息
+    if !util.HasProgressDeadline(d) {
+        util.RemoveDeploymentCondition(&newStatus, apps.DeploymentProgressing)
+    }
+
+    // 获取CondType为DeploymentProgressing为状态信息
+    currentCond := util.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
+    // Deployment状态判断
+    isCompleteDeployment := newStatus.Replicas == newStatus.UpdatedReplicas && currentCond != nil && currentCond.Reason == util.NewRSAvailableReason
+    // 未部署完成 进行状态判断并更新
+    if util.HasProgressDeadline(d) && !isCompleteDeployment {
+        switch {
+        // 已完成
+        case util.DeploymentComplete(d, &newStatus):
+            msg := fmt.Sprintf("Deployment %q has successfully progressed.", d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf("ReplicaSet %q has successfully progressed.", newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, util.NewRSAvailableReason, msg)
+            util.SetDeploymentCondition(&newStatus, *condition)
+        // 处理中
+        case util.DeploymentProgressing(d, &newStatus):
+            msg := fmt.Sprintf("Deployment %q is progressing.", d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf("ReplicaSet %q is progressing.", newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, util.ReplicaSetUpdatedReason, msg)
+            if currentCond != nil {
+                if currentCond.Status == v1.ConditionTrue {
+                    condition.LastTransitionTime = currentCond.LastTransitionTime
+                }
+                util.RemoveDeploymentCondition(&newStatus, apps.DeploymentProgressing)
+            }
+            util.SetDeploymentCondition(&newStatus, *condition)
+        // 已超时
+        case util.DeploymentTimedOut(ctx, d, &newStatus):
+            msg := fmt.Sprintf("Deployment %q has timed out progressing.", d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf("ReplicaSet %q has timed out progressing.", newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionFalse, util.TimedOutReason, msg)
+            util.SetDeploymentCondition(&newStatus, *condition)
+        }
+    }
+
+    // 处理失败状态Condition
+    if replicaFailureCond := dc.getReplicaFailures(allRSs, newRS); len(replicaFailureCond) > 0 {
+        // 只会返回一条信息
+        util.SetDeploymentCondition(&newStatus, replicaFailureCond[0])
+    } else {
+        // 没有失败信息就从Map中删除该key
+        util.RemoveDeploymentCondition(&newStatus, apps.DeploymentReplicaFailure)
+    }
+
+    // 新旧状态是否一致
+    if reflect.DeepEqual(d.Status, newStatus) {
+        // 如果状态一致 把Deployment对象重新入队并返回
+        dc.requeueStuckDeployment(ctx, d, newStatus)
+        return nil
+    }
+
+    newDeployment := d
+    newDeployment.Status = newStatus
+    // 更新对象
+    _, err := dc.client.AppsV1().Deployments(newDeployment.Namespace).UpdateStatus(ctx, newDeployment, metav1.UpdateOptions{})
+    return err
+}
+```
 
 #### RollingUpdate策略
 
