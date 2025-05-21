@@ -1385,7 +1385,6 @@ func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []
     if !util.HasProgressDeadline(d) {
         util.RemoveDeploymentCondition(&newStatus, apps.DeploymentProgressing)
     }
-
     // 获取CondType为DeploymentProgressing为状态信息
     currentCond := util.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
     // Deployment状态判断
