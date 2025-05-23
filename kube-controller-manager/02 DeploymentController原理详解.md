@@ -1451,5 +1451,238 @@ func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []
 
 #### RollingUpdate策略
 
+如果经过判断，更新策略为`RollingUpdate`，则采用滚动更新方式，逻辑入口为`rolloutRolling()`方法。从外层的逻辑来看很清晰，首先获取对象的信息，然后有限尝试扩容新`ReplicaSet`对象，如果扩容则本次调谐返回并更新状态，如果无法进行扩容动作，则对旧`ReplicaSet`进行缩容操作，如果缩容也返回并更新`Deployment`状态，如果两者都没有就根据`Spec`和`Status`的一致性检查`Deployment`对象是否为部署成功的状态，如果是就清理旧`ReplicaSet`对象，最后更新状态。
 
+```Go
+func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+    if err != nil {
+        return err
+    }
+    allRSs := append(oldRSs, newRS)
+    // 尝试扩容新版本
+    scaledUp, err := dc.reconcileNewReplicaSet(ctx, allRSs, newRS, d)
+    if err != nil {
+        return err
+    }
+    if scaledUp {
+        // 结束本次调谐
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+
+    // 尝试缩容旧版本
+    scaledDown, err := dc.reconcileOldReplicaSets(ctx, allRSs, controller.FilterActiveReplicaSets(oldRSs), newRS, d)
+    if err != nil {
+        return err
+    }
+    if scaledDown {
+        // 结束本次调谐
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // 检查是否完成部署
+    if deploymentutil.DeploymentComplete(d, &d.Status) {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+
+    // 同步状态
+    return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+}
+```
+
+##### 尝试扩容新ReplicaSet
+
+对这段逻辑进行简单的解释，首先对`ReplicaSet`和`Deployment`其中的`Spec.Replicas`字段做比较。如果新`ReplicaSet`已经和`Deployment`的期望副本数一致了则不做处理；如果是非预期的新`Replicas`期望副本数大于`Deployment`，则调整`ReplicaSet`的期望副本数为`Deployment`的期望副本数；其他情况就只剩下新`Replicas`期望副本数小于`Deployment`了，计算一下本次调整后的新`ReplicaSet`副本数并执行更新操作。
+
+```Go
+func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
+    if *(newRS.Spec.Replicas) == *(deployment.Spec.Replicas) {
+        // Scaling not required.
+        return false, nil
+    }
+    if *(newRS.Spec.Replicas) > *(deployment.Spec.Replicas) {
+        // Scale down.
+        scaled, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, newRS, *(deployment.Spec.Replicas), deployment)
+        return scaled, err
+    }
+    newReplicasCount, err := deploymentutil.NewRSNewReplicas(deployment, allRSs, newRS)
+    if err != nil {
+        return false, err
+    }
+    scaled, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, newRS, newReplicasCount, deployment)
+    return scaled, err
+}
+```
+
+###### 扩容新副本数的计算
+
+通过`NewRSNewReplicas()`函数计算出新`ReplicaSet`调整后的副本数量，规则也很简单。如果是`Recreate`策略直接返回`Deployment`的期望值；如果是`RollingUpdate`策略，根据`MaxSurge`计算`Deployment`的副本数量上限，然后根据**Deployment副本数上限与当前总副本数的差值**和**Deployment期望副本数与新ReplicaSet期望副本数的差值**，选择其中较小的加上当前新`ReplicaSet`的期望副本数，返回给上层作为调整后的期望副本数值。
+
+```Go
+func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet) (int32, error) {
+    switch deployment.Spec.Strategy.Type {
+    case apps.RollingUpdateDeploymentStrategyType:
+        // Check if we can scale up.
+        maxSurge, err := intstrutil.GetScaledValueFromIntOrPercent(deployment.Spec.Strategy.RollingUpdate.MaxSurge, int(*(deployment.Spec.Replicas)), true)
+        if err != nil {
+            return 0, err
+        }
+        // Find the total number of pods
+        currentPodCount := GetReplicaCountForReplicaSets(allRSs)
+        maxTotalPods := *(deployment.Spec.Replicas) + int32(maxSurge)
+        if currentPodCount >= maxTotalPods {
+            // Cannot scale up.
+            return *(newRS.Spec.Replicas), nil
+        }
+        // Scale up.
+        scaleUpCount := maxTotalPods - currentPodCount
+        // Do not exceed the number of desired replicas.
+        scaleUpCount = min(scaleUpCount, *(deployment.Spec.Replicas)-*(newRS.Spec.Replicas))
+        return *(newRS.Spec.Replicas) + scaleUpCount, nil
+    case apps.RecreateDeploymentStrategyType:
+        return *(deployment.Spec.Replicas), nil
+    default:
+        return 0, fmt.Errorf("deployment type %v isn't supported", deployment.Spec.Strategy.Type)
+    }
+}
+```
+
+##### 尝试缩容旧ReplicaSet
+
+缩容旧`ReplicaSet`的过程中首先计算最大可缩容数量，其计算公式为**当前副本数-最小可用副本数-新ReplicaSet不可用副本数**，然后根据最大缩容数量去缩容处理旧版本的`ReplicaSet`，总共会经历两轮缩容，第一次先清理旧`ReplicaSet`中的不健康副本，返回一个数量`cleanupCount`，然后再正常进行缩容，返回一个数量`scaledDownCount`，如果两者的和大于0表示进行了缩容操作。
+
+```Go
+func (dc *DeploymentController) reconcileOldReplicaSets(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
+    logger := klog.FromContext(ctx)
+    oldPodsCount := deploymentutil.GetReplicaCountForReplicaSets(oldRSs)
+    // 没有副本可以缩容
+    if oldPodsCount == 0 {
+        return false, nil
+    }
+    allPodsCount := deploymentutil.GetReplicaCountForReplicaSets(allRSs)
+    logger.V(4).Info("New replica set", "replicaSet", klog.KObj(newRS), "availableReplicas", newRS.Status.AvailableReplicas)
+    maxUnavailable := deploymentutil.MaxUnavailable(*deployment)
+    minAvailable := *(deployment.Spec.Replicas) - maxUnavailable
+    newRSUnavailablePodCount := *(newRS.Spec.Replicas) - newRS.Status.AvailableReplicas
+    // 计算最大缩容数量
+    maxScaledDown := allPodsCount - minAvailable - newRSUnavailablePodCount
+    if maxScaledDown <= 0 {
+        return false, nil
+    }
+    // 第一轮缩容 清理旧ReplicaSet的不健康副本 返回缩容的不健康副本数
+    oldRSs, cleanupCount, err := dc.cleanupUnhealthyReplicas(ctx, oldRSs, deployment, maxScaledDown)
+    if err != nil {
+        return false, nil
+    }
+    logger.V(4).Info("Cleaned up unhealthy replicas from old RSes", "count", cleanupCount)
+
+    allRSs = append(oldRSs, newRS)
+    // 第二轮缩容 正常缩容旧ReplicaSet 返回正常缩容的副本数
+    scaledDownCount, err := dc.scaleDownOldReplicaSetsForRollingUpdate(ctx, allRSs, oldRSs, deployment)
+    if err != nil {
+        return false, nil
+    }
+    logger.V(4).Info("Scaled down old RSes", "deployment", klog.KObj(deployment), "count", scaledDownCount)
+    // 返回结果表示是否进行了缩容
+    totalScaledDown := cleanupCount + scaledDownCount
+    return totalScaledDown > 0, nil
+}
+```
+
+###### 缩容不健康副本
+
+首先对所有旧版本的副本按创建时间进行排序，优先处理创建更早的副本。遍历所有旧的`ReplicaSet`对象，总共缩容数量不能超过方法中传入的`maxCleanupCount`，每个`ReplicaSet`的缩容选择缩容余额和不健康副本数两者中较小的，更新`ReplicaSet`的副本数为`Spec.Replicas-scaledDownCount`，并更新本地缓存中的`ReplicaSet`对象，每次缩容的值进行累加最终返回给上层。
+
+```Go
+func (dc *DeploymentController) cleanupUnhealthyReplicas(ctx context.Context, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment, maxCleanupCount int32) ([]*apps.ReplicaSet, int32, error) {
+    logger := klog.FromContext(ctx)
+    // 根据创建时间从早到晚排序
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(oldRSs))
+    // 初始化计数
+    totalScaledDown := int32(0)
+    // 遍历ReplicaSet
+    for i, targetRS := range oldRSs {
+        // 受maxCleanupCount限制清理的最大数量
+        if totalScaledDown >= maxCleanupCount {
+            break
+        }
+        if *(targetRS.Spec.Replicas) == 0 {
+            // 跳过没有副本的ReplicaSet
+            continue
+        }
+        logger.V(4).Info("Found available pods in old RS", "replicaSet", klog.KObj(targetRS), "availableReplicas", targetRS.Status.AvailableReplicas)
+        if *(targetRS.Spec.Replicas) == targetRS.Status.AvailableReplicas {
+            // no unhealthy replicas found, no scaling required.
+            continue
+        }
+        // 计算缩容数量 取缩容余额和不可用副本数中较小的
+        scaledDownCount := min(maxCleanupCount-totalScaledDown, *(targetRS.Spec.Replicas)-targetRS.Status.AvailableReplicas)
+        newReplicasCount := *(targetRS.Spec.Replicas) - scaledDownCount
+        if newReplicasCount > *(targetRS.Spec.Replicas) {
+            return nil, 0, fmt.Errorf("when cleaning up unhealthy replicas, got invalid request to scale down %s/%s %d -> %d", targetRS.Namespace, targetRS.Name, *(targetRS.Spec.Replicas), newReplicasCount)
+        }
+        // 更新ReplicaSet副本数
+        _, updatedOldRS, err := dc.scaleReplicaSetAndRecordEvent(ctx, targetRS, newReplicasCount, deployment)
+        if err != nil {
+            return nil, totalScaledDown, err
+        }
+        // 累加计数
+        totalScaledDown += scaledDownCount
+        // 更新旧ReplicaSet缓存
+        oldRSs[i] = updatedOldRS
+    }
+    return oldRSs, totalScaledDown, nil
+}
+```
+
+###### 正常缩容
+
+正常缩容的逻辑和处理不健康副本类似，先进行排序，然后相当于是重新计算了最大可缩容副本数，遍历`ReplicaSet`并选择缩容余额和期望副本数中较小的作为缩容数量，更新`ReplicaSet`对象并计数缩容的副本。
+
+```Go
+func (dc *DeploymentController) scaleDownOldReplicaSetsForRollingUpdate(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment) (int32, error) {
+    logger := klog.FromContext(ctx)
+
+    maxUnavailable := deploymentutil.MaxUnavailable(*deployment)
+    minAvailable := *(deployment.Spec.Replicas) - maxUnavailable
+    availablePodCount := deploymentutil.GetAvailableReplicaCountForReplicaSets(allRSs)
+    if availablePodCount <= minAvailable {
+        return 0, nil
+    }
+    logger.V(4).Info("Found available pods in deployment, scaling down old RSes", "deployment", klog.KObj(deployment), "availableReplicas", availablePodCount)
+    // 按创建时间排序
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(oldRSs))
+    // 初始化计数
+    totalScaledDown := int32(0)
+    // 计算最大可缩容数量
+    totalScaleDownCount := availablePodCount - minAvailable
+    // 遍历ReplicaSet
+    for _, targetRS := range oldRSs {
+        // 最大缩容数量约束
+        if totalScaledDown >= totalScaleDownCount {
+            break
+        }
+        if *(targetRS.Spec.Replicas) == 0 {
+            // 跳过没有副本的ReplicaSet
+            continue
+        }
+        // 计算缩容数量
+        scaleDownCount := min(*(targetRS.Spec.Replicas), totalScaleDownCount-totalScaledDown)
+        newReplicasCount := *(targetRS.Spec.Replicas) - scaleDownCount
+        if newReplicasCount > *(targetRS.Spec.Replicas) {
+            return 0, fmt.Errorf("when scaling down old RS, got invalid request to scale down %s/%s %d -> %d", targetRS.Namespace, targetRS.Name, *(targetRS.Spec.Replicas), newReplicasCount)
+        }
+        // 更新ReplicaSet副本数
+        _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, targetRS, newReplicasCount, deployment)
+        if err != nil {
+            return totalScaledDown, err
+        }
+        // 累加计数
+        totalScaledDown += scaleDownCount
+    }
+
+    return totalScaledDown, nil
+}
+```
 
