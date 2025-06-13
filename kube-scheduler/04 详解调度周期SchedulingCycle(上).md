@@ -586,7 +586,7 @@ func (sched *Scheduler) findNodesThatPassFilters(
 
 ##### 节点列表长度确定规则
 
-为了平衡调度的效率，不会把所有符合条件的节点都列出并打分，所以`feasiblenodes`切片会有一个预估长度，最小长度是100。`numFeasibleNodesToFind`抽样方法接收两个参数，分别是打分抽样百分比和集群节点总数。
+为了平衡调度的效率，不会把所有符合条件的节点都列出并打分，所以`feasiblenodes`切片会有一个预估长度，最小长度是100。`numFeasibleNodesToFind()`抽样方法接收两个参数，分别是打分抽样百分比和集群节点总数。
 
 ```Go
 func (sched *Scheduler) numFeasibleNodesToFind(percentageOfNodesToScore *int32, numAllNodes int32) (numNodes int32) {

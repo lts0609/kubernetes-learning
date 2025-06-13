@@ -520,7 +520,7 @@ func (cache *cacheImpl) updatePod(logger klog.Logger, oldPod, newPod *v1.Pod) er
 
 ### Cache中数据的同步
 
-在调度器启动过程中，代码位于`cmd/kube-scheduler/app/server.go`，`Cache`同步的重要代码就在`Run`函数中，此处会涉及到`Informer`机制。但可以提前了解到，在调度器启动之前，通过和`Informer`的协同，保证了`Cache`中数据和集群信息的一致性。
+在调度器启动过程中，代码位于`cmd/kube-scheduler/app/server.go`，`Cache`同步的重要代码就在`Run()`函数中，此处会涉及到`Informer`机制。但可以提前了解到，在调度器启动之前，通过和`Informer`的协同，保证了`Cache`中数据和集群信息的一致性。
 
 ```go
 startInformersAndWaitForSync := func(ctx context.Context) {

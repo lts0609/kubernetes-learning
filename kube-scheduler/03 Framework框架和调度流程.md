@@ -364,7 +364,7 @@ type Options struct {
 }
 ```
 
-在`Setup`阶段(更准确地说是在`ApplyTo`方法)基于`Options`生成了`Config/CompletedConfig`对象，合并了配置文件以及默认配置的内容，并在后续直接使用的是`CompletedConfig`去创建调度器实例，其中`Config`类型我们不特别关注，仍关注其中的字段`ComponentConfig`也就是类型`KubeSchedulerConfiguration`。
+在`Setup`阶段(更准确地说是在`ApplyTo()`方法)基于`Options`生成了`Config/CompletedConfig`对象，合并了配置文件以及默认配置的内容，并在后续直接使用的是`CompletedConfig`去创建调度器实例，其中`Config`类型我们不特别关注，仍关注其中的字段`ComponentConfig`也就是类型`KubeSchedulerConfiguration`。
 
 ```Go
 type Config struct {
@@ -659,7 +659,8 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
     ctx = klog.NewContext(ctx, logger)
     logger.V(4).Info("About to try and schedule pod", "pod", klog.KObj(pod))
   
-    // 根据PodSpec的SchedulerName获取对应的Framework 如果Pod没有配置调度器则会在SetDefaults_PodSpec过程中注入默认的"default-scheduler"
+    // 每一轮都获取配置 允许在不重启调度器的情况下动态更新策略
+    // 根据PodSpec的SchedulerName获取对应的Framework(可能存在多调度器配置) 如果Pod没有配置调度器则会在SetDefaults_PodSpec过程中注入默认的"default-scheduler"
     fwk, err := sched.frameworkForPod(pod)
     if err != nil {
         logger.Error(err, "Error occurred")

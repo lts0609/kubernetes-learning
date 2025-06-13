@@ -4,7 +4,7 @@
 
 `Informer`是`Kubernetes`中最重要的机制之一，在前面我们了解过`kube-scheduler`的代码，现在可以简单回顾，在其中找到`Informer`的影子。
 
-`cmd/kube-scheduler/app/server.go`文件中的`Run`函数完成了调度器实例的启动，看一下其中的`Informer`使用
+`cmd/kube-scheduler/app/server.go`文件中的`Run()`函数完成了调度器实例的启动，看一下其中的`Informer`使用
 
 ```Go
 startInformersAndWaitForSync := func(ctx context.Context) {
@@ -36,7 +36,7 @@ if !cc.ComponentConfig.DelayCacheUntilActive || cc.LeaderElection == nil {
 }
 ```
 
-其中的`InformerFactory`往前找来自于`cmd/kube-scheduler/app/options/options.go`中的`Config`方法
+其中的`InformerFactory`往前找来自于`cmd/kube-scheduler/app/options/options.go`中的`Config()`方法
 
 ```Go
 c.InformerFactory = scheduler.NewInformerFactory(client, 0)
@@ -52,7 +52,7 @@ func NewInformerFactory(cs clientset.Interface, resyncPeriod time.Duration) info
 }
 ```
 
-在`pkg/scheduler/scheduler.go`的`New`函数中，创建了两个`Lister`。通过代码可以看出，创建`Lister`会使用到`Informer`的`Indexer`，从而间接创建`Informer`。
+在`pkg/scheduler/scheduler.go`的`New()`函数中，创建了两个`Lister`。通过代码可以看出，创建`Lister`会使用到`Informer`的`Indexer`，从而间接创建`Informer`。
 
 ```Go
 podLister := informerFactory.Core().V1().Pods().Lister()
