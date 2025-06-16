@@ -437,3 +437,92 @@ func (pl *DefaultPreemption) PodEligibleToPreemptOthers(_ context.Context, pod *
 
 ```
 
+#### 获取候选节点
+
+确认Pod可以进行抢占后，通过`NodeLister`获取全量节点信息，`findCandidates`返回所有候选节点和状态。然后通过`NodeToStatusReader`接口获取信息记录为`Unschedulable`的节点，因为`UnschedulableAndUnresolvable`是硬性条件的不满足，这种条件不会以Pod的生命周期变化转换为满足，所以不在抢占的考虑范围以内。如果此时的潜在节点`potentialNodes`长度为0，已经没有合适的节点可以发生抢占，会清除当前Pod的`NominatedNodeName`信息并结束。`potentialNodes`长度大于0时，先获取集群中的所有`PDB`信息，驱逐某个Pod可能还会影响到其他命名空间的`PDB`，所以此处获取全量对象。
+
+```Go
+func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleState, allNodes []*framework.NodeInfo, pod *v1.Pod, m framework.NodeToStatusReader) ([]Candidate, *framework.NodeToStatus, error) {
+    // 全量节点数量判断
+    if len(allNodes) == 0 {
+        return nil, nil, errors.New("no nodes available")
+    }
+    logger := klog.FromContext(ctx)
+    // 通过状态Unschedulable初步缩小潜在候选节点的范围
+    potentialNodes, err := m.NodesForStatusCode(ev.Handler.SnapshotSharedLister().NodeInfos(), framework.Unschedulable)
+    if err != nil {
+        return nil, nil, err
+    }
+    // 潜在节点数量判断
+    if len(potentialNodes) == 0 {
+        logger.V(3).Info("Preemption will not help schedule pod on any node", "pod", klog.KObj(pod))
+        // In this case, we should clean-up any existing nominated node name of the pod.
+        if err := util.ClearNominatedNodeName(ctx, ev.Handler.ClientSet(), pod); err != nil {
+            logger.Error(err, "Could not clear the nominatedNodeName field of pod", "pod", klog.KObj(pod))
+            // We do not return as this error is not critical.
+        }
+        return nil, framework.NewDefaultNodeToStatus(), nil
+    }
+    // 获取PDB信息
+    pdbs, err := getPodDisruptionBudgets(ev.PdbLister)
+    if err != nil {
+        return nil, nil, err
+    }
+    // 确定当前批次候选节点范围
+    offset, candidatesNum := ev.GetOffsetAndNumCandidates(int32(len(potentialNodes)))
+    // 执行预抢占模拟
+    return ev.DryRunPreemption(ctx, state, pod, potentialNodes, pdbs, offset, candidatesNum)
+}
+```
+
+##### PDB
+
+PDB(PodDisruptionBudget，Pod中断预算)用于控制Pod副本的最小可用/最大不可用数量，避免发生服务中断。涉及到如`抢占驱逐`、`节点排空`、`滚动更新`、`水平扩缩容`等场景。
+
+##### 节点批量选择
+
+`GetOffsetAndNumCandidates()`方法接收一个`INT32`的整数，返回两个值，分别代表选择节点的`起始偏移量`和`候选节点数量`。
+
+```Go
+func (pl *DefaultPreemption) GetOffsetAndNumCandidates(numNodes int32) (int32, int32) {
+    return rand.Int31n(numNodes), pl.calculateNumCandidates(numNodes)
+}
+```
+
+候选节点数量的选择规则如下，此处涉及到两个参数值`MinCandidateNodesPercentage`和`MinCandidateNodesAbsolute`，分别表示**最小百分比**和**最小绝对值**，这两个变量的默认值可以在`pkg/scheduler/apis/config/testing/defaults/defaults.go`中找到。
+
+```Go
+var PluginConfigsV1 = []config.PluginConfig{
+    {
+        Name: "DefaultPreemption",
+        Args: &config.DefaultPreemptionArgs{
+            MinCandidateNodesPercentage: 10,
+            MinCandidateNodesAbsolute:   100,
+        },
+    },
+}
+```
+
+采样数量=节点总数*最小百分比，且不小于最小绝对值，不大于节点总数。
+
+```Go
+func (pl *DefaultPreemption) calculateNumCandidates(numNodes int32) int32 {
+    // 采样数量=节点总数*最小百分比
+    n := (numNodes * pl.args.MinCandidateNodesPercentage) / 100
+    // 如果采样数量<最小绝对值
+    if n < pl.args.MinCandidateNodesAbsolute {
+        // 采样数量=最小绝对值
+        n = pl.args.MinCandidateNodesAbsolute
+    }
+    // 如果采样数量>节点总数
+    if n > numNodes {
+        // 采样数量=节点总数
+        n = numNodes
+    }
+    return n
+}
+```
+
+##### 模拟抢占
+
+
