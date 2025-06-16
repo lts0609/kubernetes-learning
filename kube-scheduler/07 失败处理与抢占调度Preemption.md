@@ -394,7 +394,7 @@ func (ev *Evaluator) Preempt(ctx context.Context, state *framework.CycleState, p
 
 #### 抢占资格判断
 
-通过`NodeToStatusReader`的`Get()`方法获取提名节点的状态信息记录，传递给`PodEligibleToPreemptOthers()`方法判断Pod是否有资格进行抢占操作。首先判断`Pod.Spec.PreemptionPolicy`中的抢占策略是否存在且不为`Never`，然后获取节点快照和Pod的`NominatedNodeName`，如果字段存在表示已经在之前进行过抢占流程了，现在又出现在`PostFilter`阶段表示抢占失败。此时需要判断这个Pod是否重新进行抢占操作，如果是`UnschedulableAndUnresolvable`可以直接确定重新抢占，如果是其他失败原因则需要没有低于当前优先级的Pod正因抢占而退出才可以重新开始抢占，在这种因为临时资源导致抢占失败的情况下，为了避免资源浪费Pod还可以重试抢占尝试调度到其他节点。
+通过`NodeToStatusReader`的`Get()`方法获取提名节点的状态信息记录，传递给`PodEligibleToPreemptOthers()`方法判断Pod是否有资格进行抢占操作。首先判断`Pod.Spec.PreemptionPolicy`中的抢占策略是否存在且不为`Never`，然后获取节点快照和Pod的`NominatedNodeName`，如果字段存在表示已经在之前进行过抢占流程了，现在又出现在`PostFilter`阶段表示抢占失败。此时需要判断这个Pod是否重新进行抢占操作，如果是`UnschedulableAndUnresolvable`表示提名节点因为某些问题出现了永久不可用的情况，允许开始重新抢占；如果是其他失败原因如`Unschedulable`则需要没有低于当前优先级的Pod正因抢占而退出才可以重新抢占，在这种因为临时资源导致抢占失败的情况下，为了避免资源浪费Pod还可以重试抢占尝试调度到其他节点。一般来说，抢占解决的是`Unschedulable`的问题，而`UnschedulableAndUnresolvable`的重试是上一次调度到当前调度周期之间发生了预期以外的变化，所以允许重新抢占。
 
 回顾一下`Filter`扩展点的错误状态，`Unschedulable`表示临时的调度失败，如`CPU`资源不足、Pod间亲和性不满足等情况，可能下一轮调度情况变化就会可以调度了，这种情况不用人工干预只需要调度器重试；`UnschedulableAndUnresolvable`表示硬性条件的不满足，比如`NodeSelector`节点标签不满足、`PV`绑定失败等情况，其中临时条件和永久条件的关键区别在于**资源是否随着Pod的生命周期而发生变化**。
 
