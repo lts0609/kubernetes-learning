@@ -568,6 +568,7 @@ func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.Cycl
             } else {
                 violatingCandidates.add(c)
             }
+            // 采样节点达到数量后停止计算
             nvcSize, vcSize := nonViolatingCandidates.size(), violatingCandidates.size()
             if nvcSize > 0 && nvcSize+vcSize >= candidatesNum {
                 cancel()
