@@ -477,7 +477,7 @@ func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleS
 
 ##### PDB
 
-PDB(PodDisruptionBudget，Pod中断预算)用于控制Pod副本的最小可用/最大不可用数量，避免发生服务中断。涉及到如`抢占驱逐`、`节点排空`、`滚动更新`、`水平扩缩容`等场景。
+**PDB(PodDisruptionBudget，Pod干扰预算)**用于控制Pod副本的最小可用/最大不可用数量，保护应用避免发生服务中断。涉及到如`抢占驱逐`、`节点排空`、`滚动更新`、`水平扩缩容`等场景，该特性在1.21版本进入稳定状态，详情可见[官方文档](https://kubernetes.io/zh-cn/docs/reference/kubernetes-api/policy-resources/pod-disruption-budget-v1/)。
 
 ##### 节点批量选择
 
@@ -524,5 +524,74 @@ func (pl *DefaultPreemption) calculateNumCandidates(numNodes int32) int32 {
 ```
 
 ##### 模拟抢占
+
+`DryRunPreemption()`方法进行模拟抢占，根据函数签名，接收上下文`ctx`、调度状态`state`、抢占主体`pod`、潜在节点列表`potentialNodes`、Pod干扰预算`pdbs`、索引偏移量`offset`、采样数量`candidatesNum`，返回`[]Candidate`类型的候选节点列表和`NodeToStatus`类型的节点状态映射。具体的逻辑实现是先初始化两个列表分别记录`违反PDB`和`不违反PDB`的候选节点，然后使用并行器在所有的采样节点中执行闭包函数`checkNode()`来获取每个节点上能让出足够资源的**最小Pod集合**，然后经过类型转换为`Candidate`对象，并根据是否违反PDB做区分加入对应的列表中，如果没有成功返回Pod集合`victims`，就更新该节点的状态信息，最终返回合并后的节点列表和节点状态信息。
+
+```Go
+func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.CycleState, pod *v1.Pod, potentialNodes []*framework.NodeInfo,
+    pdbs []*policy.PodDisruptionBudget, offset int32, candidatesNum int32) ([]Candidate, *framework.NodeToStatus, error) {
+
+    fh := ev.Handler
+    // 初始化违反PDB和不违反PDB的候选节点列表
+    nonViolatingCandidates := newCandidateList(candidatesNum)
+    violatingCandidates := newCandidateList(candidatesNum)
+    ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
+    nodeStatuses := framework.NewDefaultNodeToStatus()
+
+    logger := klog.FromContext(ctx)
+    logger.V(5).Info("Dry run the preemption", "potentialNodesNumber", len(potentialNodes), "pdbsNumber", len(pdbs), "offset", offset, "candidatesNumber", candidatesNum)
+
+    var statusesLock sync.Mutex
+    var errs []error
+    // 节点检查函数
+    checkNode := func(i int) {
+        // 根据偏移量和索引拷贝节点信息
+        nodeInfoCopy := potentialNodes[(int(offset)+i)%len(potentialNodes)].Snapshot()
+        logger.V(5).Info("Check the potential node for preemption", "node", nodeInfoCopy.Node().Name)
+        // 拷贝状态信息
+        stateCopy := state.Clone()
+        // 核心方法 挑选被驱逐的Pod
+        pods, numPDBViolations, status := ev.SelectVictimsOnNode(ctx, stateCopy, pod, nodeInfoCopy, pdbs)
+        // 如果成功选到victims 先做类型转换 然后加入对应的列表
+        if status.IsSuccess() && len(pods) != 0 {
+            victims := extenderv1.Victims{
+                Pods:             pods,
+                NumPDBViolations: int64(numPDBViolations),
+            }
+            c := &candidate{
+                victims: &victims,
+                name:    nodeInfoCopy.Node().Name,
+            }
+            if numPDBViolations == 0 {
+                nonViolatingCandidates.add(c)
+            } else {
+                violatingCandidates.add(c)
+            }
+            nvcSize, vcSize := nonViolatingCandidates.size(), violatingCandidates.size()
+            if nvcSize > 0 && nvcSize+vcSize >= candidatesNum {
+                cancel()
+            }
+            return
+        }
+        // 如果没有在节点上选到victims 更新节点状态记录
+        if status.IsSuccess() && len(pods) == 0 {
+            status = framework.AsStatus(fmt.Errorf("expected at least one victim pod on node %q", nodeInfoCopy.Node().Name))
+        }
+        statusesLock.Lock()
+        if status.Code() == framework.Error {
+            errs = append(errs, status.AsError())
+        }
+        nodeStatuses.Set(nodeInfoCopy.Node().Name, status)
+        statusesLock.Unlock()
+    }
+    // 并行检查潜在节点
+    fh.Parallelizer().Until(ctx, len(potentialNodes), checkNode, ev.PluginName)
+    // 合并返回不违反PDB与违反PDB的候选节点列表
+    return append(nonViolatingCandidates.get(), violatingCandidates.get()...), nodeStatuses, utilerrors.NewAggregate(errs)
+}
+```
+
+##### 在节点上选择被驱逐的Pod
 
 
