@@ -475,7 +475,7 @@ func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleS
 }
 ```
 
-##### PDB
+##### Pod干扰预算
 
 **PDB(PodDisruptionBudget，Pod干扰预算)**用于控制Pod副本的最小可用/最大不可用数量，保护应用避免发生服务中断。涉及到如`抢占驱逐`、`节点排空`、`滚动更新`、`水平扩缩容`等场景，该特性在1.21版本进入稳定状态，详情可见[官方文档](https://kubernetes.io/zh-cn/docs/reference/kubernetes-api/policy-resources/pod-disruption-budget-v1/)。
 
@@ -594,4 +594,114 @@ func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.Cycl
 
 ##### 在节点上选择被驱逐的Pod
 
+并行器会在每个潜在的候选节点上执行`checkNode()`函数，其中的`SelectVictimsOnNode()`方法会在节点上找出能为抢占Pod让出足够资源的最小Pod集合。首先会初始化一个潜在受害者列表`potentialVictims`，然后遍历节点上的所有Pod，比较优先级把所有低于抢占者的Pod加入这个列表，并且临时移除这些Pod。此时已经没有更多的Pod可以被抢占驱逐了，执行在标准`Filter`流程中就使用的`RunFilterPluginsWithNominatedPods()`方法确认抢占者是否可以调度，如果仍然不可调度表示即使抢占也无法调度到该节点。如果可以调度，那么下一步就需要寻找最小的驱逐成本了，先根据是否违反PDB对这些低优先级的Pod进行分类，然后优先尝试恢复违反PDB的Pod，因为这类Pod更不希望收到影响。恢复Pod就是先在NodeInfo中添加Pod信息，然后执行`RunFilterPluginsWithNominatedPods()`方法验证Pod是否仍可以调度，如果添加后导致资源不足以让抢占者调度，那么添加这个Pod到`victims`列表，如果是违反PDB受害者的Pod，还需要对`numViolatingVictim`计数加一，该变量会返回给上层并作为评估标准之一。如果违反PDB和不违反PDB的节点都存在，需要对`victims`按优先级进行一次排序，最终返回受害者列表、违反PDB的受害者数量和成功状态。
+
+`SelectVictimsOnNode()`方法作为抢占的核心逻辑之一，使用了`最大删除-验证-逐步恢复`的筛选策略，使用闭包函数减少了代码冗余；逐步恢复阶段分别处理两类受害者列表，优先保障了高优先级Pod和服务可用(PDB)。体现了调度器在复杂场景下的实用主义思想，在算法复杂度和执行效率之间寻找动态平衡点。
+
+```Go
+func (pl *DefaultPreemption) SelectVictimsOnNode(
+    ctx context.Context,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodeInfo *framework.NodeInfo,
+    pdbs []*policy.PodDisruptionBudget) ([]*v1.Pod, int, *framework.Status) {
+    logger := klog.FromContext(ctx)
+    // 初始化潜在受害者列表
+    var potentialVictims []*framework.PodInfo
+    // 定义闭包函数 移除Pod
+    removePod := func(rpi *framework.PodInfo) error {
+        if err := nodeInfo.RemovePod(logger, rpi.Pod); err != nil {
+            return err
+        }
+        // 预过滤扩展的执行保证Pod被安全移除/添加
+        status := pl.fh.RunPreFilterExtensionRemovePod(ctx, state, pod, rpi, nodeInfo)
+        if !status.IsSuccess() {
+            return status.AsError()
+        }
+        return nil
+    }
+    // 定义闭包函数 添加Pod
+    addPod := func(api *framework.PodInfo) error {
+        nodeInfo.AddPodInfo(api)
+        status := pl.fh.RunPreFilterExtensionAddPod(ctx, state, pod, api, nodeInfo)
+        if !status.IsSuccess() {
+            return status.AsError()
+        }
+        return nil
+    }
+    // 在节点中找出所有优先级低于抢占者的Pod加入potentialVictims列表 并暂时从节点上移除它们
+    podPriority := corev1helpers.PodPriority(pod)
+    for _, pi := range nodeInfo.Pods {
+        if corev1helpers.PodPriority(pi.Pod) < podPriority {
+            potentialVictims = append(potentialVictims, pi)
+            if err := removePod(pi); err != nil {
+                return nil, 0, framework.AsStatus(err)
+            }
+        }
+    }
+
+    // 没有更低优先级的Pod了 返回状态原因
+    if len(potentialVictims) == 0 {
+        return nil, 0, framework.NewStatus(framework.UnschedulableAndUnresolvable, "No preemption victims found for incoming pod")
+    }
+
+    // 确认假设所有低优先级的Pod都已经不存在 抢占Pod是否可以调度
+    if status := pl.fh.RunFilterPluginsWithNominatedPods(ctx, state, pod, nodeInfo); !status.IsSuccess() {
+        // 如果仍不可调度 直接返回
+        return nil, 0, status
+    }
+    var victims []*v1.Pod
+    numViolatingVictim := 0
+    // 对所有潜在受害者按优先级由高到低排序
+    sort.Slice(potentialVictims, func(i, j int) bool { return util.MoreImportantPod(potentialVictims[i].Pod, potentialVictims[j].Pod) })
+    // 把潜在受害者按是否违反PDB分类
+    violatingVictims, nonViolatingVictims := filterPodsWithPDBViolation(potentialVictims, pdbs)
+    // 定义闭包函数 尝试恢复被移除的Pod
+    reprievePod := func(pi *framework.PodInfo) (bool, error) {
+        // 先添加Pod
+        if err := addPod(pi); err != nil {
+            return false, err
+        }
+        // 添加之后确认抢占者是否仍然可调度
+        status := pl.fh.RunFilterPluginsWithNominatedPods(ctx, state, pod, nodeInfo)
+        fits := status.IsSuccess()
+        // 如果恢复该Pod后导致了抢占者不可调度
+        if !fits {
+            // 把Pod重新删除
+            if err := removePod(pi); err != nil {
+                return false, err
+            }
+            rpi := pi.Pod
+            // 添加Pod到victimes列表
+            victims = append(victims, rpi)
+            logger.V(5).Info("Pod is a potential preemption victim on node", "pod", klog.KObj(rpi), "node", klog.KObj(nodeInfo.Node()))
+        }
+        return fits, nil
+    }
+    // 遍历违反PDB的节点
+    for _, p := range violatingVictims {
+        // 优先级从高到低尝试逐步恢复Pod
+        if fits, err := reprievePod(p); err != nil {
+            return nil, 0, framework.AsStatus(err)
+        } else if !fits {
+            // 违反PDB的受害者计数累加
+            numViolatingVictim++
+        }
+    }
+    // 遍历不违反PDB的节点
+    for _, p := range nonViolatingVictims {
+        // 优先级从高到低尝试逐步恢复Pod
+        if _, err := reprievePod(p); err != nil {
+            return nil, 0, framework.AsStatus(err)
+        }
+    }
+
+    // 因为先尝试恢复了违反PDB的Pod 如果两个队列都不为空 需要重新根据优先级排序
+    if len(violatingVictims) != 0 && len(nonViolatingVictims) != 0 {
+        sort.Slice(victims, func(i, j int) bool { return util.MoreImportantPod(victims[i], victims[j]) })
+    }
+    // 返回受害者列表、违反PDB的受害者数量、以及成功状态
+    return victims, numViolatingVictim, framework.NewStatus(framework.Success)
+}
+```
 
