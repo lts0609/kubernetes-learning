@@ -706,3 +706,68 @@ func (pl *DefaultPreemption) SelectVictimsOnNode(
 }
 ```
 
+#### 执行扩展器过滤
+
+获取到候选节点和受害者后，会遍历执行注册的扩展器并执行其逻辑，把每个扩展器的输出作为下一个扩展器的输入，最终经过所有扩展器的过滤，返回了更小范围的候选节点列表。
+
+`HTTPExtender`是通过HTTP接口调用外部扩展程序的机制，`extender.ProcessPreemption()`方法把抢占信息封装成HTTP请求发送给外部程序，接收到外部程序的响应后将其转换为内部数据形式并返回。
+
+```Go
+func (ev *Evaluator) callExtenders(logger klog.Logger, pod *v1.Pod, candidates []Candidate) ([]Candidate, *framework.Status) {
+    // 获取注册的扩展器
+    extenders := ev.Handler.Extenders()
+    nodeLister := ev.Handler.SnapshotSharedLister().NodeInfos()
+    if len(extenders) == 0 {
+        return candidates, nil
+    }
+
+    // []Candidate类型转换为map[string]*extenderv1.Victims
+    victimsMap := ev.CandidatesToVictimsMap(candidates)
+    if len(victimsMap) == 0 {
+        return candidates, nil
+    }
+    // 遍历候选节点执行
+    for _, extender := range extenders {
+        if !extender.SupportsPreemption() || !extender.IsInterested(pod) {
+            continue
+        }
+        nodeNameToVictims, err := extender.ProcessPreemption(pod, victimsMap, nodeLister)
+        if err != nil {
+            if extender.IsIgnorable() {
+                logger.Info("Skipped extender as it returned error and has ignorable flag set",
+                    "extender", extender.Name(), "err", err)
+                continue
+            }
+            return nil, framework.AsStatus(err)
+        }
+        // 校验返回结果
+        for nodeName, victims := range nodeNameToVictims {
+            // 如果是无效节点 返回错误
+            if victims == nil || len(victims.Pods) == 0 {
+                if extender.IsIgnorable() {
+                    delete(nodeNameToVictims, nodeName)
+                    logger.Info("Ignored node for which the extender didn't report victims", "node", klog.KRef("", nodeName), "extender", extender.Name())
+                    continue
+                }
+                return nil, framework.AsStatus(fmt.Errorf("expected at least one victim pod on node %q", nodeName))
+            }
+        }
+        // 更新变量结果 传入下一个扩展器
+        victimsMap = nodeNameToVictims
+
+        if len(victimsMap) == 0 {
+            break
+        }
+    }
+    // 转换回[]Candidate类型并返回
+    var newCandidates []Candidate
+    for nodeName := range victimsMap {
+        newCandidates = append(newCandidates, &candidate{
+            victims: victimsMap[nodeName],
+            name:    nodeName,
+        })
+    }
+    return newCandidates, nil
+}
+```
+
