@@ -1,129 +1,5 @@
 # 失败处理与抢占调度Preemption
 
-## 调度的失败处理
-
-在`ScheduleOne()`方法中可以看到调度器在两个位置进行了失败处理，不难想到这两处就是`SchedulingCycle`与`BindingCycle`的结尾，在两个生命周期结束时进行错误判断与处理。
-
-```Go
-func (sched *Scheduler) ScheduleOne(ctx context.Context) {
-    ......
-
-    scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
-    if !status.IsSuccess() {
-        sched.FailureHandler(schedulingCycleCtx, fwk, assumedPodInfo, status, scheduleResult.nominatingInfo, start)
-        return
-    }
-
-    go func() {
-        ......
-
-        status := sched.bindingCycle(bindingCycleCtx, state, fwk, scheduleResult, assumedPodInfo, start, podsToActivate)
-        if !status.IsSuccess() {
-            sched.handleBindingCycleError(bindingCycleCtx, state, fwk, assumedPodInfo, start, scheduleResult, status)
-            return
-        }
-    }()
-}
-```
-
-失败处理接口`FailureHandler`是`FailureHandlerFn`类型的函数，在调度器创建时的`applyDefaultHandlers()`方法设置。
-
-```Go
-func (sched *Scheduler) applyDefaultHandlers() {
-    sched.SchedulePod = sched.schedulePod
-    sched.FailureHandler = sched.handleSchedulingFailure
-}
-```
-
-下面来详细分析`handleSchedulingFailure()`方法内的逻辑。首先来看函数签名，该方法接收六个参数，分别是上下文信息`ctx`，调度配置`fwk`，Pod信息`podInfo`，返回状态`status`，提名信息`nominatingInfo`和调度起始时间`start`。整体上包括调度事件记录、Pod提名节点信息处理、Pod对象重新入队和Pod状态更新。
-
-```Go
-func (sched *Scheduler) handleSchedulingFailure(ctx context.Context, fwk framework.Framework, podInfo *framework.QueuedPodInfo, status *framework.Status, nominatingInfo *framework.NominatingInfo, start time.Time) {
-    calledDone := false
-    defer func() {
-        if !calledDone {
-            // 一般情况下AddUnschedulableIfNotPresent内部会调用SchedulingQueue.Done(pod.UID) 
-            // 避免没有调用的特殊情况 正确释放Pod资源
-            sched.SchedulingQueue.Done(podInfo.Pod.UID)
-        }
-    }()
-
-    logger := klog.FromContext(ctx)
-    // 初始化错误原因
-    reason := v1.PodReasonSchedulerError
-    if status.IsRejected() {
-        // 如果状态是被拒绝表示不可调度
-        reason = v1.PodReasonUnschedulable
-    }
-    // 记录指标
-    switch reason {
-    case v1.PodReasonUnschedulable:
-        metrics.PodUnschedulable(fwk.ProfileName(), metrics.SinceInSeconds(start))
-    case v1.PodReasonSchedulerError:
-        metrics.PodScheduleError(fwk.ProfileName(), metrics.SinceInSeconds(start))
-    }
-
-    // 获取失败信息
-    pod := podInfo.Pod
-    err := status.AsError()
-    errMsg := status.Message()
-
-    if err == ErrNoNodesAvailable {
-        // 集群中没有Node注册
-        logger.V(2).Info("Unable to schedule pod; no nodes are registered to the cluster; waiting", "pod", klog.KObj(pod))
-    } else if fitError, ok := err.(*framework.FitError); ok {
-        // 不符合条件被调度插件拒绝
-        // 记录UnschedulablePlugins和PendingPlugins
-        podInfo.UnschedulablePlugins = fitError.Diagnosis.UnschedulablePlugins
-        podInfo.PendingPlugins = fitError.Diagnosis.PendingPlugins
-        logger.V(2).Info("Unable to schedule pod; no fit; waiting", "pod", klog.KObj(pod), "err", errMsg)
-    } else {
-        // 其他内部错误
-        logger.Error(err, "Error scheduling pod; retrying", "pod", klog.KObj(pod))
-    }
-
-    // 使用Lister获取最新信息并在其中查找当前Pod
-    podLister := fwk.SharedInformerFactory().Core().V1().Pods().Lister()
-    cachedPod, e := podLister.Pods(pod.Namespace).Get(pod.Name)
-    if e != nil {
-        logger.Info("Pod doesn't exist in informer cache", "pod", klog.KObj(pod), "err", e)
-    } else {
-        // 检查是否有NodeName信息
-        if len(cachedPod.Spec.NodeName) != 0 {
-            logger.Info("Pod has been assigned to node. Abort adding it back to queue.", "pod", klog.KObj(pod), "node", cachedPod.Spec.NodeName)
-        } else {
-            // 没有NodeName信息 把Pod深拷贝一份后重新入队
-            podInfo.PodInfo, _ = framework.NewPodInfo(cachedPod.DeepCopy())
-            if err := sched.SchedulingQueue.AddUnschedulableIfNotPresent(logger, podInfo, sched.SchedulingQueue.SchedulingCycle()); err != nil {
-                logger.Error(err, "Error occurred")
-            }
-            calledDone = true
-        }
-    }
-
-    // 尝试添加带有提名节点信息的Pod到Nominator
-    if sched.SchedulingQueue != nil {
-        sched.SchedulingQueue.AddNominatedPod(logger, podInfo.PodInfo, nominatingInfo)
-    }
-
-    if err == nil {
-        return
-    }
-    // 记录事件
-    msg := truncateMessage(errMsg)
-    fwk.EventRecorder().Eventf(pod, nil, v1.EventTypeWarning, "FailedScheduling", "Scheduling", msg)
-    // 更新Pod状态 包括提名节点信息和Condition
-    if err := updatePod(ctx, sched.client, pod, &v1.PodCondition{
-        Type:    v1.PodScheduled,
-        Status:  v1.ConditionFalse,
-        Reason:  reason,
-        Message: errMsg,
-    }, nominatingInfo); err != nil {
-        logger.Error(err, "Error updating pod", "pod", klog.KObj(pod))
-    }
-}
-```
-
 ## 抢占调度流程
 
 ### 抢占事件发生的时机
@@ -771,3 +647,482 @@ func (ev *Evaluator) callExtenders(logger klog.Logger, pod *v1.Pod, candidates [
 }
 ```
 
+#### 获取最优候选节点
+
+这个阶段可以理解为标准流程中的`Priorities`，根据执行评分插件，选出最适合抢占的候选节点，其中的核心函数是`pickOneNodeForPreemption()`，作用可以类比标准流程的`RunScorePlugins()`方法。
+
+```Go
+func (ev *Evaluator) SelectCandidate(ctx context.Context, candidates []Candidate) Candidate {
+    logger := klog.FromContext(ctx)
+
+    if len(candidates) == 0 {
+        return nil
+    }
+    // 只有一个候选节点直接返回 等同于len(feasibleNode)==1的场景
+    if len(candidates) == 1 {
+        return candidates[0]
+    }
+    // 数据类型转换
+    victimsMap := ev.CandidatesToVictimsMap(candidates)
+    // 获取评分函数列表
+    scoreFuncs := ev.OrderedScoreFuncs(ctx, victimsMap)
+    // 执行评分函数
+    candidateNode := pickOneNodeForPreemption(logger, victimsMap, scoreFuncs)
+
+    // 返回最有节点对象
+    if victims := victimsMap[candidateNode]; victims != nil {
+        return &candidate{
+            victims: victims,
+            name:    candidateNode,
+        }
+    }
+
+    // 异常处理 不会执行到此处
+    logger.Error(errors.New("no candidate selected"), "Should not reach here", "candidates", candidates)
+    // 避免流程结束
+    return candidates[0]
+}
+```
+
+`pickOneNodeForPreemption()`函数实现了节点的选择，根据对代码的分析，它的实现比`Priorities`要简单很多，不涉及节点的并行计算和归一化。使用贪心算法不断更新最高评分和最高分节点列表，并把当前评分函数的输出作为下一个评分函数的输入。值得一提的是，评分函数列表中的策略是存在优先级的，前一个评分函数的重要性永远高于后一个评分函数，只有当一个评分函数无法完全区分节点是否最优时，才会进入策略链的下一环继续评估。如果某一个评分函数只得到了一个最高分节点，那么就可以直接返回该节点了。
+
+```Go
+func pickOneNodeForPreemption(logger klog.Logger, nodesToVictims map[string]*extenderv1.Victims, scoreFuncs []func(node string) int64) string {
+    if len(nodesToVictims) == 0 {
+        return ""
+    }
+    // 初始化候选节点列表
+    allCandidates := make([]string, 0, len(nodesToVictims))
+    for node := range nodesToVictims {
+        allCandidates = append(allCandidates, node)
+    }
+    // 如果没有获取到评分函数 设置默认函数
+    if len(scoreFuncs) == 0 {
+        // 最少违反PDB
+        minNumPDBViolatingScoreFunc := func(node string) int64 {
+            // 违反PDB受害者数量越少评分越高
+            return -nodesToVictims[node].NumPDBViolations
+        }
+        // 最高优先级受害者等级低
+        minHighestPriorityScoreFunc := func(node string) int64 {
+            // 受害者列表中第一个(最高优先级)元素的优先级越低评分越高
+            highestPodPriority := corev1helpers.PodPriority(nodesToVictims[node].Pods[0])
+            return -int64(highestPodPriority)
+        }
+        // 受害者优先级总和最小
+        minSumPrioritiesScoreFunc := func(node string) int64 {
+            var sumPriorities int64
+            for _, pod := range nodesToVictims[node].Pods {
+                // 受害者的优先级总和越小评分越高
+                sumPriorities += int64(corev1helpers.PodPriority(pod)) + int64(math.MaxInt32+1)
+            }
+            return -sumPriorities
+        }
+        // 受害者数量最少
+        minNumPodsScoreFunc := func(node string) int64 {
+            // 受害者数量越少评分越高
+            return -int64(len(nodesToVictims[node].Pods))
+        }
+        // 最高优先级受害者的启动时间最晚
+        latestStartTimeScoreFunc := func(node string) int64 {
+            // 最高优先级受害者的启动时间越晚评分越高
+            earliestStartTimeOnNode := util.GetEarliestPodStartTime(nodesToVictims[node])
+            if earliestStartTimeOnNode == nil {
+                logger.Error(errors.New("earliestStartTime is nil for node"), "Should not reach here", "node", node)
+                return int64(math.MinInt64)
+            }
+            return earliestStartTimeOnNode.UnixNano()
+        }
+
+        // 注册默认函数到scoreFuncs
+        scoreFuncs = []func(string) int64{
+            // A node with a minimum number of PDB is preferable.
+            minNumPDBViolatingScoreFunc,
+            // A node with a minimum highest priority victim is preferable.
+            minHighestPriorityScoreFunc,
+            // A node with the smallest sum of priorities is preferable.
+            minSumPrioritiesScoreFunc,
+            // A node with the minimum number of pods is preferable.
+            minNumPodsScoreFunc,
+            // A node with the latest start time of all highest priority victims is preferable.
+            latestStartTimeScoreFunc,
+            // If there are still ties, then the first Node in the list is selected.
+        }
+    }
+    // 执行所有评分函数
+    for _, f := range scoreFuncs {
+        selectedNodes := []string{}
+        maxScore := int64(math.MinInt64)
+        // 遍历每个候选节点
+        for _, node := range allCandidates {
+            score := f(node)
+            if score > maxScore {
+                maxScore = score
+                selectedNodes = []string{}
+            }
+            if score == maxScore {
+                selectedNodes = append(selectedNodes, node)
+            }
+        }
+        // 如果经过筛选只有最后一个候选节点直接返回
+        if len(selectedNodes) == 1 {
+            return selectedNodes[0]
+        }
+        // 更新节点列表
+        allCandidates = selectedNodes
+    }
+    // 返回首个元素
+    return allCandidates[0]
+}
+```
+
+#### 候选节点提名前准备
+
+确定了候选节点和受害者以后，就需要把这些倒霉的Pod从节点上驱逐出去，当前Kubernetes支持同步抢占和异步抢占两种方式。调度器根据特性门控`EnableAsyncPreemption`的开关决定使用同步或异步。
+
+```Go
+if ev.enableAsyncPreemption {
+    // 异步抢占
+    ev.prepareCandidateAsync(bestCandidate, pod, ev.PluginName)
+} else {
+    // 同步抢占
+    if status := ev.prepareCandidate(ctx, bestCandidate, pod, ev.PluginName); !status.IsSuccess() {
+        return nil, status
+    }
+}
+```
+
+##### 同步抢占
+
+同步抢占通过`prepareCandidate()`方法实现，通过并行器驱逐所有受害者，然后检查是否存在比抢占者优先级低但是提名了同一个节点的Pod，如果存在就清除它们的`NominatedNodeName`字段。
+
+```Go
+func (ev *Evaluator) prepareCandidate(ctx context.Context, c Candidate, pod *v1.Pod, pluginName string) *framework.Status {
+    // 初始化对象
+    fh := ev.Handler
+    cs := ev.Handler.ClientSet()
+
+    ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
+    logger := klog.FromContext(ctx)
+    errCh := parallelize.NewErrorChannel()
+    // 并行驱逐所有受害者
+    fh.Parallelizer().Until(ctx, len(c.Victims().Pods), func(index int) {
+        if err := ev.PreemptPod(ctx, c, pod, c.Victims().Pods[index], pluginName); err != nil {
+            errCh.SendErrorWithCancel(err, cancel)
+        }
+    }, ev.PluginName)
+    if err := errCh.ReceiveError(); err != nil {
+        return framework.AsStatus(err)
+    }
+    // 记录监控指标
+    metrics.PreemptionVictims.Observe(float64(len(c.Victims().Pods)))
+
+    // 是否有低于抢占者优先级的Pod提名到同一节点 清除NominatedNodeName字段
+    nominatedPods := getLowerPriorityNominatedPods(logger, fh, pod, c.Name())
+    if err := util.ClearNominatedNodeName(ctx, cs, nominatedPods...); err != nil {
+        // 如果清除NominatedNodeName字段失败不会影响流程
+        logger.Error(err, "Cannot clear 'NominatedNodeName' field")
+    }
+
+    return nil
+}
+```
+
+上面有提到`PreemptPod()`方法是在创建评估器时注册的，具体实现如下。首先判断受害者Pod是否在等待准入插件返回结果，如果正处于`Waiting`状态则直接调用`Reject()`方法终止其调度。如果不是`Waiting`状态先构造一个新的状态信息，然后先进行本地更新，如果本地更新成功才会调用API接口更新`API Server`中受害者Pod的状态信息并删除实例对象。
+
+```Go
+PreemptPod = func(ctx context.Context, c Candidate, preemptor, victim *v1.Pod, pluginName string) error {
+    logger := klog.FromContext(ctx)
+    // 检查受害者Pod是否为WaitingPod
+    if waitingPod := ev.Handler.GetWaitingPod(victim.UID); waitingPod != nil {
+        // 如果是WaitingPod 直接调用Reject方法
+        waitingPod.Reject(pluginName, "preempted")
+        logger.V(2).Info("Preemptor pod rejected a waiting pod", "preemptor", klog.KObj(preemptor), "waitingPod", klog.KObj(victim), "node", c.Name())
+    } else {
+        // 受害者Pod不是WaitingPod
+        // 构造PodCondition信息
+        condition := &v1.PodCondition{
+            Type:    v1.DisruptionTarget,
+            Status:  v1.ConditionTrue,
+            Reason:  v1.PodReasonPreemptionByScheduler,
+            Message: fmt.Sprintf("%s: preempting to accommodate a higher priority pod", preemptor.Spec.SchedulerName),
+        }
+        newStatus := victim.Status.DeepCopy()
+        // 本地更新Pod状态
+        updated := apipod.UpdatePodCondition(newStatus, condition)
+        if updated {
+            // 本地状态成功更新后调用Api对Pod状态进行Patch
+            if err := util.PatchPodStatus(ctx, ev.Handler.ClientSet(), victim, newStatus); err != nil {
+                logger.Error(err, "Could not add DisruptionTarget condition due to preemption", "pod", klog.KObj(victim), "preemptor", klog.KObj(preemptor))
+                return err
+            }
+        }
+        // 删除Pod
+        if err := util.DeletePod(ctx, ev.Handler.ClientSet(), victim); err != nil {
+            if !apierrors.IsNotFound(err) {
+                logger.Error(err, "Tried to preempted pod", "pod", klog.KObj(victim), "preemptor", klog.KObj(preemptor))
+                return err
+            }
+            logger.V(2).Info("Victim Pod is already deleted", "preemptor", klog.KObj(preemptor), "victim", klog.KObj(victim), "node", c.Name())
+            return nil
+        }
+        logger.V(2).Info("Preemptor Pod preempted victim Pod", "preemptor", klog.KObj(preemptor), "victim", klog.KObj(victim), "node", c.Name())
+    }
+
+    ev.Handler.EventRecorder().Eventf(victim, preemptor, v1.EventTypeNormal, "Preempted", "Preempting", "Preempted by pod %v on node %v", preemptor.UID, c.Name())
+
+    return nil
+}
+```
+
+##### 异步抢占
+
+异步抢占能够避免阻塞调度主流程，可以提高调度器的吞吐量和响应速度。异步抢占的核心逻辑和同步抢占基本相同，但是异步抢占会额外维护评估器中的`preempting`集合，在其中记录正处于抢占状态的Pod，并通过加锁/解锁避免并发问题。在驱逐受害者Pod时，同步抢占直接并行驱逐所有，而异步抢占的驱逐动作通过协程启动，首先并行驱逐`N-1`个受害者Pod，驱逐成功后删除`preempting`集合中的对象，并单独驱逐最后一个受害者Pod。
+
+```Go
+func (ev *Evaluator) prepareCandidateAsync(c Candidate, pod *v1.Pod, pluginName string) {
+    metrics.PreemptionVictims.Observe(float64(len(c.Victims().Pods)))
+
+    // 初始化对象
+    ctx, cancel := context.WithCancel(context.Background())
+    errCh := parallelize.NewErrorChannel()
+    // 和同步抢占相同
+    preemptPod := func(index int) {
+        victim := c.Victims().Pods[index]
+        if err := ev.PreemptPod(ctx, c, pod, victim, pluginName); err != nil {
+            errCh.SendErrorWithCancel(err, cancel)
+        }
+    }
+    // 评估器的preempting集合保存正在抢占的Pod
+    ev.mu.Lock()
+    ev.preempting.Insert(pod.UID)
+    ev.mu.Unlock()
+
+    logger := klog.FromContext(ctx)
+    // 启动协程执行
+    go func() {
+        startTime := time.Now()
+        result := metrics.GoroutineResultSuccess
+        defer metrics.PreemptionGoroutinesDuration.WithLabelValues(result).Observe(metrics.SinceInSeconds(startTime))
+        defer metrics.PreemptionGoroutinesExecutionTotal.WithLabelValues(result).Inc()
+        defer func() {
+            if result == metrics.GoroutineResultError {
+                // 如果最终结果失败 把Pod放回到activeQ
+                ev.Handler.Activate(logger, map[string]*v1.Pod{pod.Name: pod})
+            }
+        }()
+        defer cancel()
+        logger.V(2).Info("Start the preemption asynchronously", "preemptor", klog.KObj(pod), "node", c.Name(), "numVictims", len(c.Victims().Pods))
+
+        // 是否有低于抢占者优先级的Pod提名到同一节点 清除NominatedNodeName字段
+        nominatedPods := getLowerPriorityNominatedPods(logger, ev.Handler, pod, c.Name())
+        if err := util.ClearNominatedNodeName(ctx, ev.Handler.ClientSet(), nominatedPods...); err != nil {
+            // 如果清除NominatedNodeName字段失败不会影响流程
+            logger.Error(err, "Cannot clear 'NominatedNodeName' field from lower priority pods on the same target node", "node", c.Name())
+            result = metrics.GoroutineResultError
+        }
+        // 如果没有受害者Pod需要驱逐 从评估器的preempting集合中删除当前Pod并返回
+        if len(c.Victims().Pods) == 0 {
+            ev.mu.Lock()
+            delete(ev.preempting, pod.UID)
+            ev.mu.Unlock()
+
+            return
+        }
+        // 并行删除N-1个受害者Pod
+        ev.Handler.Parallelizer().Until(ctx, len(c.Victims().Pods)-1, preemptPod, ev.PluginName)
+        if err := errCh.ReceiveError(); err != nil {
+            logger.Error(err, "Error occurred during async preemption")
+            result = metrics.GoroutineResultError
+        }
+        // 从评估器的preempting集合中删除当前Pod
+        ev.mu.Lock()
+        delete(ev.preempting, pod.UID)
+        ev.mu.Unlock()
+        // 删除最后一个受害者Pod
+        if err := ev.PreemptPod(ctx, c, pod, c.Victims().Pods[len(c.Victims().Pods)-1], pluginName); err != nil {
+            logger.Error(err, "Error occurred during async preemption")
+            result = metrics.GoroutineResultError
+        }
+
+        logger.V(2).Info("Async Preemption finished completely", "preemptor", klog.KObj(pod), "node", c.Name(), "result", result)
+    }()
+}
+```
+
+#### 抢占的结束
+
+在成功驱逐了所有受害者Pod后，返回`PostFilterResult`类型的抢占结果，在其中包含了提名节点的名称。组装错误信息并返回，这一个调度周期就结束了，在后续的错误处理环节，如果发现结果的`nominatingInfo`字段不为空，则修改Pod的`Status.NominatedNodeName`字段为`nominatingInfo`的值，Pod状态设置为`Unschedulable`状态，在后面的调度周期会重新入队并尝试调度到提名节点。
+
+```Go
+func (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    logger := klog.FromContext(ctx)
+    pod := podInfo.Pod
+    scheduleResult, err := sched.SchedulePod(ctx, fwk, state, pod)
+    if err != nil {
+        ...... 
+        // 抢占流程
+        result, status := fwk.RunPostFilterPlugins(ctx, state, pod, fitError.Diagnosis.NodeToStatus)
+        msg := status.Message()
+        fitError.Diagnosis.PostFilterMsg = msg
+        if status.Code() == framework.Error {
+            logger.Error(nil, "Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+        } else {
+            logger.V(5).Info("Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+        }
+
+        var nominatingInfo *framework.NominatingInfo
+        if result != nil {
+            nominatingInfo = result.NominatingInfo
+        }
+        // 返回抢占结果和Unschedulable状态
+        return ScheduleResult{nominatingInfo: nominatingInfo}, podInfo, framework.NewStatus(framework.Unschedulable).WithError(err)
+    }
+    ......
+}
+```
+
+```Go
+func (sched *Scheduler) ScheduleOne(ctx context.Context) {
+    ......
+    scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
+    if !status.IsSuccess() {
+        // 进行错误处理
+        sched.FailureHandler(schedulingCycleCtx, fwk, assumedPodInfo, status, scheduleResult.nominatingInfo, start)
+        return
+    }
+    ......
+}
+```
+
+## 调度的失败处理
+
+在`ScheduleOne()`方法中可以看到调度器在两个位置进行了失败处理，不难想到这两处就是`SchedulingCycle`与`BindingCycle`的结尾，在两个生命周期结束时进行错误判断与处理。
+
+```Go
+func (sched *Scheduler) ScheduleOne(ctx context.Context) {
+    ......
+
+    scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
+    if !status.IsSuccess() {
+        sched.FailureHandler(schedulingCycleCtx, fwk, assumedPodInfo, status, scheduleResult.nominatingInfo, start)
+        return
+    }
+
+    go func() {
+        ......
+
+        status := sched.bindingCycle(bindingCycleCtx, state, fwk, scheduleResult, assumedPodInfo, start, podsToActivate)
+        if !status.IsSuccess() {
+            sched.handleBindingCycleError(bindingCycleCtx, state, fwk, assumedPodInfo, start, scheduleResult, status)
+            return
+        }
+    }()
+}
+```
+
+失败处理接口`FailureHandler`是`FailureHandlerFn`类型的函数，在调度器创建时的`applyDefaultHandlers()`方法设置。
+
+```Go
+func (sched *Scheduler) applyDefaultHandlers() {
+    sched.SchedulePod = sched.schedulePod
+    sched.FailureHandler = sched.handleSchedulingFailure
+}
+```
+
+下面来详细分析`handleSchedulingFailure()`方法内的逻辑。首先来看函数签名，该方法接收六个参数，分别是上下文信息`ctx`，调度配置`fwk`，Pod信息`podInfo`，返回状态`status`，提名信息`nominatingInfo`和调度起始时间`start`。整体上包括调度事件记录、Pod提名节点信息处理、Pod对象重新入队和Pod状态更新。
+
+```Go
+func (sched *Scheduler) handleSchedulingFailure(ctx context.Context, fwk framework.Framework, podInfo *framework.QueuedPodInfo, status *framework.Status, nominatingInfo *framework.NominatingInfo, start time.Time) {
+    calledDone := false
+    defer func() {
+        if !calledDone {
+            // 一般情况下AddUnschedulableIfNotPresent内部会调用SchedulingQueue.Done(pod.UID) 
+            // 避免没有调用的特殊情况 正确释放Pod资源
+            sched.SchedulingQueue.Done(podInfo.Pod.UID)
+        }
+    }()
+
+    logger := klog.FromContext(ctx)
+    // 初始化错误原因
+    reason := v1.PodReasonSchedulerError
+    if status.IsRejected() {
+        // 如果状态是被拒绝表示不可调度
+        reason = v1.PodReasonUnschedulable
+    }
+    // 记录指标
+    switch reason {
+    case v1.PodReasonUnschedulable:
+        metrics.PodUnschedulable(fwk.ProfileName(), metrics.SinceInSeconds(start))
+    case v1.PodReasonSchedulerError:
+        metrics.PodScheduleError(fwk.ProfileName(), metrics.SinceInSeconds(start))
+    }
+
+    // 获取失败信息
+    pod := podInfo.Pod
+    err := status.AsError()
+    errMsg := status.Message()
+
+    if err == ErrNoNodesAvailable {
+        // 集群中没有Node注册
+        logger.V(2).Info("Unable to schedule pod; no nodes are registered to the cluster; waiting", "pod", klog.KObj(pod))
+    } else if fitError, ok := err.(*framework.FitError); ok {
+        // 不符合条件被调度插件拒绝
+        // 记录UnschedulablePlugins和PendingPlugins
+        podInfo.UnschedulablePlugins = fitError.Diagnosis.UnschedulablePlugins
+        podInfo.PendingPlugins = fitError.Diagnosis.PendingPlugins
+        logger.V(2).Info("Unable to schedule pod; no fit; waiting", "pod", klog.KObj(pod), "err", errMsg)
+    } else {
+        // 其他内部错误
+        logger.Error(err, "Error scheduling pod; retrying", "pod", klog.KObj(pod))
+    }
+
+    // 使用Lister获取最新信息并在其中查找当前Pod
+    podLister := fwk.SharedInformerFactory().Core().V1().Pods().Lister()
+    cachedPod, e := podLister.Pods(pod.Namespace).Get(pod.Name)
+    if e != nil {
+        logger.Info("Pod doesn't exist in informer cache", "pod", klog.KObj(pod), "err", e)
+    } else {
+        // 检查是否有NodeName信息
+        if len(cachedPod.Spec.NodeName) != 0 {
+            logger.Info("Pod has been assigned to node. Abort adding it back to queue.", "pod", klog.KObj(pod), "node", cachedPod.Spec.NodeName)
+        } else {
+            // 没有NodeName信息 把Pod深拷贝一份后重新入队
+            podInfo.PodInfo, _ = framework.NewPodInfo(cachedPod.DeepCopy())
+            if err := sched.SchedulingQueue.AddUnschedulableIfNotPresent(logger, podInfo, sched.SchedulingQueue.SchedulingCycle()); err != nil {
+                logger.Error(err, "Error occurred")
+            }
+            calledDone = true
+        }
+    }
+
+    // 尝试添加带有提名节点信息的Pod到Nominator
+    if sched.SchedulingQueue != nil {
+        sched.SchedulingQueue.AddNominatedPod(logger, podInfo.PodInfo, nominatingInfo)
+    }
+
+    if err == nil {
+        return
+    }
+    // 记录事件
+    msg := truncateMessage(errMsg)
+    fwk.EventRecorder().Eventf(pod, nil, v1.EventTypeWarning, "FailedScheduling", "Scheduling", msg)
+    // 更新Pod状态 包括提名节点信息和Condition
+    if err := updatePod(ctx, sched.client, pod, &v1.PodCondition{
+        Type:    v1.PodScheduled,
+        Status:  v1.ConditionFalse,
+        Reason:  reason,
+        Message: errMsg,
+    }, nominatingInfo); err != nil {
+        logger.Error(err, "Error updating pod", "pod", klog.KObj(pod))
+    }
+}
+```
