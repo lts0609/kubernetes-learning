@@ -679,6 +679,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 
     // 记录开始调度的时间
     start := time.Now()
+	// 初始化CycleState对象
     state := framework.NewCycleState()
     // 生成随机数 如果值小于10就记录插件指标
     state.SetRecordPluginMetrics(rand.Intn(100) < pluginMetricsSamplePercent)
@@ -719,4 +720,4 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 }
 ```
 
-通过上面的代码可以看出，在一个`Pod`调度的的完整生命周期中，总共存在三个动作，即`Pod出队`、`调度`、`异步绑定`，其中`Pod出队`动作比较简单，经过[Scheduler创建流程与调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20Scheduler%E5%88%9B%E5%BB%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)中调度队列部分的学习，可以知道`Pop()`动作就是弹出`ActiveQ`的队首元素，如果队列为空会阻塞等待唤醒。`调度`和`绑定`是两个清晰的生命周期，其中`调度`周期的扩展点以`ReservePlugins`，此时默认Pod会被调度成功，提前预留资源刷新调度缓存，Pod的内部状态为`Assumed`。绑定周期由于包括存储、网络等资源的设置而耗时较长所以异步执行，可以理解为在完成一个Pod的节点计算选择，就立刻进入了下一个Pod的调度。
+通过上面的代码可以看出，在一个`Pod`调度的的完整生命周期中，`CycleState`是`Pod专属上下文`，负责在调度过程中传递和共享状态信息。共存在三个动作，即`Pod出队`、`调度`、`异步绑定`，其中`Pod出队`动作比较简单，经过[Scheduler创建流程与调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20Scheduler%E5%88%9B%E5%BB%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)中调度队列部分的学习，可以知道`Pop()`动作就是弹出`ActiveQ`的队首元素，如果队列为空会阻塞等待唤醒。`调度`和`绑定`是两个清晰的生命周期，其中`调度`周期的扩展点以`ReservePlugins`，此时默认Pod会被调度成功，提前预留资源刷新调度缓存，Pod的内部状态为`Assumed`。绑定周期由于包括存储、网络等资源的设置而耗时较长所以异步执行，可以理解为在完成一个Pod的节点计算选择，就立刻进入了下一个Pod的调度。
