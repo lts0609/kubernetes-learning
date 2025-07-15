@@ -148,6 +148,7 @@ func (pl *VolumeBinding) PreBind(ctx context.Context, cs *framework.CycleState, 
     }
     logger := klog.FromContext(ctx)
     logger.V(5).Info("Trying to bind volumes for pod", "pod", klog.KObj(pod))
+    // 进行绑定
     err = pl.Binder.BindPodVolumes(ctx, pod, podVolumes)
     if err != nil {
         logger.V(5).Info("Failed to bind volumes for pod", "pod", klog.KObj(pod), "err", err)
@@ -158,5 +159,132 @@ func (pl *VolumeBinding) PreBind(ctx context.Context, cs *framework.CycleState, 
 }
 ```
 
+第二个插件`DynamicResources`处理动态资源如GPU在Pod绑定到节点前的分配，首先还是从`CycleState`获取状态信息，然后判断声明的资源是否已经在节点上被预留，如果没有被预留则执行`bindClaim()`方法，`bindClaim()`返回更新后的资源对象，实际上是更新了它的`ReservedFor`、`Allocation`和`Finalizers`字段，把返回的对象更新到调度上下文`CycleState`中。
 
+```Go
+func (pl *DynamicResources) PreBind(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+    if !pl.enabled {
+        return nil
+    }
+    // 获取状态信息
+    state, err := getStateData(cs)
+    if err != nil {
+        return statusError(klog.FromContext(ctx), err)
+    }
+    if len(state.claims) == 0 {
+        return nil
+    }
+
+    logger := klog.FromContext(ctx)
+    // 遍历生命资源是否都已经被预留
+    for index, claim := range state.claims {
+        // 如果没有被预留执行处理逻辑
+        if !resourceclaim.IsReservedForPod(pod, claim) {
+            claim, err := pl.bindClaim(ctx, state, index, pod, nodeName)
+            if err != nil {
+                return statusError(logger, err)
+            }
+            // 更新资源状态
+            state.claims[index] = claim
+        }
+    }
+    return nil
+}
+
+func (pl *DynamicResources) bindClaim(ctx context.Context, state *stateData, index int, pod *v1.Pod, nodeName string) (patchedClaim *resourceapi.ResourceClaim, finalErr error) {
+    logger := klog.FromContext(ctx)
+    // 深拷贝动态资源
+    claim := state.claims[index].DeepCopy()
+    // 获取动态资源分配信息
+    allocation := state.informationsForClaim[index].allocation
+    defer func() {
+        // 结束前清理分配状态
+        if allocation != nil {
+            if finalErr == nil {
+                if err := pl.draManager.ResourceClaims().AssumeClaimAfterAPICall(claim); err != nil {
+                    logger.V(5).Info("Claim not stored in assume cache", "err", finalErr)
+                }
+            }
+            pl.draManager.ResourceClaims().RemoveClaimPendingAllocation(claim.UID)
+        }
+    }()
+
+    logger.V(5).Info("preparing claim status update", "claim", klog.KObj(state.claims[index]), "allocation", klog.Format(allocation))
+    // 资源版本比较
+    refreshClaim := false
+    // RetryOnConflict方法接收一个重试次数和匿名函数
+    retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+        // 后续重试时如果标识位为true
+        if refreshClaim {
+            // 通过API获取最新资源对象
+            updatedClaim, err := pl.clientset.ResourceV1beta1().ResourceClaims(claim.Namespace).Get(ctx, claim.Name, metav1.GetOptions{})
+            if err != nil {
+                return fmt.Errorf("get updated claim %s after conflict: %w", klog.KObj(claim), err)
+            }
+            logger.V(5).Info("retrying update after conflict", "claim", klog.KObj(claim))
+            // 覆盖旧版本资源对象
+            claim = updatedClaim
+        } else {
+            // 第一次执行先设置标识位为true
+            refreshClaim = true
+        }
+        // 检查资源是否已经标记为删除
+        if claim.DeletionTimestamp != nil {
+            return fmt.Errorf("claim %s got deleted in the meantime", klog.KObj(claim))
+        }
+        // 处理资源分配结果
+        if allocation != nil {
+            if claim.Status.Allocation != nil {
+                return fmt.Errorf("claim %s got allocated elsewhere in the meantime", klog.KObj(claim))
+            }
+
+            // 如果没有Finalizer
+            if !slices.Contains(claim.Finalizers, resourceapi.Finalizer) {
+                // 给资源对象添加Finalizer避免被意外删除
+                claim.Finalizers = append(claim.Finalizers, resourceapi.Finalizer)
+                // 通过API更新资源对象
+                updatedClaim, err := pl.clientset.ResourceV1beta1().ResourceClaims(claim.Namespace).Update(ctx, claim, metav1.UpdateOptions{})
+                if err != nil {
+                    return fmt.Errorf("add finalizer to claim %s: %w", klog.KObj(claim), err)
+                }
+                // 更新资源对象
+                claim = updatedClaim
+            }
+            // 把从CycleState中临时存储的分配决策赋给资源对象
+            claim.Status.Allocation = allocation
+        }
+
+        // 添加到资源预留列表
+        claim.Status.ReservedFor = append(claim.Status.ReservedFor, resourceapi.ResourceClaimConsumerReference{Resource: "pods", Name: pod.Name, UID: pod.UID})
+        // 通过API更新资源对象
+        updatedClaim, err := pl.clientset.ResourceV1beta1().ResourceClaims(claim.Namespace).UpdateStatus(ctx, claim, metav1.UpdateOptions{})
+        if err != nil {
+            if allocation != nil {
+                return fmt.Errorf("add allocation and reservation to claim %s: %w", klog.KObj(claim), err)
+            }
+            return fmt.Errorf("add reservation to claim %s: %w", klog.KObj(claim), err)
+        }
+        // 更新资源对象
+        claim = updatedClaim
+        return nil
+    })
+
+    if retryErr != nil {
+        return nil, retryErr
+    }
+
+    logger.V(5).Info("reserved", "pod", klog.KObj(pod), "node", klog.ObjectRef{Name: nodeName}, "resourceclaim", klog.Format(claim))
+    return claim, nil
+}
+```
+
+根据以上的了解，可以感受到几个扩展点之间的协作关系：
+
+* `Reserve`阶段在内存中锁定资源并写入`CycleState`；
+* `Permit`阶段验证资源的依赖是否就绪、资源是否未被占用；
+* `PreBind`阶段把分配结果持久化到资源对象API；
+
+`PreBind`与`Reserve`和`Permit`共同完成了从资源**临时锁定**到**许可绑定**再到**最终确认**的过程，与更早的`Filter/Score`完成了**静态匹配**到**动态确认**的过程。`PreBind`是绑定执行前的最终确认者，是最后一个失败后会导致Pod进入`Unschedulable`的扩展点，如果在其后的`Bind`阶段失败，通常会进行重试绑定的操作，而不会标记为`Unschedulable`而重新进行调度计算。
+
+### Bind扩展点
 
