@@ -176,7 +176,7 @@ func (pl *DynamicResources) PreBind(ctx context.Context, cs *framework.CycleStat
     }
 
     logger := klog.FromContext(ctx)
-    // 遍历生命资源是否都已经被预留
+    // 遍历动态资源是否都已经被预留
     for index, claim := range state.claims {
         // 如果没有被预留执行处理逻辑
         if !resourceclaim.IsReservedForPod(pod, claim) {
