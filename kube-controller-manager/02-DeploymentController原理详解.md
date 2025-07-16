@@ -387,7 +387,7 @@ type DeploymentSpec struct {
 }
 ```
 
-继续看`LabelSelector`类型的定义，它正符合在一个`yaml`文件中对于标签选择的定义规范，即：1.选择标签与某个值是匹配的；2.标签和某些值存在`In/NotIn/Exists/DoesNotExist`的关系。
+继续看`LabelSelector`类型的定义，它正符合在一个`yaml`文件中对于标签选择的定义规范，即：1.选择标签与某个值是匹配的;2.标签和某些值存在`In/NotIn/Exists/DoesNotExist`的关系。
 
 ```Go
 type LabelSelector struct {
@@ -529,15 +529,15 @@ func (m *ReplicaSetControllerRefManager) ClaimReplicaSets(ctx context.Context, s
 拿到`RepicaSet`对象的第一步是获取它的`OwnerReferences`对象，判断逻辑如下：
 
 * 第一种情况：所属控制器存在
-    * 其所属控制器存在，但不是当前的控制器，跳过处理；
-    * 其所属控制器存在，是当前的控制器，还需要检查一次标签选择，避免由于`Selector`动态修改导致的不匹配；
-    * 其所属控制器存在，是当前的控制器，但标签不匹配，如果当前控制器正在删除中，也跳过处理；
-    * 其所属控制器存在，是当前的控制器，但标签不匹配，控制器正常，尝试释放对象；
+    * 其所属控制器存在，但不是当前的控制器，跳过处理;
+    * 其所属控制器存在，是当前的控制器，还需要检查一次标签选择，避免由于`Selector`动态修改导致的不匹配;
+    * 其所属控制器存在，是当前的控制器，但标签不匹配，如果当前控制器正在删除中，也跳过处理;
+    * 其所属控制器存在，是当前的控制器，但标签不匹配，控制器正常，尝试释放对象;
 * 第二种情况：所属控制器不存在，孤儿对象
-    * 控制器被删除或标签不匹配，跳过处理；
-    * 控制器被删除或标签匹配，`ReplicaSet`对象正在被删除，跳过处理；
-    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间不匹配，跳过处理；
-    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间匹配，尝试认领；
+    * 控制器被删除或标签不匹配，跳过处理;
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正在被删除，跳过处理;
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间不匹配，跳过处理;
+    * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间匹配，尝试认领;
 
 ```Go
 func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.Object, match func(metav1.Object) bool, adopt, release func(context.Context, metav1.Object) error) (bool, error) {
@@ -1043,9 +1043,9 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 }
 ```
 
-只有一个`ReplicaSet`实例存在`Pod`，具体情况包括：1.新的`ReplicaSet`被创建；2.回滚后只剩下旧`ReplicaSet`；3.滚动更新时旧`ReplicaSet`副本已经归零。
+只有一个`ReplicaSet`实例存在`Pod`，具体情况包括：1.新的`ReplicaSet`被创建;2.回滚后只剩下旧`ReplicaSet`;3.滚动更新时旧`ReplicaSet`副本已经归零。
 
-首先获取活跃的`ReplicaSet`对象，所谓活跃就是副本数大于0。其内部逻辑是在所有的`ReplicaSet`中查找副本数大于0的对象，如果结果是1个直接返回；如果是0个，先看最新的`ReplicaSet`对象是否存在，如果存在就返回它，不存在就返回列表中第一个旧的`ReplicaSet`对象；如果超过1个表示正在滚动更新过程中，返回`nil`。如果`activeOrLatest`不为空，对比活跃`ReplicaSet`对象的副本数和`Deployment`对象中是否是一致的，如果一致则不做处理。数量不一致则调用`scaleReplicaSetAndRecordEvent()`方法调整副本数，保证在后续逻辑开始前`ReplicaSet`副本实际状态和预期状态的一致性。
+首先获取活跃的`ReplicaSet`对象，所谓活跃就是副本数大于0。其内部逻辑是在所有的`ReplicaSet`中查找副本数大于0的对象，如果结果是1个直接返回;如果是0个，先看最新的`ReplicaSet`对象是否存在，如果存在就返回它，不存在就返回列表中第一个旧的`ReplicaSet`对象;如果超过1个表示正在滚动更新过程中，返回`nil`。如果`activeOrLatest`不为空，对比活跃`ReplicaSet`对象的副本数和`Deployment`对象中是否是一致的，如果一致则不做处理。数量不一致则调用`scaleReplicaSetAndRecordEvent()`方法调整副本数，保证在后续逻辑开始前`ReplicaSet`副本实际状态和预期状态的一致性。
 
 ##### 场景二
 
@@ -1067,7 +1067,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 }
 ```
 
-清理阶段，新的`ReplicaSet`已经饱和(副本数量达到`Deployment`的期望)，需要把剩余旧的`ReplicaSet`管理的副本数量缩至0。判断依据是`ReplicaSet`中三个字段的值要和`Deployment`的`Spec.Replicas`中设置相同：1.`Spec.Replicas`；2.`Annotations`中`desired-replicas`的值；3.`Status.AvailableReplicas`。此处可能会有疑问，为什么要同时确认`Spec`和`Annotations`中的值，其实他们表示的语义是不同的，`Spec`只能表示一个当前的期望状态，可能会动态变化，而`Annotations`是在创建`ReplicaSet`对象注入的`Deployment`最终期望。
+清理阶段，新的`ReplicaSet`已经饱和(副本数量达到`Deployment`的期望)，需要把剩余旧的`ReplicaSet`管理的副本数量缩至0。判断依据是`ReplicaSet`中三个字段的值要和`Deployment`的`Spec.Replicas`中设置相同：1.`Spec.Replicas`;2.`Annotations`中`desired-replicas`的值;3.`Status.AvailableReplicas`。此处可能会有疑问，为什么要同时确认`Spec`和`Annotations`中的值，其实他们表示的语义是不同的，`Spec`只能表示一个当前的期望状态，可能会动态变化，而`Annotations`是在创建`ReplicaSet`对象注入的`Deployment`最终期望。
 
 执行的动作就是找出旧的`ReplicaSet`中副本数不为0的对象，然后调用`scaleReplicaSetAndRecordEvent()`方法把它们的期望值更新为0，和场景一的处理方式基本相同。
 
@@ -1493,7 +1493,7 @@ func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Depl
 
 ##### 尝试扩容新ReplicaSet
 
-对这段逻辑进行简单的解释，首先对`ReplicaSet`和`Deployment`其中的`Spec.Replicas`字段做比较。如果新`ReplicaSet`已经和`Deployment`的期望副本数一致了则不做处理；如果是非预期的新`Replicas`期望副本数大于`Deployment`，则调整`ReplicaSet`的期望副本数为`Deployment`的期望副本数；其他情况就只剩下新`Replicas`期望副本数小于`Deployment`了，计算一下本次调整后的新`ReplicaSet`副本数并执行更新操作。
+对这段逻辑进行简单的解释，首先对`ReplicaSet`和`Deployment`其中的`Spec.Replicas`字段做比较。如果新`ReplicaSet`已经和`Deployment`的期望副本数一致了则不做处理;如果是非预期的新`Replicas`期望副本数大于`Deployment`，则调整`ReplicaSet`的期望副本数为`Deployment`的期望副本数;其他情况就只剩下新`Replicas`期望副本数小于`Deployment`了，计算一下本次调整后的新`ReplicaSet`副本数并执行更新操作。
 
 ```Go
 func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
@@ -1517,7 +1517,7 @@ func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allR
 
 ###### 扩容新副本数的计算
 
-通过`NewRSNewReplicas()`函数计算出新`ReplicaSet`调整后的副本数量，规则也很简单。如果是`Recreate`策略直接返回`Deployment`的期望值；如果是`RollingUpdate`策略，根据`MaxSurge`计算`Deployment`的副本数量上限，然后根据**Deployment副本数上限与当前总副本数的差值**和**Deployment期望副本数与新ReplicaSet期望副本数的差值**，选择其中较小的加上当前新`ReplicaSet`的期望副本数，返回给上层作为调整后的期望副本数值。
+通过`NewRSNewReplicas()`函数计算出新`ReplicaSet`调整后的副本数量，规则也很简单。如果是`Recreate`策略直接返回`Deployment`的期望值;如果是`RollingUpdate`策略，根据`MaxSurge`计算`Deployment`的副本数量上限，然后根据**Deployment副本数上限与当前总副本数的差值**和**Deployment期望副本数与新ReplicaSet期望副本数的差值**，选择其中较小的加上当前新`ReplicaSet`的期望副本数，返回给上层作为调整后的期望副本数值。
 
 ```Go
 func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet) (int32, error) {

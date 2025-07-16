@@ -178,17 +178,17 @@ type NominatingInfo struct {
 
 根据源码注释可以看出，抢占大致分为六步：
 
-* 第一步：通过`PodLister`获取Pod的最新信息状态；
+* 第一步：通过`PodLister`获取Pod的最新信息状态;
 
-* 第二步：确认这个Pod是否有资格进行抢占；
+* 第二步：确认这个Pod是否有资格进行抢占;
 
-* 第三步：获取所有可发生抢占的候选节点；
+* 第三步：获取所有可发生抢占的候选节点;
 
-* 第四步：调用注册的扩展器进一步缩小候选节点范围；
+* 第四步：调用注册的扩展器进一步缩小候选节点范围;
 
-* 第五步：根据各种条件选择出最优的候选节点；
+* 第五步：根据各种条件选择出最优的候选节点;
 
-* 第六步：执行抢占，驱逐低优先级Pod；
+* 第六步：执行抢占，驱逐低优先级Pod;
 
 这六个步骤执行后会返回抢占的最终结果给调度器，整体来看和标准的调度流程很类似，都会包括预选和优选的过程，实际上这些逻辑都紧紧围绕着调度器的本职工作：为Pod选择合适的`Node`，然后把`Node`的名称告诉Pod。
 
@@ -270,9 +270,9 @@ func (ev *Evaluator) Preempt(ctx context.Context, state *framework.CycleState, p
 
 #### 抢占资格判断
 
-通过`NodeToStatusReader`的`Get()`方法获取提名节点的状态信息记录，传递给`PodEligibleToPreemptOthers()`方法判断Pod是否有资格进行抢占操作。首先判断`Pod.Spec.PreemptionPolicy`中的抢占策略是否存在且不为`Never`，然后获取节点快照和Pod的`NominatedNodeName`，如果字段存在表示已经在之前进行过抢占流程了，现在又出现在`PostFilter`阶段表示抢占失败。此时需要判断这个Pod是否重新进行抢占操作，如果是`UnschedulableAndUnresolvable`表示提名节点因为某些问题出现了永久不可用的情况，允许开始重新抢占；如果是其他失败原因如`Unschedulable`则需要没有低于当前优先级的Pod正因抢占而退出才可以重新抢占，在这种因为临时资源导致抢占失败的情况下，为了避免资源浪费Pod还可以重试抢占尝试调度到其他节点。一般来说，抢占解决的是`Unschedulable`的问题，而`UnschedulableAndUnresolvable`的重试是上一次调度到当前调度周期之间发生了预期以外的变化，所以允许重新抢占。
+通过`NodeToStatusReader`的`Get()`方法获取提名节点的状态信息记录，传递给`PodEligibleToPreemptOthers()`方法判断Pod是否有资格进行抢占操作。首先判断`Pod.Spec.PreemptionPolicy`中的抢占策略是否存在且不为`Never`，然后获取节点快照和Pod的`NominatedNodeName`，如果字段存在表示已经在之前进行过抢占流程了，现在又出现在`PostFilter`阶段表示抢占失败。此时需要判断这个Pod是否重新进行抢占操作，如果是`UnschedulableAndUnresolvable`表示提名节点因为某些问题出现了永久不可用的情况，允许开始重新抢占;如果是其他失败原因如`Unschedulable`则需要没有低于当前优先级的Pod正因抢占而退出才可以重新抢占，在这种因为临时资源导致抢占失败的情况下，为了避免资源浪费Pod还可以重试抢占尝试调度到其他节点。一般来说，抢占解决的是`Unschedulable`的问题，而`UnschedulableAndUnresolvable`的重试是上一次调度到当前调度周期之间发生了预期以外的变化，所以允许重新抢占。
 
-回顾一下`Filter`扩展点的错误状态，`Unschedulable`表示临时的调度失败，如`CPU`资源不足、Pod间亲和性不满足等情况，可能下一轮调度情况变化就会可以调度了，这种情况不用人工干预只需要调度器重试；`UnschedulableAndUnresolvable`表示硬性条件的不满足，比如`NodeSelector`节点标签不满足、`PV`绑定失败等情况，其中临时条件和永久条件的关键区别在于**资源是否随着Pod的生命周期而发生变化**。
+回顾一下`Filter`扩展点的错误状态，`Unschedulable`表示临时的调度失败，如`CPU`资源不足、Pod间亲和性不满足等情况，可能下一轮调度情况变化就会可以调度了，这种情况不用人工干预只需要调度器重试;`UnschedulableAndUnresolvable`表示硬性条件的不满足，比如`NodeSelector`节点标签不满足、`PV`绑定失败等情况，其中临时条件和永久条件的关键区别在于**资源是否随着Pod的生命周期而发生变化**。
 
 ```Go
 // 1) Ensure the preemptor is eligible to preempt other pods.
@@ -473,7 +473,7 @@ func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.Cycl
 
 并行器会在每个潜在的候选节点上执行`checkNode()`函数，其中的`SelectVictimsOnNode()`方法会在节点上找出能为抢占Pod让出足够资源的最小Pod集合。首先会初始化一个潜在受害者列表`potentialVictims`，然后遍历节点上的所有Pod，比较优先级把所有低于抢占者的Pod加入这个列表，并且临时移除这些Pod。此时已经没有更多的Pod可以被抢占驱逐了，执行在标准`Filter`流程中就使用的`RunFilterPluginsWithNominatedPods()`方法确认抢占者是否可以调度，如果仍然不可调度表示即使抢占也无法调度到该节点。如果可以调度，那么下一步就需要寻找最小的驱逐成本了，先根据是否违反PDB对这些低优先级的Pod进行分类，然后优先尝试恢复违反PDB的Pod，因为这类Pod更不希望收到影响。恢复Pod就是先在NodeInfo中添加Pod信息，然后执行`RunFilterPluginsWithNominatedPods()`方法验证Pod是否仍可以调度，如果添加后导致资源不足以让抢占者调度，那么添加这个Pod到`victims`列表，如果是违反PDB受害者的Pod，还需要对`numViolatingVictim`计数加一，该变量会返回给上层并作为评估标准之一。如果违反PDB和不违反PDB的节点都存在，需要对`victims`按优先级进行一次排序，最终返回受害者列表、违反PDB的受害者数量和成功状态。
 
-`SelectVictimsOnNode()`方法作为抢占的核心逻辑之一，使用了`最大删除-验证-逐步恢复`的筛选策略，使用闭包函数减少了代码冗余；逐步恢复阶段分别处理两类受害者列表，优先保障了高优先级Pod和服务可用(PDB)。体现了调度器在复杂场景下的实用主义思想，在算法复杂度和执行效率之间寻找动态平衡点。
+`SelectVictimsOnNode()`方法作为抢占的核心逻辑之一，使用了`最大删除-验证-逐步恢复`的筛选策略，使用闭包函数减少了代码冗余;逐步恢复阶段分别处理两类受害者列表，优先保障了高优先级Pod和服务可用(PDB)。体现了调度器在复杂场景下的实用主义思想，在算法复杂度和执行效率之间寻找动态平衡点。
 
 ```Go
 func (pl *DefaultPreemption) SelectVictimsOnNode(

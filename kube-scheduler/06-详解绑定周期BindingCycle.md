@@ -280,9 +280,9 @@ func (pl *DynamicResources) bindClaim(ctx context.Context, state *stateData, ind
 
 根据以上的了解，可以感受到几个扩展点之间的协作关系：
 
-* `Reserve`阶段在内存中锁定资源并写入`CycleState`；
-* `Permit`阶段验证资源的依赖是否就绪、资源是否未被占用；
-* `PreBind`阶段把分配结果持久化到资源对象API；
+* `Reserve`阶段在内存中锁定资源并写入`CycleState`;
+* `Permit`阶段验证资源的依赖是否就绪、资源是否未被占用;
+* `PreBind`阶段把分配结果持久化到资源对象API;
 
 `PreBind`与`Reserve`和`Permit`共同完成了从资源**临时锁定**到**许可绑定**再到**最终确认**的过程，与更早的`Filter/Score`完成了**静态匹配**到**动态确认**的过程。`PreBind`是绑定执行前的最终确认者，是最后一个失败后会导致Pod进入`Unschedulable`的扩展点，如果在其后的`Bind`阶段失败，通常会进行重试绑定的操作，而不会标记为`Unschedulable`而重新进行调度计算。
 
