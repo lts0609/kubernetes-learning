@@ -6,7 +6,7 @@
 scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
 ```
 
-根据函数签名部分，它接收六个参数，包括调度周期的上下文`ctx`，用于协程的生命周期管理；调度周期状态`state`，调度插件通过该对象读取或写入数据以便协同工作；调度框架接口对象`fwk`，调度过程中根据`Pod.Status.SchedulerName`字段调度框架获取对应`Framework`实例，对应调度流程中的配置以及扩展点插件列表；Pod的信息`podInfo`，根据其中的信息选择节点；开始调度的时间戳`start`；待激活Pod集合`podsToActivate`。
+根据函数签名部分，它接收六个参数，包括调度周期的上下文`ctx`，用于协程的生命周期管理;调度周期状态`state`，调度插件通过该对象读取或写入数据以便协同工作;调度框架接口对象`fwk`，调度过程中根据`Pod.Status.SchedulerName`字段调度框架获取对应`Framework`实例，对应调度流程中的配置以及扩展点插件列表;Pod的信息`podInfo`，根据其中的信息选择节点;开始调度的时间戳`start`;待激活Pod集合`podsToActivate`。
 
 ```Go
 func (sched *Scheduler) schedulingCycle(
@@ -294,19 +294,19 @@ type Status struct {
 
 补充说明一下插件返回的内部状态，为枚举类型：
 
-`Success`：插件执行成功；
+`Success`：插件执行成功;
 
-`Error`：内部错误，立即入队重试；
+`Error`：内部错误，立即入队重试;
 
-`Unschedulable`：表示临时的不可调度，是动态(资源)的条件不满足，比如节点CPU资源不足，这种失败后Pod会重新入队等待调度，有退避时间；
+`Unschedulable`：表示临时的不可调度，是动态(资源)的条件不满足，比如节点CPU资源不足，这种失败后Pod会重新入队等待调度，有退避时间;
 
-`UnschedulableAndUnresolvable`是静态(配置)条件不满足，如要求节点上存在某个标签但实际不存在，调度器不会重试，对应事件如节点更新可能会触发重新调度；
+`UnschedulableAndUnresolvable`是静态(配置)条件不满足，如要求节点上存在某个标签但实际不存在，调度器不会重试，对应事件如节点更新可能会触发重新调度;
 
-`Wait`：仅和`Permit`插件有关，要求Pod进入等待状态；
+`Wait`：仅和`Permit`插件有关，要求Pod进入等待状态;
 
-`Skip`：跳过当前插件检查；
+`Skip`：跳过当前插件检查;
 
-`Pending `是外部依赖条件不满足导致的等待，如存储卷未准备好或有依赖Pod的处理项未完成；
+`Pending `是外部依赖条件不满足导致的等待，如存储卷未准备好或有依赖Pod的处理项未完成;
 
 #### 核心函数findNodesThatFitPod
 

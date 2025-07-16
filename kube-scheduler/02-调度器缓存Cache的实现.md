@@ -1,8 +1,6 @@
 # 调度器缓存Cache的实现
 
-在正式进入调度器的工作流程之前，先再来了解一个概念。
-
-如果对`Informer`机制有一定的了解，会知道其中`Indexer`组件作为集群信息的`Local Storage`，但是在Pod调度过程中，其实使用的是调度器实现的由`Cache`专门提供的集群`节点- Pod`快照信息，下面一起看`Cache`的设计和实现。
+在正式进入调度器的工作流程之前，先再来了解一下`Cache`概念。 如果对`Informer`机制有一定的了解，会知道其中`Indexer`组件作为集群信息的`Local Storage`，但是在Pod调度过程中，其实使用的是调度器实现的由`Cache`专门提供的集群`节点- Pod`快照信息，下面一起看`Cache`的设计和实现。
 
 需要注意的是，`client-go`中的`Cache`和此处提到的调度器`Cache`并不是一个。`client-go`中的缓存依赖`List-Watch`机制，虽然调度器中的缓存也依赖`Informer`，但缓存中的数据是不同的，如`client-go`中的缓存的是Kubernetes的`API`对象，而调度器的缓存主要保存了`Node`和`Pod`的映射和聚合信息。
 
@@ -124,7 +122,7 @@ type cacheImpl struct {
 
 ##### podState
 
-Pod在缓存中是以`namespace-podname`为key，`podState`为value存储的
+Pod在缓存中是以`namespace-podname`为key，`podState`为value的形式存储的。
 
 ```go
 type podState struct {
@@ -139,7 +137,7 @@ type podState struct {
 
 ##### nodeInfoListItem
 
-节点信息的双向链表
+`nodeInfoListItem`是存储节点信息的双向链表。
 
 ```go
 type nodeInfoListItem struct {
@@ -154,7 +152,7 @@ type nodeInfoListItem struct {
 
 ##### nodeTree
 
-以`zone`划分的节点集合
+`nodeTree`是根据`zone`划分的节点集合。
 
 ```go
 type nodeTree struct {
@@ -169,11 +167,11 @@ type nodeTree struct {
 
 ### 相关方法
 
-代码逻辑都比较清晰，故仅在代码段中简单注释。
+代码逻辑都比较清晰，故仅在代码片段中简单注释。
 
 #### New
 
-启动一个`Cache`实例
+启动一个`Cache`实例，代码实现如下。
 
 ```go
 func New(ctx context.Context, ttl time.Duration) Cache {
@@ -430,7 +428,7 @@ func (cache *cacheImpl) updateNodeInfoSnapshotList(logger klog.Logger, snapshot 
 
 #### AssumePod
 
-假定一个Pod调度成功，把它添加到节点缓存信息中。
+假定一个Pod调度成功，把它以`AssumedPod`的形式添加到节点缓存中。
 
 ```go
 func (cache *cacheImpl) AssumePod(logger klog.Logger, pod *v1.Pod) error {
@@ -478,7 +476,7 @@ func (cache *cacheImpl) addPod(logger klog.Logger, pod *v1.Pod, assumePod bool) 
 
 #### ForgetPod
 
-`AssumePod`过期，从缓存中移除。
+`AssumePod`过期，将其从调度缓存中移除。
 
 ```go
 func (cache *cacheImpl) ForgetPod(logger klog.Logger, pod *v1.Pod) error {
@@ -505,7 +503,7 @@ func (cache *cacheImpl) ForgetPod(logger klog.Logger, pod *v1.Pod) error {
 
 #### updatePod
 
-更新缓存中Pod信息，先删后加。
+更新缓存中Pod信息，先删除后添加能够保证缓存信息的一致性。
 
 ```go
 func (cache *cacheImpl) updatePod(logger klog.Logger, oldPod, newPod *v1.Pod) error {

@@ -349,16 +349,16 @@ func New(ctx context.Context,
 
 `Run()`函数位于`cmd/kube-scheduler/app/server.go`，和`runCommand()`函数在同一路径下，完整过程包括：
 
-1. 先启动日志记录器，输出`Info`级别的环境信息日志
-2. 根据`componentconfig`注册配置`configz`，类型是`Config`指针
-3. 启动事件广播器
-4. 初始化健康检查设置，包括`WatchDog`和`Shutdown`检查器
-5. 检查是否为`Leader`
-6. 创建同步处理健康检查器
-7. 协调`Leader`选举
-8. 启动健康检查器Server
-9. 启动所有`Informer`并等待同步
-10. 运行调度器实例
+1. 先启动日志记录器，输出`Info`级别的环境信息日志;
+2. 根据`componentconfig`注册配置`configz`，类型是`Config`指针;
+3. 启动事件广播器;
+4. 初始化健康检查设置，包括`WatchDog`和`Shutdown`检查器;
+5. 检查是否为`Leader`;
+6. 创建同步处理健康检查器;
+7. 协调`Leader`选举;
+8. 启动健康检查器Server;
+9. 启动所有`Informer`并等待同步;
+10. 运行调度器实例;
 
 ```go
 func Run(ctx context.Context, cc *schedulerserverconfig.CompletedConfig, sched *scheduler.Scheduler) error {
@@ -521,7 +521,7 @@ func Run(ctx context.Context, cc *schedulerserverconfig.CompletedConfig, sched *
 
 ## 调度器运行原理
 
-上面已经说到了创建完成后直接运行调度器实例，来看一下调度器的启动到底都包含哪些步骤，代码路径`pkg/scheduler/scheduler.go`
+上面已经说到了创建完成后直接运行调度器实例，来看一下调度器的启动到底都包含哪些步骤，代码路径`pkg/scheduler/scheduler.go`。
 
 `Run()`函数的实现非常简单，第一步先启动日志记录器，然后启动调度队列和调度循环，然后等待`ctx.Done()`信号使线程阻塞，如果收到了`ctx.Done()`信号就对调度队列和调度插件执行`Close()`操作释放资源，其中`ScheduleOne`是在一个协程中启动的，原因是为了避免在没有Pod需要调度时挂起状态的`ScheduleOne`阻塞了后续的信号接收，导致调度队列无法关闭造成的死锁情况。
 
@@ -1230,6 +1230,6 @@ func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 2. 每次有Pod加入`ActiveQ`，都会通过`broadcast()`去唤醒等待中的协程，因为如果一个线程要调用`Pop()`方法时会先判断队列长度，如果队列为空时通过执行`cond.Wait()`挂起进程。
 3. 退避队列每秒刷新一次，失败队列每三十秒刷新一次。
 4. 在调度队列中的所有Pod都处于的是`Pending`状态。
-5. 如果一个Pod调度成功，会通过`AssignedPodAdded()`方法尝试把`unschedulablePods`中相关的Pod移动到其他两个队列；如果一个Pod调度失败，会通过`AddUnschedulableIfNotPresent`方法把该Pod重新放回队列。
+5. 如果一个Pod调度成功，会通过`AssignedPodAdded()`方法尝试把`unschedulablePods`中相关的Pod移动到其他两个队列;如果一个Pod调度失败，会通过`AddUnschedulableIfNotPresent`方法把该Pod重新放回队列。
 
 ![SchedulingQueue](../image/SchedulingQueue.png)
