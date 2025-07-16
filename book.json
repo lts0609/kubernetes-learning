@@ -1,0 +1,71 @@
+{
+  "title": "Kubernetes Learning",
+  "description": "Kubernetes源码学习",
+  "author": "lts0609",
+  "language": "zh-hans",
+  "structure": {
+    "summary": "SUMMARY.md",
+    "readme": "README.md"
+  },
+  "output": {
+    "name": "website"
+  },
+  "plugins": [
+    "-highlight",
+    "-lunr",
+    "-search",
+    "-sharing",
+    "-sharing-plus",
+    "pageview-count",
+    "page-toc-button",
+    "page-treeview",
+    "back-to-top-button",
+    "splitter",
+    "code",
+    "search-pro",
+    "popup",
+    "scroll-to-top",
+    "auto-scroll-table",
+    "anchors",
+    "klipse",
+    "prism",
+    "tbfed-pagefooter"
+  ],
+  "pluginsConfig": {
+    "prism": {
+      "css": [
+        "prismjs/themes/prism-tomorrow.css"
+      ],
+      "lang": {
+        "go": "go",
+        "yaml": "yaml"
+      }
+    },
+
+    "search-pro": {
+      "multilingual": false,
+      "indexing": {
+        "delay": 500,
+        "minLength": 2
+      }
+    },
+    "tbfed-pagefooter": {
+      "copyright": "© 2025 lts0609. All rights reserved.",
+      "modify_label": "最后更新时间：",
+      "modify_format": "YYYY-MM-DD HH:mm:ss"
+    },
+    "page-toc-button": {
+      "maxDepth": 3,
+      "minDepth": 1,
+      "position": "left"
+    },
+    "page-treeview": {
+      "sidebarHeader": "目录",
+      "copyright": "",
+      "collapse": true
+    },
+    "klipse": {
+      "languages": ["go", "yaml"]
+    }
+  }
+}

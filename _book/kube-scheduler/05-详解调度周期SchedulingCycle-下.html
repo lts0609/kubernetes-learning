@@ -1,0 +1,1632 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>详解调度周期SchedulingCycle(下) · Kubernetes Learning</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        <meta name="author" content="lts0609">
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-pageview-count/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-page-toc-button/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-page-treeview/style.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-back-to-top-button/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-splitter/splitter.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search-pro/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-auto-scroll-table/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-anchors/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-prism/prism-tomorrow.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-tbfed-pagefooter/footer.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="06-详解绑定周期BindingCycle.html" />
+    
+    
+    <link rel="prev" href="04-详解调度周期SchedulingCycle-上.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Kubernetes源码学习
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Scheduler
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="01-Scheduler创建流程与调度队列.html">
+            
+                <a href="01-Scheduler创建流程与调度队列.html">
+            
+                    
+                    Scheduler创建流程与调度队列
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="02-调度器缓存Cache的实现.html">
+            
+                <a href="02-调度器缓存Cache的实现.html">
+            
+                    
+                    调度器缓存Cache的实现
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="03-Framework框架和调度流程.html">
+            
+                <a href="03-Framework框架和调度流程.html">
+            
+                    
+                    Framework框架和调度流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.4" data-path="04-详解调度周期SchedulingCycle-上.html">
+            
+                <a href="04-详解调度周期SchedulingCycle-上.html">
+            
+                    
+                    详解调度周期SchedulingCycle(上)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.2.5" data-path="05-详解调度周期SchedulingCycle-下.html">
+            
+                <a href="05-详解调度周期SchedulingCycle-下.html">
+            
+                    
+                    详解调度周期SchedulingCycle(下)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.6" data-path="06-详解绑定周期BindingCycle.html">
+            
+                <a href="06-详解绑定周期BindingCycle.html">
+            
+                    
+                    详解绑定周期BindingCycle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.7" data-path="07-失败处理与抢占调度Preemption.html">
+            
+                <a href="07-失败处理与抢占调度Preemption.html">
+            
+                    
+                    失败处理与抢占调度Preemption
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.8" data-path="08-调度器扩展与实践.html">
+            
+                <a href="08-调度器扩展与实践.html">
+            
+                    
+                    调度器扩展与实践
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../kube-controller-manager/">
+            
+                <a href="../kube-controller-manager/">
+            
+                    
+                    Controller Manager
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../kube-controller-manager/01-ControllerManager创建流程.html">
+            
+                <a href="../kube-controller-manager/01-ControllerManager创建流程.html">
+            
+                    
+                    ControllerManager创建流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../kube-controller-manager/02-DeploymentController原理详解.html">
+            
+                <a href="../kube-controller-manager/02-DeploymentController原理详解.html">
+            
+                    
+                    DeploymentController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >详解调度周期SchedulingCycle(下)</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <div class="treeview__container"><ul>
+<li><div><a href="#priorities&#x9636;&#x6BB5;">Priorities&#x9636;&#x6BB5;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#score&#x6269;&#x5C55;&#x70B9;&#x4E0E;normalizescore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;">Score&#x6269;&#x5C55;&#x70B9;&#x4E0E;NormalizeScore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#normalizescore&#x63D2;&#x4EF6;">NormalizeScore&#x63D2;&#x4EF6;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#selecthost">SelectHost</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#assume&#x9636;&#x6BB5;">Assume&#x9636;&#x6BB5;</a><i></i></div></li>
+<li><div><a href="#reserve&#x6269;&#x5C55;&#x70B9;">Reserve&#x6269;&#x5C55;&#x70B9;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;">&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#permit&#x6269;&#x5C55;&#x70B9;">Permit&#x6269;&#x5C55;&#x70B9;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;">Permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;</a><i></i></div></li>
+</ul></li>
+</ul>
+</div>
+
+<h1 id="&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;schedulingcycle&#x4E0B;"><a name="&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;schedulingcycle&#x4E0B;" class="plugin-anchor" href="#&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;schedulingcycle&#x4E0B;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;SchedulingCycle(&#x4E0B;)</h1>
+<p>&#x5728;&#x4E0A;&#x7BC7;&#x4E2D;&#x8BE6;&#x7EC6;&#x4ECB;&#x7ECD;&#x4E86;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x7684;&#x4E0A;&#x534A;&#x6BB5;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;<code>Predicates</code>&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#xFF0C;&#x5728;&#x5176;&#x8FC7;&#x7A0B;&#x4E2D;&#x8FD4;&#x56DE;&#x4E86;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x5BF9;&#x8C61;<code>feasibleNodes</code>&#xFF0C;&#x5B83;&#x662F;&#x4E00;&#x4E2A;<code>NodeInfo</code>&#x7C7B;&#x578B;&#x7684;&#x5207;&#x7247;&#xFF0C;&#x4FDD;&#x5B58;&#x4E86;&#x5728;&#x6761;&#x4EF6;&#x8FC7;&#x6EE4;&#x540E;&#x7B26;&#x5408;Pod&#x8C03;&#x5EA6;&#x8981;&#x6C42;&#x7684;&#x8282;&#x70B9;&#x4FE1;&#x606F;&#x3002;</p>
+<p>&#x56DE;&#x5230;<code>Predicates</code>&#x7ED3;&#x675F;&#x7684;&#x4F4D;&#x7F6E;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;<code>schedulePod()</code>&#x65B9;&#x6CD5;&#x4E2D;</p>
+<pre class="language-"><code class="lang-Go">func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) (result ScheduleResult, err error) {
+    ......
+    // Predicates&#x9636;&#x6BB5; &#x8FD4;&#x56DE;&#x9884;&#x9009;Node&#x548C;&#x8BCA;&#x65AD;&#x7ED3;&#x679C;
+    feasibleNodes, diagnosis, err := sched.findNodesThatFitPod(ctx, fwk, state, pod)
+    ......
+    // Case1:&#x8282;&#x70B9;&#x5217;&#x8868;&#x4E3A;&#x7A7A; &#x8FD4;&#x56DE;&#x5931;&#x8D25;
+    if len(feasibleNodes) == 0 {
+        // &#x4E0A;&#x5C42;&#x51FD;&#x6570;&#x53EA;&#x4F1A;&#x5173;&#x6CE8;err&#x662F;&#x5426;&#x4E3A;&#x7A7A; result&#x672A;&#x88AB;&#x8D4B;&#x503C;
+        return result, &amp;framework.FitError{
+            Pod:         pod,
+            NumAllNodes: sched.nodeInfoSnapshot.NumNodes(),
+            Diagnosis:   diagnosis,
+        }
+    }
+
+    // Case2:&#x5217;&#x8868;&#x957F;&#x5EA6;&#x4E3A;1 &#x4E0D;&#x9700;&#x8981;Priorities&#x9636;&#x6BB5; &#x76F4;&#x63A5;&#x8D70;&#x540E;&#x7EED;&#x6D41;&#x7A0B;
+    if len(feasibleNodes) == 1 {
+        // &#x5728;Predicates&#x9636;&#x6BB5;&#x6210;&#x529F;&#x65F6;&#x4F1A;&#x6839;&#x636E;feasibleNodes&#x586B;&#x5145;result&#x5BF9;&#x8C61;
+        return ScheduleResult{
+            SuggestedHost:  feasibleNodes[0].Node().Name,
+            EvaluatedNodes: 1 + diagnosis.NodeToStatus.Len(),
+            FeasibleNodes:  1,
+        }, nil
+    }
+    // Case3:&#x5217;&#x8868;&#x957F;&#x5EA6;&gt;1 &#x9700;&#x8981;Priorities&#x9636;&#x6BB5;&#x9009;&#x51FA;&#x6700;&#x5408;&#x9002;&#x7684;&#x8282;&#x70B9;&#x518D;&#x8FD4;&#x56DE;
+    priorityList, err := prioritizeNodes(ctx, sched.Extenders, fwk, state, pod, feasibleNodes)
+    if err != nil {
+        return result, err
+    }
+
+    host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+    trace.Step(&quot;Prioritizing done&quot;)
+
+    return ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  len(feasibleNodes),
+    }, err
+}
+</code></pre>
+<h3 id="priorities&#x9636;&#x6BB5;"><a name="priorities&#x9636;&#x6BB5;" class="plugin-anchor" href="#priorities&#x9636;&#x6BB5;"><i class="fa fa-link" aria-hidden="true"></i></a>Priorities&#x9636;&#x6BB5;</h3>
+<p><code>Priorities</code>&#x9636;&#x6BB5;&#x7684;&#x5165;&#x53E3;&#x51FD;&#x6570;&#x662F;<code>prioritizeNodes()</code>&#xFF0C;&#x5BF9;&#x8C03;&#x5EA6;&#x6D41;&#x7A0B;&#x6709;&#x8FC7;&#x57FA;&#x672C;&#x4E86;&#x89E3;&#x7684;&#x4E00;&#x5B9A;&#x90FD;&#x77E5;&#x9053;Pod&#x7684;&#x8C03;&#x5EA6;&#x6709;<code>&#x9884;&#x9009;</code>&#x548C;<code>&#x4F18;&#x9009;</code>&#x4E24;&#x4E2A;&#x9636;&#x6BB5;&#xFF0C;&#x5F88;&#x660E;&#x663E;&#x5728;&#x8FD9;&#x4E2A;&#x9636;&#x6BB5;&#x8981;&#x505A;&#x7684;&#x4E8B;&#x60C5;&#x5C31;&#x662F;&#x5BF9;&#x4E0A;&#x4E00;&#x6B65;&#x4E2D;&#x8FC7;&#x6EE4;&#x51FA;&#x6765;&#x7684;&#x8282;&#x70B9;&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#xFF0C;&#x7136;&#x540E;&#x9009;&#x62E9;&#x6700;&#x5408;&#x9002;&#x7684;&#x4E00;&#x4E2A;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error) {
+    logger := klog.FromContext(ctx)
+
+    if len(extenders) == 0 &amp;&amp; !fwk.HasScorePlugins() {
+        result := make([]framework.NodePluginScores, 0, len(nodes))
+        for i := range nodes {
+            result = append(result, framework.NodePluginScores{
+                Name:       nodes[i].Node().Name,
+                TotalScore: 1,
+            })
+        }
+        return result, nil
+    }
+
+    // Run PreScore plugins.
+    preScoreStatus := fwk.RunPreScorePlugins(ctx, state, pod, nodes)
+    if !preScoreStatus.IsSuccess() {
+        return nil, preScoreStatus.AsError()
+    }
+
+    // Run the Score plugins.
+    nodesScores, scoreStatus := fwk.RunScorePlugins(ctx, state, pod, nodes)
+    if !scoreStatus.IsSuccess() {
+        return nil, scoreStatus.AsError()
+    }
+
+    // Additional details logged at level 10 if enabled.
+    loggerVTen := logger.V(10)
+    if loggerVTen.Enabled() {
+        for _, nodeScore := range nodesScores {
+            for _, pluginScore := range nodeScore.Scores {
+                loggerVTen.Info(&quot;Plugin scored node for pod&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;plugin&quot;, pluginScore.Name, &quot;node&quot;, nodeScore.Name, &quot;score&quot;, pluginScore.Score)
+            }
+        }
+    }
+
+    if len(extenders) != 0 &amp;&amp; nodes != nil {
+        // allNodeExtendersScores has all extenders scores for all nodes.
+        // It is keyed with node name.
+        allNodeExtendersScores := make(map[string]*framework.NodePluginScores, len(nodes))
+        var mu sync.Mutex
+        var wg sync.WaitGroup
+        for i := range extenders {
+            if !extenders[i].IsInterested(pod) {
+                continue
+            }
+            wg.Add(1)
+            go func(extIndex int) {
+                metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Inc()
+                defer func() {
+                    metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Dec()
+                    wg.Done()
+                }()
+                prioritizedList, weight, err := extenders[extIndex].Prioritize(pod, nodes)
+                if err != nil {
+                    // Prioritization errors from extender can be ignored, let k8s/other extenders determine the priorities
+                    logger.V(5).Info(&quot;Failed to run extender&apos;s priority function. No score given by this extender.&quot;, &quot;error&quot;, err, &quot;pod&quot;, klog.KObj(pod), &quot;extender&quot;, extenders[extIndex].Name())
+                    return
+                }
+                mu.Lock()
+                defer mu.Unlock()
+                for i := range *prioritizedList {
+                    nodename := (*prioritizedList)[i].Host
+                    score := (*prioritizedList)[i].Score
+                    if loggerVTen.Enabled() {
+                        loggerVTen.Info(&quot;Extender scored node for pod&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;extender&quot;, extenders[extIndex].Name(), &quot;node&quot;, nodename, &quot;score&quot;, score)
+                    }
+
+                    // MaxExtenderPriority may diverge from the max priority used in the scheduler and defined by MaxNodeScore,
+                    // therefore we need to scale the score returned by extenders to the score range used by the scheduler.
+                    finalscore := score * weight * (framework.MaxNodeScore / extenderv1.MaxExtenderPriority)
+
+                    if allNodeExtendersScores[nodename] == nil {
+                        allNodeExtendersScores[nodename] = &amp;framework.NodePluginScores{
+                            Name:   nodename,
+                            Scores: make([]framework.PluginScore, 0, len(extenders)),
+                        }
+                    }
+                    allNodeExtendersScores[nodename].Scores = append(allNodeExtendersScores[nodename].Scores, framework.PluginScore{
+                        Name:  extenders[extIndex].Name(),
+                        Score: finalscore,
+                    })
+                    allNodeExtendersScores[nodename].TotalScore += finalscore
+                }
+            }(i)
+        }
+        // wait for all go routines to finish
+        wg.Wait()
+        for i := range nodesScores {
+            if score, ok := allNodeExtendersScores[nodes[i].Node().Name]; ok {
+                nodesScores[i].Scores = append(nodesScores[i].Scores, score.Scores...)
+                nodesScores[i].TotalScore += score.TotalScore
+            }
+        }
+    }
+
+    if loggerVTen.Enabled() {
+        for i := range nodesScores {
+            loggerVTen.Info(&quot;Calculated node&apos;s final score for pod&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;node&quot;, nodesScores[i].Name, &quot;score&quot;, nodesScores[i].TotalScore)
+        }
+    }
+    return nodesScores, nil
+}
+</code></pre>
+<p>&#x901A;&#x8FC7;&#x5BF9;<code>Kubernetes&#x6E90;&#x7801;</code>&#x7684;&#x5B66;&#x4E60;&#xFF0C;&#x53EF;&#x4EE5;&#x611F;&#x89C9;&#x5230;&#x5B83;&#x7684;&#x4EE3;&#x7801;&#x662F;&#x5F88;&#x7ED3;&#x6784;&#x5316;&#x7684;&#xFF0C;<code>prioritizeNodes()</code>&#x51FD;&#x6570;&#x6574;&#x4F53;&#x8F83;&#x957F;&#xFF0C;&#x6211;&#x4EEC;&#x5206;&#x5757;&#x6765;&#x7406;&#x6E05;&#x5B83;&#x7684;&#x903B;&#x8F91;&#x3002;&#x9996;&#x5148;&#x6839;&#x636E;&#x51FD;&#x6570;&#x7B7E;&#x540D;&#xFF0C;&#x5B83;&#x7684;&#x5165;&#x53C2;&#x5305;&#x62EC;&#xFF1A;&#x7528;&#x4E8E;&#x63A7;&#x5236;&#x751F;&#x547D;&#x5468;&#x671F;&#x7684;&#x4E0A;&#x4E0B;&#x6587;&#x53C2;&#x6570;<code>ctx</code>&#xFF0C;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;<code>extenders</code>&#xFF0C;&#x8C03;&#x5EA6;&#x6846;&#x67B6;&#x5B9E;&#x4F8B;<code>fwk</code>&#xFF0C;&#x5B58;&#x50A8;&#x8C03;&#x5EA6;&#x72B6;&#x6001;&#x7684;<code>state</code>&#xFF0C;Pod&#x4FE1;&#x606F;&#x5BF9;&#x8C61;<code>pod</code>&#xFF0C;&#x4EE5;&#x53CA;&#x4E0A;&#x4E00;&#x6B65;&#x8FD4;&#x56DE;&#x7684;&#x8282;&#x70B9;&#x5217;&#x8868;<code>nodes</code>&#x3002;&#x8FD4;&#x56DE;&#x503C;&#x662F;&#x4E00;&#x4E2A;<code>NodePluginScores</code>&#x5207;&#x7247;&#x7C7B;&#x578B;&#x7684;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x679C;&#xFF0C;&#x540E;&#x7EED;&#x4F1A;&#x7ECF;&#x8FC7;<code>selectHost()</code>&#x51FD;&#x6570;&#xFF0C;&#x6700;&#x7EC8;&#x6572;&#x5B9A;&#x7684;&#x76EE;&#x6807;&#x8282;&#x70B9;&#x5E76;&#x8FD4;&#x56DE;&#x8282;&#x70B9;&#x540D;&#x79F0;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error)
+</code></pre>
+<p>&#x5148;&#x6765;&#x770B;&#x4E0D;&#x5305;&#x62EC;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;&#x7684;&#x903B;&#x8F91;&#x90E8;&#x5206;&#xFF0C;&#x5982;&#x679C;&#x6CA1;&#x6709;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;&#x548C;<code>Score</code>&#x63D2;&#x4EF6;&#xFF0C;&#x5C31;&#x628A;&#x6240;&#x6709;&#x7684;&#x8282;&#x70B9;&#x90FD;&#x6253;<code>1&#x5206;</code>&#x7136;&#x540E;&#x8FD4;&#x56DE;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error) {
+    logger := klog.FromContext(ctx)
+    // &#x6CA1;&#x6709;&#x6269;&#x5C55;&#x5668;&#x4E5F;&#x6CA1;&#x6709;&#x8BC4;&#x5206;&#x63D2;&#x4EF6; &#x7EDF;&#x4E00;&#x7ED9;&#x4E00;&#x5206;&#x5E76;&#x8FD4;&#x56DE;
+    if len(extenders) == 0 &amp;&amp; !fwk.HasScorePlugins() {
+        result := make([]framework.NodePluginScores, 0, len(nodes))
+        for i := range nodes {
+            result = append(result, framework.NodePluginScores{
+                Name:       nodes[i].Node().Name,
+                TotalScore: 1,
+            })
+        }
+        return result, nil
+    }
+
+    // PreScore&#x6269;&#x5C55;&#x70B9;
+    preScoreStatus := fwk.RunPreScorePlugins(ctx, state, pod, nodes)
+    if !preScoreStatus.IsSuccess() {
+        return nil, preScoreStatus.AsError()
+    }
+
+    // Score&#x6269;&#x5C55;&#x70B9;
+    nodesScores, scoreStatus := fwk.RunScorePlugins(ctx, state, pod, nodes)
+    if !scoreStatus.IsSuccess() {
+        return nil, scoreStatus.AsError()
+    }
+
+    // &#x8BE6;&#x7EC6;&#x65E5;&#x5FD7;&#x8F93;&#x51FA;
+    loggerVTen := logger.V(10)
+    if loggerVTen.Enabled() {
+        for _, nodeScore := range nodesScores {
+            for _, pluginScore := range nodeScore.Scores {
+                loggerVTen.Info(&quot;Plugin scored node for pod&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;plugin&quot;, pluginScore.Name, &quot;node&quot;, nodeScore.Name, &quot;score&quot;, pluginScore.Score)
+            }
+        }
+    }
+    ......
+}
+</code></pre>
+<p><code>RunPreScorePlugins()</code>&#x7684;&#x5B9E;&#x73B0;&#x548C;<code>RunPreFilterPlugins()</code>&#x975E;&#x5E38;&#x7C7B;&#x4F3C;&#xFF0C;&#x540C;&#x6837;&#x662F;&#x505A;&#x4E86;&#x4E24;&#x5927;&#x7C7B;&#x4E8B;&#x60C5;&#xFF1A;&#x5728;&#x904D;&#x5386;&#x6267;&#x884C;<code>PreScore</code>&#x63D2;&#x4EF6;&#x7684;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x8C03;&#x7528;<code>cycleState.Write()</code>&#x8BB0;&#x5F55;&#x4FE1;&#x606F;&#x5230;<code>cycleState</code>&#x4E2D;&#xFF0C;&#x5982;&#x6C61;&#x70B9;&#x5BB9;&#x5FCD;&#x548C;&#x4EB2;&#x548C;&#x6027;&#x7B49;&#xFF0C;&#x5E76;&#x5728;&#x904D;&#x5386;&#x7ED3;&#x675F;&#x540E;&#x628A;&#x6CA1;&#x6709;&#x76F8;&#x5173;&#x6761;&#x4EF6;&#x540E;&#x7EED;&#x4E0D;&#x9700;&#x8981;&#x6267;&#x884C;&#x7684;<code>Score</code>&#x63D2;&#x4EF6;&#x4E5F;&#x8BB0;&#x5F55;&#x5230;<code>cycleState</code>&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) RunPreScorePlugins(
+    ctx context.Context,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) (status *framework.Status) {
+    startTime := time.Now()
+    skipPlugins := sets.New[string]()
+    // &#x6700;&#x540E;&#x628A;Score&#x9636;&#x6BB5;&#x4E0D;&#x9700;&#x8981;&#x6267;&#x884C;&#x7684;&#x63D2;&#x4EF6;&#x8BB0;&#x5F55;&#x5230;cycleState
+    defer func() {
+        state.SkipScorePlugins = skipPlugins
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreScore, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, &quot;PreScore&quot;)
+    }
+    // &#x904D;&#x5386;&#x6267;&#x884C;PreScore&#x63D2;&#x4EF6;&#x903B;&#x8F91;
+    for _, pl := range f.preScorePlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runPreScorePlugin(ctx, pl, state, pod, nodes)
+        if status.IsSkip() {
+            skipPlugins.Insert(pl.Name())
+            continue
+        }
+        if !status.IsSuccess() {
+            return framework.AsStatus(fmt.Errorf(&quot;running PreScore plugin %q: %w&quot;, pl.Name(), status.AsError()))
+        }
+    }
+    return nil
+}
+</code></pre>
+<p>&#x4EE5;Kubernetes&#x7684;&#x9ED8;&#x8BA4;&#x63D2;&#x4EF6;&#x914D;&#x7F6E;&#x4E3A;&#x4F8B;&#xFF0C;&#x5206;&#x6790;<code>PreScore</code>&#x548C;<code>Score</code>&#x63D2;&#x4EF6;&#x7684;&#x884C;&#x4E3A;&#xFF0C;&#x7531;&#x4E8E;<code>Weight</code>&#x6743;&#x91CD;&#x5B57;&#x6BB5;&#x4E00;&#x5B9A;&#x662F;&#x4F5C;&#x7528;&#x4E8E;<code>Score</code>&#x76F8;&#x5173;&#x7684;&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x6240;&#x4EE5;&#x9009;&#x62E9;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x4F5C;&#x4E3A;&#x5206;&#x6790;&#x5BF9;&#x8C61;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func getDefaultPlugins() *v1.Plugins {
+    plugins := &amp;v1.Plugins{
+        MultiPoint: v1.PluginSet{
+            Enabled: []v1.Plugin{
+                {Name: names.SchedulingGates},
+                {Name: names.PrioritySort},
+                {Name: names.NodeUnschedulable},
+                {Name: names.NodeName},
+                {Name: names.TaintToleration, Weight: ptr.To[int32](3)},
+                {Name: names.NodeAffinity, Weight: ptr.To[int32](2)},
+                {Name: names.NodePorts},
+                {Name: names.NodeResourcesFit, Weight: ptr.To[int32](1)},
+                {Name: names.VolumeRestrictions},
+                {Name: names.NodeVolumeLimits},
+                {Name: names.VolumeBinding},
+                {Name: names.VolumeZone},
+                {Name: names.PodTopologySpread, Weight: ptr.To[int32](2)},
+                {Name: names.InterPodAffinity, Weight: ptr.To[int32](2)},
+                {Name: names.DefaultPreemption},
+                {Name: names.NodeResourcesBalancedAllocation, Weight: ptr.To[int32](1)},
+                {Name: names.ImageLocality, Weight: ptr.To[int32](1)},
+                {Name: names.DefaultBinder},
+            },
+        },
+    }
+    applyFeatureGates(plugins)
+
+    return plugins
+}
+</code></pre>
+<p>&#x5728;&#x7ECF;&#x8FC7;&#x4ECE;<code>&#x7B97;&#x6CD5;&#x786C;&#x7F16;&#x7801;</code>&#x5230;<code>Scheduler Framework</code>&#x7684;&#x91CD;&#x6784;&#x540E;&#xFF0C;&#x63D2;&#x4EF6;&#x90FD;&#x5728;&#x8DEF;&#x5F84;<code>pkg/scheduler/framework/plugins</code>&#x4E0B;&#x5B9A;&#x4E49;&#x3002;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x53EF;&#x4EE5;&#x5728;&#x8BE5;&#x8DEF;&#x5F84;&#x4E0B;&#x627E;&#x5230;&#xFF0C;&#x4E00;&#x822C;&#x6BCF;&#x4E2A;&#x63D2;&#x4EF6;&#x76EE;&#x5F55;&#x4E0B;&#x90FD;&#x662F;&#x7531;&#x7B97;&#x6CD5;&#x5B9E;&#x73B0;&#x548C;&#x5355;&#x5143;&#x6D4B;&#x8BD5;&#x4E24;&#x4E2A;&#x6587;&#x4EF6;&#x7EC4;&#x6210;&#x3002;</p>
+<p>&#x5728;<code>taint_toleration.go</code>&#x6587;&#x4EF6;&#x4E2D;&#xFF0C;&#x53EF;&#x4EE5;&#x770B;&#x5230;&#x8BE5;&#x63D2;&#x4EF6;&#x5B9E;&#x73B0;&#x4E86;<code>Filter&#x3001;PreScore&#x3001;Score&#x3001;NormalizeScore</code>&#x63A5;&#x53E3;&#xFF0C;&#x5176;&#x4E2D;&#x7684;&#x903B;&#x8F91;&#x6BD4;&#x8F83;&#x7B80;&#x5355;&#xFF0C;<code>PreScore</code>&#x6269;&#x5C55;&#x70B9;&#x65F6;&#x4F7F;&#x7528;<code>cycleState.Write()</code>&#x8BB0;&#x5F55;&#x6C61;&#x70B9;&#x5BB9;&#x5FCD;&#x4FE1;&#x606F;&#x5230;<code>cycleState</code>&#xFF0C;&#x5230;<code>Score</code>&#x6269;&#x5C55;&#x70B9;&#x65F6;<code>TaintToleration</code>&#x6839;&#x636E;&#x5199;&#x5165;&#x65F6;&#x7684;key&#x4F7F;&#x7528;<code>cycleState.Read()</code>&#x8BFB;&#x51FA;<code>PreScore</code>&#x9636;&#x6BB5;&#x8BB0;&#x5F55;&#x7684;&#x6570;&#x636E;&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x8F6F;&#x6027;&#x6C61;&#x70B9;&#x5C31;&#x8BA1;&#x6570;&#x52A0;&#x4E00;&#xFF0C;&#x6700;&#x540E;&#x8FD4;&#x56DE;&#x7ED3;&#x679C;&#x3002;<code>NormalizeScore</code>&#x6269;&#x5C55;&#x70B9;&#x8C03;&#x7528;&#x4E86;&#x9ED8;&#x8BA4;&#x7684;&#x5F52;&#x4E00;&#x5316;&#x903B;&#x8F91;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (pl *TaintToleration) PreScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) *framework.Status {
+    if len(nodes) == 0 {
+        return nil
+    }
+    tolerationsPreferNoSchedule := getAllTolerationPreferNoSchedule(pod.Spec.Tolerations)
+    state := &amp;preScoreState{
+        tolerationsPreferNoSchedule: tolerationsPreferNoSchedule,
+    }
+    cycleState.Write(preScoreStateKey, state)
+    return nil
+}
+
+func (pl *TaintToleration) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+    nodeInfo, err := pl.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+    if err != nil {
+        return 0, framework.AsStatus(fmt.Errorf(&quot;getting node %q from Snapshot: %w&quot;, nodeName, err))
+    }
+    node := nodeInfo.Node()
+
+    s, err := getPreScoreState(state)
+    if err != nil {
+        return 0, framework.AsStatus(err)
+    }
+
+    score := int64(countIntolerableTaintsPreferNoSchedule(node.Spec.Taints, s.tolerationsPreferNoSchedule))
+    return score, nil
+}
+
+func (pl *TaintToleration) NormalizeScore(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+    return helper.DefaultNormalizeScore(framework.MaxNodeScore, true, scores)
+}
+
+func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.Toleration) (intolerableTaints int) {
+    for _, taint := range taints {
+        // &#x4EC5;&#x5904;&#x7406;&#x8F6F;&#x6027;&#x6C61;&#x70B9;
+        if taint.Effect != v1.TaintEffectPreferNoSchedule {
+            continue
+        }
+        // &#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x8BE5;&#x6C61;&#x70B9;&#x65F6;&#x8BA1;&#x6570;+1
+        if !v1helper.TolerationsTolerateTaint(tolerations, &amp;taint) {
+            intolerableTaints++
+        }
+    }
+    // &#x8FD4;&#x56DE;&#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x6C61;&#x70B9;&#x8BA1;&#x6570;&#x7ED3;&#x679C;
+    return
+}
+</code></pre>
+<h4 id="score&#x6269;&#x5C55;&#x70B9;&#x4E0E;normalizescore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;"><a name="score&#x6269;&#x5C55;&#x70B9;&#x4E0E;normalizescore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;" class="plugin-anchor" href="#score&#x6269;&#x5C55;&#x70B9;&#x4E0E;normalizescore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;"><i class="fa fa-link" aria-hidden="true"></i></a>Score&#x6269;&#x5C55;&#x70B9;&#x4E0E;NormalizeScore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;</h4>
+<p><code>RunScorePlugins()</code>&#x7684;&#x5B9E;&#x73B0;&#x548C;<code>RunFilterPlugins()</code>&#x7C7B;&#x4F3C;&#x3002;&#x9996;&#x5148;&#xFF0C;<code>Filter</code>&#x63D2;&#x4EF6;&#x6267;&#x884C;&#x7684;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x72B6;&#x6001;&#x88AB;&#x5B58;&#x50A8;&#x5728;<code>CycleState</code>&#x5BF9;&#x8C61;&#x5E76;&#x8BFB;&#x5199;&#xFF0C;&#x8FC7;&#x6EE4;&#x7684;&#x884C;&#x4E3A;&#x5C5E;&#x4E8E;&#x8D23;&#x4EFB;&#x94FE;&#x6A21;&#x5F0F;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x5904;&#x4E0D;&#x901A;&#x8FC7;&#x5C31;&#x76F4;&#x63A5;&#x5931;&#x8D25;&#x9000;&#x51FA;&#xFF0C;&#x6240;&#x4EE5;&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#x8282;&#x70B9;&#x5C42;&#x9762;&#x5E76;&#x884C;&#x4F46;&#x63D2;&#x4EF6;&#x5C42;&#x9762;&#x662F;&#x4E32;&#x884C;&#x7684;&#x3002;&#x8BC4;&#x5206;&#x9636;&#x6BB5;&#x4E5F;&#x662F;&#x8282;&#x70B9;&#x5C42;&#x9762;&#x4E32;&#x884C;&#x548C;&#x63D2;&#x4EF6;&#x5C42;&#x9762;&#x5E76;&#x884C;&#xFF0C;&#x5982;&#x6709;&#x7591;&#x95EE;&#x53EF;&#x4EE5;&#x5BF9;&#x6BD4;<code>Predicates</code>&#x9636;&#x6BB5;&#x7684;<code>findNodesThatPassFilters()</code>&#x4E0E;<code>Priorities</code>&#x9636;&#x6BB5;&#x7684;<code>RunScorePlugins()</code>&#x65B9;&#x6CD5;&#x5E76;&#x52A0;&#x4EE5;&#x8BE6;&#x7EC6;&#x5BF9;&#x6BD4;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) RunScorePlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) (ns []framework.NodePluginScores, status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Score, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    allNodePluginScores := make([]framework.NodePluginScores, len(nodes))
+    numPlugins := len(f.scorePlugins)
+    plugins := make([]framework.ScorePlugin, 0, numPlugins)
+    pluginToNodeScores := make(map[string]framework.NodeScoreList, numPlugins)
+    // &#x521D;&#x59CB;&#x5316;Score&#x6269;&#x5C55;&#x70B9;&#x4F7F;&#x7528;&#x7684;&#x63D2;&#x4EF6;&#x5217;&#x8868;
+    for _, pl := range f.scorePlugins {
+        if state.SkipScorePlugins.Has(pl.Name()) {
+            continue
+        }
+        plugins = append(plugins, pl)
+        pluginToNodeScores[pl.Name()] = make(framework.NodeScoreList, len(nodes))
+    }
+    // &#x521B;&#x5EFA;&#x4E0A;&#x4E0B;&#x6587;&#x5BF9;&#x8C61;
+    ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
+    errCh := parallelize.NewErrorChannel()
+    // Score&#x63D2;&#x4EF6;&#x5217;&#x8868;&#x4E0D;&#x4E3A;&#x7A7A;&#x65F6;
+    if len(plugins) &gt; 0 {
+        logger := klog.FromContext(ctx)
+        verboseLogs := logger.V(4).Enabled()
+        if verboseLogs {
+            logger = klog.LoggerWithName(logger, &quot;Score&quot;)
+        }
+        // &#x4E3A;&#x6BCF;&#x4E2A;&#x8282;&#x70B9;&#x5E76;&#x53D1;&#x6267;&#x884C;&#x8BC4;&#x5206;&#x64CD;&#x4F5C;
+        f.Parallelizer().Until(ctx, len(nodes), func(index int) {
+            nodeName := nodes[index].Node().Name
+            logger := logger
+            if verboseLogs {
+                logger = klog.LoggerWithValues(logger, &quot;node&quot;, klog.ObjectRef{Name: nodeName})
+            }
+            // Score&#x63D2;&#x4EF6;&#x7EA7;&#x522B;&#x4E32;&#x884C;
+            for _, pl := range plugins {
+                ctx := ctx
+                if verboseLogs {
+                    logger := klog.LoggerWithName(logger, pl.Name())
+                    ctx = klog.NewContext(ctx, logger)
+                }
+                s, status := f.runScorePlugin(ctx, pl, state, pod, nodeName)
+                if !status.IsSuccess() {
+                    err := fmt.Errorf(&quot;plugin %q failed with: %w&quot;, pl.Name(), status.AsError())
+                    errCh.SendErrorWithCancel(err, cancel)
+                    return
+                }
+                // &#x8BB0;&#x5F55;&#x8BC4;&#x5206;&#x4FE1;&#x606F;&#x5230;pluginToNodeScores
+                pluginToNodeScores[pl.Name()][index] = framework.NodeScore{
+                    Name:  nodeName,
+                    Score: s,
+                }
+            }
+        }, metrics.Score)
+        if err := errCh.ReceiveError(); err != nil {
+            return nil, framework.AsStatus(fmt.Errorf(&quot;running Score plugins: %w&quot;, err))
+        }
+    }
+
+    // NormalizeScore&#x6269;&#x5C55;&#x70B9;
+    // &#x4E3A;&#x6BCF;&#x4E2A;&#x63D2;&#x4EF6;&#x5E76;&#x53D1;&#x6267;&#x884C;&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;
+    f.Parallelizer().Until(ctx, len(plugins), func(index int) {
+        pl := plugins[index]
+        // Score&#x63D2;&#x4EF6;&#x5FC5;&#x987B;&#x5B9E;&#x73B0;ScoreExtensions()&#x65B9;&#x6CD5; &#x5982;&#x679C;&#x4E0D;&#x9700;&#x8981;&#x5F52;&#x4E00;&#x5316;&#x5C31;&#x5728;&#x8BE5;&#x65B9;&#x6CD5;&#x4E2D;&#x8FD4;&#x56DE;nil
+        if pl.ScoreExtensions() == nil {
+            return
+        }
+        nodeScoreList := pluginToNodeScores[pl.Name()]
+        // &#x6709;&#x5F52;&#x4E00;&#x5316;&#x9700;&#x8981;&#x7684;&#x6267;&#x884C;&#x63D2;&#x4EF6;&#x7684;NormalizeScore()&#x65B9;&#x6CD5;&#x5E76;&#x8FD4;&#x56DE;&#x7ED3;&#x679C;
+        status := f.runScoreExtension(ctx, pl, state, pod, nodeScoreList)
+        if !status.IsSuccess() {
+            err := fmt.Errorf(&quot;plugin %q failed with: %w&quot;, pl.Name(), status.AsError())
+            errCh.SendErrorWithCancel(err, cancel)
+            return
+        }
+    }, metrics.Score)
+    if err := errCh.ReceiveError(); err != nil {
+        return nil, framework.AsStatus(fmt.Errorf(&quot;running Normalize on Score plugins: %w&quot;, err))
+    }
+
+    // &#x6309;&#x8282;&#x70B9;&#x7C92;&#x5EA6;&#x5E76;&#x53D1;&#x6267;&#x884C; &#x6839;&#x636E;&#x6743;&#x91CD;&#x8C03;&#x6574;&#x6700;&#x7EC8;&#x8BC4;&#x5206;
+    f.Parallelizer().Until(ctx, len(nodes), func(index int) {
+        nodePluginScores := framework.NodePluginScores{
+            Name:   nodes[index].Node().Name,
+            Scores: make([]framework.PluginScore, len(plugins)),
+        }
+
+        for i, pl := range plugins {
+            weight := f.scorePluginWeight[pl.Name()]
+            nodeScoreList := pluginToNodeScores[pl.Name()]
+            score := nodeScoreList[index].Score
+            // &#x8BC4;&#x5206;&#x7684;&#x8303;&#x56F4;&#x5982;&#x679C;&#x4E0D;&#x5728;1-100&#x4E4B;&#x95F4;&#x8FD4;&#x56DE;&#x9519;&#x8BEF;
+            if score &gt; framework.MaxNodeScore || score &lt; framework.MinNodeScore {
+                err := fmt.Errorf(&quot;plugin %q returns an invalid score %v, it should in the range of [%v, %v] after normalizing&quot;, pl.Name(), score, framework.MinNodeScore, framework.MaxNodeScore)
+                errCh.SendErrorWithCancel(err, cancel)
+                return
+            }
+            weightedScore := score * int64(weight)
+            // &#x8BB0;&#x5F55;&#x5355;&#x4E2A;&#x63D2;&#x4EF6;&#x6700;&#x7EC8;&#x8BC4;&#x5206;&#x5230;nodePluginScores
+            nodePluginScores.Scores[i] = framework.PluginScore{
+                Name:  pl.Name(),
+                Score: weightedScore,
+            }
+            // &#x7D2F;&#x52A0;&#x8BB0;&#x5F55;&#x8282;&#x70B9;&#x603B;&#x5206;
+            nodePluginScores.TotalScore += weightedScore
+        }
+        allNodePluginScores[index] = nodePluginScores
+    }, metrics.Score)
+    if err := errCh.ReceiveError(); err != nil {
+        return nil, framework.AsStatus(fmt.Errorf(&quot;applying score defaultWeights on Score plugins: %w&quot;, err))
+    }
+    // &#x8FD4;&#x56DE;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x679C;&#x5217;&#x8868;
+    return allNodePluginScores, nil
+}
+
+// &#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x6784;
+type NodePluginScores struct {
+    // &#x8282;&#x70B9;&#x540D;&#x79F0;
+    Name string
+    // &#x63D2;&#x4EF6;-&#x8BC4;&#x5206; &#x5217;&#x8868;
+    Scores []PluginScore
+    // &#x603B;&#x5206;
+    TotalScore int64
+}
+</code></pre>
+<h5 id="normalizescore&#x63D2;&#x4EF6;"><a name="normalizescore&#x63D2;&#x4EF6;" class="plugin-anchor" href="#normalizescore&#x63D2;&#x4EF6;"><i class="fa fa-link" aria-hidden="true"></i></a>NormalizeScore&#x63D2;&#x4EF6;</h5>
+<p>&#x4E00;&#x4E9B;&#x63D2;&#x4EF6;&#x7684;<code>NormalizeScore()</code>&#x5B9E;&#x73B0;&#x662F;&#x76F4;&#x63A5;&#x8C03;&#x7528;&#x4E86;&#x9ED8;&#x8BA4;&#x7684;&#x5F52;&#x4E00;&#x5316;&#x8BC4;&#x5206;&#x65B9;&#x6CD5;<code>DefaultNormalizeScore()</code>&#xFF0C;&#x5728;&#x6587;&#x4EF6;<code>pkg/scheduler/framework/plugins/helper/normalize_score.go</code>&#x4E2D;&#x5B9A;&#x4E49;&#xFF0C;&#x4EC5;&#x6CE8;&#x91CA;&#x4E0D;&#x505A;&#x8FC7;&#x591A;&#x8BF4;&#x660E;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.NodeScoreList) *framework.Status {
+    var maxCount int64
+    // &#x83B7;&#x53D6;&#x6240;&#x6709;&#x8282;&#x70B9;&#x4E2D;&#x7684;&#x6700;&#x9AD8;&#x5206;
+    for i := range scores {
+        if scores[i].Score &gt; maxCount {
+            maxCount = scores[i].Score
+        }
+    }
+    // &#x5982;&#x679C;&#x6240;&#x6709;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x90FD;&#x662F;0&#x7684;&#x60C5;&#x51B5;
+    if maxCount == 0 {
+        if reverse {
+            for i := range scores {
+                scores[i].Score = maxPriority
+            }
+        }
+        return nil
+    }
+    // &#x6B63;&#x5E38;&#x60C5;&#x51B5;
+    for i := range scores {
+        score := scores[i].Score
+        // 100*&#x8BC4;&#x5206;/&#x6700;&#x9AD8;&#x5206;
+        score = maxPriority * score / maxCount
+        // reverse&#x7528;&#x4E8E;Score&#x8BC4;&#x5206;&#x4F4E;&#x8868;&#x793A;&#x66F4;&#x9AD8;&#x4F18;&#x5148;&#x7EA7;&#x7684;&#x60C5;&#x51B5; &#x5982;TaintToleration&#x63D2;&#x4EF6;
+        if reverse {
+            // &#x4F4E;&#x5206;&#x53CD;&#x8F6C;&#x53D8;&#x6210;&#x9AD8;&#x5206;
+            score = maxPriority - score
+        }
+        // &#x8BB0;&#x5F55;&#x5F52;&#x4E00;&#x5316;&#x540E;&#x7684;&#x8BC4;&#x5206;
+        scores[i].Score = score
+    }
+    return nil
+}
+</code></pre>
+<p>&#x5BF9;&#x4E0A;&#x9762;&#x4F8B;&#x5982;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x7684;&#x4E86;&#x89E3;&#xFF0C;&#x4E0D;&#x96BE;&#x53D1;&#x73B0;&#x5176;&#x5B9E;&#x8C03;&#x5EA6;&#x5668;&#x7684;&#x7B97;&#x6CD5;&#x5B9E;&#x73B0;&#x5E76;&#x4E0D;&#x590D;&#x6742;&#xFF0C;&#x91CD;&#x70B9;&#x5728;&#x4E8E;&#x6574;&#x4F53;&#x6D41;&#x7A0B;&#x7684;&#x8BBE;&#x8BA1;&#xFF0C;&#x5B9E;&#x9645;&#x4E0A;&#x5728;&#x4E86;&#x89E3;&#x4E86;<code>Scheduler Framework</code>&#x540E;&#xFF0C;Pod&#x7684;&#x6574;&#x4E2A;&#x8C03;&#x5EA6;&#x6D41;&#x7A0B;&#x5C31;&#x5DF2;&#x7ECF;&#x975E;&#x5E38;&#x6E05;&#x6670;&#x4E86;&#x3002;&#x5230;&#x76EE;&#x524D;&#x4E3A;&#x6B62;&#x603B;&#x5171;&#x63A5;&#x89E6;&#x5230;&#x4E86;<code>PreFilter</code>&#x3001;<code>Filter</code>&#x3001;<code>PreScore</code>&#x3001;<code>Score</code>&#x8FD9;&#x56DB;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#x7684;&#x63D2;&#x4EF6;(&#x5176;&#x4E2D;<code>NormalizeScore</code>&#x5728;<code>Score</code>&#x6269;&#x5C55;&#x70B9;&#x5185;&#x90E8;&#xFF0C;&#x4E0D;&#x5C5E;&#x4E8E;12&#x4E2A;&#x6807;&#x51C6;&#x6269;&#x5C55;&#x70B9;&#x4E4B;&#x4E00;)&#x3002;&#x5728;&#x7ED3;&#x5408;&#x6D41;&#x7A0B;&#x56FE;&#x4E2D;&#xFF0C;&#x524D;&#x9762;&#x6709;&#x4E09;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#x6CA1;&#x6709;&#x770B;&#x5230;&#xFF0C;&#x5206;&#x522B;&#x662F;<code>PreEnqueue</code>&#x3001;<code>QueueSort</code>&#x548C;<code>PostFilter</code>&#xFF0C;&#x5176;&#x4E2D;<code>PreEnqueue</code>&#x548C;<code>QueueSort</code>&#x662F;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x76F8;&#x5173;&#x7684;&#x4E24;&#x4E2A;&#x63D2;&#x4EF6;&#xFF0C;&#x6240;&#x4EE5;&#x6CA1;&#x6709;&#x51FA;&#x73B0;&#x5728;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x5185;&#xFF0C;&#x5982;&#x679C;&#x611F;&#x5174;&#x8DA3;&#x53EF;&#x4EE5;&#x56DE;&#x5230;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x7684;<code>runPreEnqueuePlugins()</code>&#x65B9;&#x6CD5;&#x4E2D;&#xFF0C;&#x5728;Pod&#x6DFB;&#x52A0;&#x5230;<code>ActiveQ</code>&#x65F6;&#x8C03;&#x7528;&#x3002;<code>QueueSort</code>&#x8C03;&#x7528;&#x70B9;&#x8F83;&#x4E3A;&#x9690;&#x853D;&#xFF0C;&#x53EF;&#x4EE5;&#x4EE5;<code>func (aq *activeQueue) update()</code>&#x4E3A;&#x5165;&#x53E3;&#xFF0C;&#x8C03;&#x7528;&#x5173;&#x7CFB;&#x5982;&#x4E0B;&#x65B9;&#x6240;&#x793A;&#xFF0C;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;&#x4E4B;&#x521D;&#xFF0C;&#x5C31;&#x5411;&#x5176;&#x4E2D;&#x6CE8;&#x518C;&#x4E86;<code>Less()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x5B83;&#x7684;&#x8C03;&#x7528;&#x70B9;&#x4E0D;&#x50CF;&#x5176;&#x4ED6;&#x7684;&#x63D2;&#x4EF6;&#x662F;<code>runXXXPlugin()</code>&#x800C;&#x662F;<code>Less()</code>&#xFF0C;Pod&#x7684;&#x5165;&#x961F;&#x548C;&#x51FA;&#x961F;&#x90FD;&#x4F1A;&#x8C03;&#x7528;<code>Less()</code>&#x65B9;&#x6CD5;&#x3002;<code>PostFilter</code>&#x63D2;&#x4EF6;&#x53EA;&#x4E0E;&#x62A2;&#x5360;&#x6D41;&#x7A0B;&#x6709;&#x5173;&#xFF0C;&#x5728;&#x540E;&#x9762;&#x4F1A;&#x5355;&#x72EC;&#x4ECB;&#x7ECD;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">// &#x5165;&#x961F;&#x7684;&#x8C03;&#x7528;&#x94FE; activeQueue.update-&gt;queue.AddOrUpdate-&gt;heap.Push-&gt;up
+func (aq *activeQueue) update(newPod *v1.Pod, oldPodInfo *framework.QueuedPodInfo) *framework.QueuedPodInfo {
+    aq.lock.Lock()
+    defer aq.lock.Unlock()
+
+    if pInfo, exists := aq.queue.Get(oldPodInfo); exists {
+        _ = pInfo.Update(newPod)
+        aq.queue.AddOrUpdate(pInfo)
+        return pInfo
+    }
+    return nil
+}
+
+func (h *Heap[T]) AddOrUpdate(obj T) {
+    key := h.data.keyFunc(obj)
+    if _, exists := h.data.items[key]; exists {
+        h.data.items[key].obj = obj
+        heap.Fix(h.data, h.data.items[key].index)
+    } else {
+        heap.Push(h.data, &amp;itemKeyValue[T]{key, obj})
+        if h.metricRecorder != nil {
+            h.metricRecorder.Inc()
+        }
+    }
+}
+
+// golang&#x7684;container/heap&#x5305;
+func Push(h Interface, x any) {
+    h.Push(x)
+    up(h, h.Len()-1)
+}
+
+func up(h Interface, j int) {
+    for {
+        i := (j - 1) / 2 // parent
+        // &#x76F4;&#x63A5;&#x8C03;&#x7528;&#x70B9;
+        if i == j || !h.Less(j, i) {
+            break
+        }
+        h.Swap(i, j)
+        j = i
+    }
+}
+
+// &#x51FA;&#x961F;&#x7684;&#x8C03;&#x7528;&#x94FE; activeQueue.pop-&gt;activeQueue.unlockedPop-&gt;queue.Pop-&gt;heap.Pop-&gt;down
+func (aq *activeQueue) pop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    aq.lock.Lock()
+    defer aq.lock.Unlock()
+
+    return aq.unlockedPop(logger)
+}
+
+func (aq *activeQueue) unlockedPop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    for aq.queue.Len() == 0 {
+        if aq.closed {
+            logger.V(2).Info(&quot;Scheduling queue is closed&quot;)
+            return nil, nil
+        }
+        aq.cond.Wait()
+    }
+
+    pInfo, err := aq.queue.Pop()
+    ......
+}
+
+func (h *Heap[T]) Pop() (T, error) {
+    obj := heap.Pop(h.data)
+    if obj != nil {
+        if h.metricRecorder != nil {
+            h.metricRecorder.Dec()
+        }
+        return obj.(T), nil
+    }
+    var zero T
+    return zero, fmt.Errorf(&quot;heap is empty&quot;)
+}
+
+// golang&#x7684;container/heap&#x5305;
+func Pop(h Interface) any {
+    n := h.Len() - 1
+    h.Swap(0, n)
+    down(h, 0, n)
+    return h.Pop()
+}
+
+func down(h Interface, i0, n int) bool {
+    i := i0
+    for {
+        j1 := 2*i + 1
+        if j1 &gt;= n || j1 &lt; 0 { // j1 &lt; 0 after int overflow
+            break
+        }
+        j := j1 // left child
+        // &#x76F4;&#x63A5;&#x8C03;&#x7528;&#x70B9;
+        if j2 := j1 + 1; j2 &lt; n &amp;&amp; h.Less(j2, j1) {
+            j = j2 // = 2*i + 2  // right child
+        }
+        if !h.Less(j, i) {
+            break
+        }
+        h.Swap(i, j)
+        i = j
+    }
+    return i &gt; i0
+}
+</code></pre>
+<h4 id="selecthost"><a name="selecthost" class="plugin-anchor" href="#selecthost"><i class="fa fa-link" aria-hidden="true"></i></a>SelectHost</h4>
+<p>&#x6B64;&#x65F6;&#x5DF2;&#x7ECF;&#x5F97;&#x5230;&#x4E86;&#x6BCF;&#x4E2A;&#x8282;&#x70B9;&#x548C;&#x5176;&#x8BC4;&#x5206;&#x7684;&#x5BF9;&#x5E94;&#x5173;&#x7CFB;&#xFF0C;&#x8FD8;&#x9700;&#x8981;&#x8FDB;&#x884C;<code>Priorities</code>&#x9636;&#x6BB5;&#x7684;&#x6700;&#x540E;&#x4E00;&#x6B65;&#xFF0C;&#x90A3;&#x5C31;&#x662F;&#x4ECE;&#x4E0A;&#x4E00;&#x6B65;&#x7684;&#x7ED3;&#x679C;&#x4E2D;&#x9009;&#x51FA;&#x6700;&#x4F18;&#x5148;&#x7684;&#x90A3;&#x4E2A;&#xFF0C;&#x7136;&#x540E;&#x4EE5;<code>ScheduleResult</code>&#x7ED3;&#x6784;&#x7684;&#x5F62;&#x5F0F;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+return ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  len(feasibleNodes),
+    }, err
+</code></pre>
+<p>&#x5176;&#x4E2D;&#x7684;&#x4E00;&#x4E2A;&#x8F93;&#x5165;&#x53C2;&#x6570;&#x662F;<code>numberOfHighestScoredNodesToReport</code>&#xFF0C;&#x5B83;&#x7684;&#x503C;&#x4E3A;3&#xFF0C;&#x53EF;&#x4EE5;&#x8986;&#x76D6;<code>&#x4E00;&#x4E3B;&#x4E24;&#x5907;</code>&#x7684;&#x573A;&#x666F;&#x5E76;&#x907F;&#x514D;&#x8BB0;&#x5F55;&#x8FC7;&#x591A;&#x4FE1;&#x606F;&#x7684;&#x5185;&#x5B58;&#x5360;&#x7528;&#xFF0C;&#x540C;&#x65F6;&#x7528;&#x4E8E;&#x62A2;&#x5360;&#x6D41;&#x7A0B;&#x548C;&#x9519;&#x8BEF;&#x8BB0;&#x5F55;&#xFF0C;&#x8BE5;&#x6570;&#x503C;&#x662F;&#x4FE1;&#x606F;&#x5B8C;&#x6574;&#x6027;&#x548C;&#x6027;&#x80FD;&#x4E4B;&#x95F4;&#x7684;&#x5E73;&#x8861;&#x70B9;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">    // numberOfHighestScoredNodesToReport is the number of node scores
+    // to be included in ScheduleResult.
+    numberOfHighestScoredNodesToReport = 3
+</code></pre>
+<p>&#x4E0B;&#x9762;&#x5206;&#x6790;<code>selectHost()</code>&#x51FD;&#x6570;&#xFF0C;&#x9996;&#x5148;&#x662F;&#x5BF9;&#x957F;&#x5EA6;&#x505A;&#x4F8B;&#x884C;&#x7684;&#x5224;&#x65AD;&#xFF0C;&#x7136;&#x540E;&#x5F00;&#x59CB;&#x63D0;&#x53D6;&#x524D;&#x4E09;&#x8BC4;&#x5206;&#x7684;&#x8282;&#x70B9;&#xFF0C;&#x8FD9;&#x91CC;&#x7684;&#x8BBE;&#x8BA1;&#x91C7;&#x7528;&#x4E86;&#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;&#x3002;&#x9996;&#x5148;&#x521D;&#x59CB;&#x5316;&#x4E86;&#x4E00;&#x4E2A;&#x5217;&#x8868;&#xFF0C;&#x5E76;&#x628A;<code>nodeScoreHeap</code>&#x5806;&#x4E2D;&#x7684;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;<code>Pop</code>&#x51FA;&#x6765;&#x52A0;&#x5165;&#x5230;&#x5217;&#x8868;&#x4E2D;&#xFF0C;&#x56E0;&#x4E3A;<code>nodeScoreHeap</code>&#x662F;&#x6309;<code>TotalScore</code>&#x4ECE;&#x9AD8;&#x5230;&#x4F4E;&#x6765;&#x6392;&#x5E8F;&#x7684;&#x3002;&#x7136;&#x540E;&#x5F00;&#x59CB;&#x5FAA;&#x73AF;&#x6DFB;&#x52A0;&#x5143;&#x7D20;&#xFF0C;&#x5728;&#x5207;&#x7247;&#x5B9E;&#x9645;&#x957F;&#x5EA6;&#x5C0F;&#x4E8E;&#x5BB9;&#x91CF;&#x65F6;&#xFF0C;&#x5148;&#x62FF;&#x5F53;&#x524D;&#x8282;&#x70B9;&#x7684;<code>TotalScore</code>&#x548C;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x7684;<code>TotalScore</code>&#x505A;&#x6BD4;&#x8F83;&#xFF0C;&#x5982;&#x679C;&#x503C;&#x76F8;&#x7B49;&#x5C31;&#x6839;&#x636E;&#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;&#xFF0C;&#x4EE5;<code>1/&#x76F8;&#x540C;&#x5206;&#x6570;&#x8282;&#x70B9;&#x6570;&#x91CF;</code>&#x7684;&#x6982;&#x7387;&#x66FF;&#x6362;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#xFF0C;&#x4EE5;<code>selectedIndex</code>&#x52A8;&#x6001;&#x8BB0;&#x5F55;&#x5176;&#x4F4D;&#x7F6E;&#xFF0C;&#x7136;&#x540E;&#x5728;&#x5143;&#x7D20;&#x52A0;&#x6EE1;&#x4E4B;&#x540E;&#x4EA4;&#x6362;&#x5217;&#x8868;&#x4E2D;&#x4E24;&#x4E2A;&#x7D22;&#x5F15;&#x4F4D;&#x7F6E;&#x7684;&#x503C;&#xFF0C;&#x6700;&#x7EC8;&#x8FD4;&#x56DE;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x7684;&#x8282;&#x70B9;&#x540D;&#x79F0;&#x548C;&#x5206;&#x6570;&#x524D;&#x4E09;&#x7684;&#x8282;&#x70B9;&#x5217;&#x8868;&#xFF0C;&#x81F3;&#x6B64;<code>Priorities</code>&#x9636;&#x6BB5;&#x5B8C;&#x5168;&#x7ED3;&#x675F;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (h nodeScoreHeap) Less(i, j int) bool { return h[i].TotalScore &gt; h[j].TotalScore }
+
+func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, []framework.NodePluginScores, error) {
+    if len(nodeScoreList) == 0 {
+        return &quot;&quot;, nil, errEmptyPriorityList
+    }
+    // &#x521D;&#x59CB;&#x5316;&#x5806;&#x7ED3;&#x6784;&#x7684;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x5217;&#x8868;
+    var h nodeScoreHeap = nodeScoreList
+    heap.Init(&amp;h)
+    cntOfMaxScore := 1
+    selectedIndex := 0
+    // &#x5148;&#x63D0;&#x53D6;&#x7B2C;&#x4E00;&#x4E2A;&#x8282;&#x70B9; &#x5FC5;&#x7136;&#x662F;&#x6700;&#x9AD8;&#x5206;
+    sortedNodeScoreList := make([]framework.NodePluginScores, 0, count)
+    sortedNodeScoreList = append(sortedNodeScoreList, heap.Pop(&amp;h).(framework.NodePluginScores))
+
+    // &#x5FAA;&#x73AF;&#x6DFB;&#x52A0;&#x8282;&#x70B9;
+    for ns := heap.Pop(&amp;h).(framework.NodePluginScores); ; ns = heap.Pop(&amp;h).(framework.NodePluginScores) {
+        // &#x5F53;&#x524D;&#x8282;&#x70B9;&#x5206;&#x6570;&#x548C;&#x6700;&#x9AD8;&#x5206;&#x4E0D;&#x540C; &#x4E14;&#x8282;&#x70B9;&#x5217;&#x8868;&#x5DF2;&#x6EE1;&#x65F6;&#x9000;&#x51FA;&#x5FAA;&#x73AF;
+        if ns.TotalScore != sortedNodeScoreList[0].TotalScore &amp;&amp; len(sortedNodeScoreList) == count {
+            break
+        }
+        // &#x6700;&#x9AD8;&#x540C;&#x5206;&#x8282;&#x70B9;&#x7684;&#x9009;&#x62E9; &#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;
+        if ns.TotalScore == sortedNodeScoreList[0].TotalScore {
+            // &#x6700;&#x9AD8;&#x5206;&#x540C;&#x5206;&#x8282;&#x70B9;&#x6570;&#x91CF;&#x8BA1;&#x6570;+1
+            cntOfMaxScore++
+            if rand.Intn(cntOfMaxScore) == 0 {
+                // &#x540C;&#x5206;&#x8282;&#x70B9;&#x6709;1/cntOfMaxScore&#x7684;&#x6982;&#x7387;&#x66FF;&#x4EE3;&#x6700;&#x4F18;&#x8282;&#x70B9;
+                selectedIndex = cntOfMaxScore - 1
+            }
+        }
+
+        sortedNodeScoreList = append(sortedNodeScoreList, ns)
+        // &#x5806;&#x4E3A;&#x7A7A;&#x65F6;&#x9000;&#x51FA;&#x5FAA;&#x73AF;
+        if h.Len() == 0 {
+            break
+        }
+    }
+    // &#x5982;&#x679C;&#x6700;&#x9AD8;&#x5206;&#x540C;&#x5206;&#x8282;&#x70B9;&#x66FF;&#x6362;&#x4E86;0&#x53F7;&#x5143;&#x7D20;
+    if selectedIndex != 0 {
+        // &#x5728;sortedNodeScoreList&#x4E2D;&#x4EA4;&#x6362;&#x5143;&#x7D20;&#x4F4D;&#x7F6E;
+        previous := sortedNodeScoreList[0]
+        sortedNodeScoreList[0] = sortedNodeScoreList[selectedIndex]
+        sortedNodeScoreList[selectedIndex] = previous
+    }
+    // &#x4FDD;&#x8BC1;&#x53EA;&#x6709;count&#x4E2A;&#x5143;&#x7D20;
+    if len(sortedNodeScoreList) &gt; count {
+        sortedNodeScoreList = sortedNodeScoreList[:count]
+    }
+    // &#x8FD4;&#x56DE;&#x7B2C;&#x4E00;&#x4E2A;&#x8282;&#x70B9;&#x7684;&#x540D;&#x79F0;&#x548C;&#x6574;&#x4E2A;&#x5217;&#x8868;
+    return sortedNodeScoreList[0].Name, sortedNodeScoreList, nil
+}
+</code></pre>
+<p><code>schedulePod()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x7684;<code>ScheduleResult</code>&#x4E2D;&#x5305;&#x62EC;&#x6700;&#x540E;&#x8981;&#x5C1D;&#x8BD5;&#x7ED1;&#x5B9A;&#x7684;&#x8282;&#x70B9;<code>SuggestedHost</code>&#xFF0C;&#x672C;&#x6B21;&#x603B;&#x5171;&#x8BC4;&#x4F30;&#x8FC7;&#x7684;&#x8282;&#x70B9;&#x603B;&#x6570;<code>EvaluatedNodes</code>&#xFF0C;&#x5176;&#x503C;&#x662F;&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#x8FD4;&#x56DE;&#x7684;<code>feasibleNodes</code>&#x957F;&#x5EA6;&#x4E0E;&#x5DF2;&#x77E5;&#x4E0D;&#x53EF;&#x8C03;&#x5EA6;&#x8282;&#x70B9;&#x5217;&#x8868;<code>NodeToStatus</code>&#x7684;&#x957F;&#x5EA6;&#x603B;&#x548C;&#xFF0C;&#x8FD8;&#x6709;&#x53EF;&#x7528;&#x8282;&#x70B9;&#x6570;&#x91CF;<code>FeasibleNodes</code>&#x3002;</p>
+<pre class="language-"><code class="lang-Go">    return ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  len(feasibleNodes),
+    }, err
+</code></pre>
+<h3 id="assume&#x9636;&#x6BB5;"><a name="assume&#x9636;&#x6BB5;" class="plugin-anchor" href="#assume&#x9636;&#x6BB5;"><i class="fa fa-link" aria-hidden="true"></i></a>Assume&#x9636;&#x6BB5;</h3>
+<p><code>ScheduleResult</code>&#x5BF9;&#x8C61;&#x8FD4;&#x56DE;&#x4EE5;&#x540E;&#xFF0C;<code>schedulingCycle()</code>&#x65B9;&#x6CD5;&#x4E2D;&#x7684;&#x7B2C;&#x4E00;&#x4E2A;&#x903B;&#x8F91;&#x7EC8;&#x4E8E;&#x7ED3;&#x675F;&#x4E86;&#xFF0C;&#x5148;&#x4E0D;&#x7EA0;&#x7ED3;&#x4E8E;&#x5931;&#x8D25;&#x5904;&#x7406;&#xFF0C;&#x7EE7;&#x7EED;&#x5206;&#x6790;&#x6807;&#x51C6;&#x7684;&#x6210;&#x529F;&#x6D41;&#x7A0B;&#x3002;</p>
+<p>&#x5728;<code>SchedulePod()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x4E86;&#x6210;&#x529F;&#x4EE5;&#x540E;&#xFF0C;<code>Kubernetes</code>&#x8C03;&#x5EA6;&#x5668;&#x5BF9;&#x6B64;&#x6709;&#x4E50;&#x89C2;&#x7684;&#x9884;&#x671F;&#xFF0C;&#x8BA4;&#x4E3A;&#x7ECF;&#x8FC7;&#x7CBE;&#x5BC6;&#x800C;&#x53C8;&#x4FDD;&#x5B88;&#x7684;&#x8BA1;&#x7B97;&#x903B;&#x8F91;&#x4EE5;&#x540E;&#xFF0C;&#x8FD9;&#x4E2A;Pod&#x6700;&#x7EC8;&#x4F1A;&#x88AB;&#x6210;&#x529F;&#x7ED1;&#x5B9A;&#xFF0C;&#x800C;&#x7ED1;&#x5B9A;&#x5468;&#x671F;&#x53C8;&#x662F;&#x5F02;&#x6B65;&#x8FDB;&#x884C;&#x7684;&#xFF0C;&#x6240;&#x4EE5;&#x6B64;&#x65F6;Pod&#x4F1A;&#x8FDB;&#x5165;&#x4E00;&#x4E2A;<code>Assumed</code>&#x7684;&#x4E2D;&#x95F4;&#x72B6;&#x6001;&#xFF0C;&#x5B83;&#x4F1A;&#x5B58;&#x5728;&#x4E8E;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;<code>Cache</code>&#x4E2D;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    logger := klog.FromContext(ctx)
+    pod := podInfo.Pod
+    scheduleResult, err := sched.SchedulePod(ctx, fwk, state, pod)
+    // err&#x4E0D;&#x4E3A;&#x7A7A;&#x7684;&#x5904;&#x7406; &#x6682;&#x4E14;&#x5FFD;&#x7565;
+    // ......
+    // &#x6DF1;&#x62F7;&#x8D1D;PodInfo
+    assumedPodInfo := podInfo.DeepCopy()
+    assumedPod := assumedPodInfo.Pod
+    // &#x5728;&#x7F13;&#x5B58;&#x4E2D;&#x5BF9;Pod&#x7684;&#x9884;&#x671F;&#x72B6;&#x6001;&#x505A;&#x66F4;&#x65B0;
+    err = sched.assume(logger, assumedPod, scheduleResult.SuggestedHost)
+    ......
+}
+</code></pre>
+<p>&#x8C03;&#x7528;<code>assume()</code>&#x65B9;&#x6CD5;&#x66F4;&#x65B0;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x5185;&#x5BB9;&#xFF0C;&#x5176;&#x4E2D;&#x7684;<code>Cache.AssumePod()</code>&#x5728;&#x7B2C;&#x4E00;&#x7BC7;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x90E8;&#x5206;&#x6709;&#x8FC7;&#x7B80;&#x5355;&#x8BF4;&#x660E;&#xFF0C;&#x8FD9;&#x4E00;&#x6B65;&#x5B9E;&#x9645;&#x5C31;&#x662F;&#x66F4;&#x65B0;&#x7F13;&#x5B58;&#x4E00;&#x904D;&#x4E0B;&#x4E00;&#x4E2A;Pod&#x7684;&#x8BA1;&#x7B97;&#x80FD;&#x591F;&#x8003;&#x8651;&#x5230;&#x5904;&#x4E8E;<code>Assume</code>&#x72B6;&#x6001;&#x7684;Pod&#xFF0C;&#x4E0D;&#x81F3;&#x4E8E;&#x56E0;&#x4E3A;&#x8D44;&#x6E90;&#x51B2;&#x7A81;&#x5BFC;&#x81F4;&#x7ED1;&#x5B9A;&#x5931;&#x8D25;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string) error {
+    // &#x4FEE;&#x6539;NodeName&#x5B57;&#x6BB5;
+    assumed.Spec.NodeName = host
+    // &#x6DFB;&#x52A0;&#x5230;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;&#x4E2D;
+    if err := sched.Cache.AssumePod(logger, assumed); err != nil {
+        logger.Error(err, &quot;Scheduler cache AssumePod failed&quot;)
+        return err
+    }
+    // if &quot;assumed&quot; is a nominated pod, we should remove it from internal cache
+    if sched.SchedulingQueue != nil {
+        // &#x66F4;&#x65B0;&#x6E05;&#x9664;&#x63D0;&#x540D;&#x5668;&#x4E2D;&#x7684;&#x4FE1;&#x606F;
+        sched.SchedulingQueue.DeleteNominatedPodIfExists(assumed)
+    }
+
+    return nil
+}
+</code></pre>
+<h3 id="reserve&#x6269;&#x5C55;&#x70B9;"><a name="reserve&#x6269;&#x5C55;&#x70B9;" class="plugin-anchor" href="#reserve&#x6269;&#x5C55;&#x70B9;"><i class="fa fa-link" aria-hidden="true"></i></a>Reserve&#x6269;&#x5C55;&#x70B9;</h3>
+<p>&#x5728;<code>Assume</code>&#x9636;&#x6BB5;&#x540E;&#xFF0C;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x8FD8;&#x5269;&#x4E0B;&#x4E24;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x6B64;&#x65F6;&#x5173;&#x4E8E;&#x8C03;&#x5EA6;&#x7684;&#x9009;&#x62E9;&#x5DF2;&#x7ECF;&#x7ED3;&#x675F;&#x4E86;&#xFF0C;&#x6240;&#x505A;&#x7684;&#x5185;&#x5BB9;&#x662F;&#x8981;&#x4E3A;&#x7ED1;&#x5B9A;&#x548C;&#x4E0B;&#x6B21;&#x8C03;&#x5EA6;&#x505A;&#x51C6;&#x5907;&#xFF0C;&#x63A5;&#x4E0B;&#x6765;&#x7684;&#x6269;&#x5C55;&#x70B9;&#x662F;&#x8D44;&#x6E90;&#x9884;&#x7559;<code>Reserve</code>&#x6269;&#x5C55;&#x70B9;&#x548C;&#x51C6;&#x5165;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    ......
+    // Run the Reserve method of reserve plugins.
+    if sts := fwk.RunReservePluginsReserve(ctx, state, assumedPod, scheduleResult.SuggestedHost); !sts.IsSuccess() {
+        // trigger un-reserve to clean up state associated with the reserved Pod
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+            logger.Error(forgetErr, &quot;Scheduler cache ForgetPod failed&quot;)
+        }
+
+        if sts.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: 1,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, sts)
+            fitErr.Diagnosis.AddPluginStatus(sts)
+            return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(sts.Code()).WithError(fitErr)
+        }
+        return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, sts
+    }
+    // Run &quot;permit&quot; plugins.
+    runPermitStatus := fwk.RunPermitPlugins(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+    if !runPermitStatus.IsWait() &amp;&amp; !runPermitStatus.IsSuccess() {
+        // trigger un-reserve to clean up state associated with the reserved Pod
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        if forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != nil {
+            logger.Error(forgetErr, &quot;Scheduler cache ForgetPod failed&quot;)
+        }
+
+        if runPermitStatus.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: 1,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, runPermitStatus)
+            fitErr.Diagnosis.AddPluginStatus(runPermitStatus)
+            return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(runPermitStatus.Code()).WithError(fitErr)
+        }
+
+        return ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, runPermitStatus
+    }
+
+    // At the end of a successful scheduling cycle, pop and move up Pods if needed.
+    if len(podsToActivate.Map) != 0 {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        // Clear the entries after activation.
+        podsToActivate.Map = make(map[string]*v1.Pod)
+    }
+
+    return scheduleResult, assumedPodInfo, nil
+}
+</code></pre>
+<p>&#x4E0B;&#x9762;&#x770B;&#x8D44;&#x6E90;&#x9884;&#x7559;&#x7684;&#x903B;&#x8F91;<code>RunReservePluginsReserve()</code>&#x548C;<code>runReservePluginReserve()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x5916;&#x5C42;&#x548C;&#x4E4B;&#x524D;&#x7684;&#x51E0;&#x4E2A;<code>RunXXXPlugin()</code>&#x6CA1;&#x6709;&#x4EC0;&#x4E48;&#x533A;&#x522B;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) RunReservePluginsReserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Reserve, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, &quot;Reserve&quot;)
+        logger = klog.LoggerWithValues(logger, &quot;node&quot;, klog.ObjectRef{Name: nodeName})
+    }
+    for _, pl := range f.reservePlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runReservePluginReserve(ctx, pl, state, pod, nodeName)
+        if !status.IsSuccess() {
+            if status.IsRejected() {
+                logger.V(4).Info(&quot;Pod rejected by plugin&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;plugin&quot;, pl.Name(), &quot;status&quot;, status.Message())
+                status.SetPlugin(pl.Name())
+                return status
+            }
+            err := status.AsError()
+            logger.Error(err, &quot;Plugin failed&quot;, &quot;plugin&quot;, pl.Name(), &quot;pod&quot;, klog.KObj(pod))
+            return framework.AsStatus(fmt.Errorf(&quot;running Reserve plugin %q: %w&quot;, pl.Name(), err))
+        }
+    }
+    return nil
+}
+
+func (f *frameworkImpl) runReservePluginReserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+    if !state.ShouldRecordPluginMetrics() {
+        return pl.Reserve(ctx, state, pod, nodeName)
+    }
+    startTime := time.Now()
+    status := pl.Reserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Reserve, pl.Name(), status.Code().String(), metrics.SinceInSeconds(startTime))
+    return status
+}
+</code></pre>
+<p>&#x90A3;&#x4E48;&#x770B;&#x4E00;&#x4E2A;&#x5177;&#x4F53;&#x7684;&#x8D44;&#x6E90;&#x9884;&#x7559;&#x63D2;&#x4EF6;<code>VolumeBinding</code>&#x5B9E;&#x73B0;&#xFF0C;</p>
+<pre class="language-"><code class="lang-Go">func (pl *VolumeBinding) Reserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+    // &#x4ECE;CycleState&#x4E2D;&#x83B7;&#x53D6;&#x4FE1;&#x606F;
+    state, err := getStateData(cs)
+    if err != nil {
+        return framework.AsStatus(err)
+    }
+    // we don&apos;t need to hold the lock as only one node will be reserved for the given pod
+    podVolumes, ok := state.podVolumesByNode[nodeName]
+    if ok {
+        allBound, err := pl.Binder.AssumePodVolumes(klog.FromContext(ctx), pod, nodeName, podVolumes)
+        if err != nil {
+            return framework.AsStatus(err)
+        }
+        // &#x6709;&#x5377;&#x9700;&#x8981;&#x7ED1;&#x5B9A;&#x65F6; &#x503C;&#x8BBE;&#x7F6E;&#x4E3A;allBound&#x8FD4;&#x56DE;&#x7684;bool&#x503C;
+        state.allBound = allBound
+    } else {
+        // &#x6CA1;&#x6709;&#x5377;&#x9700;&#x8981;&#x7ED1;&#x5B9A;&#x65F6; &#x503C;&#x76F4;&#x63A5;&#x8BBE;&#x7F6E;&#x4E3A;true
+        state.allBound = true
+    }
+    return nil
+}
+</code></pre>
+<p>&#x5176;&#x4E2D;&#x8C03;&#x7528;&#x4E86;<code>AssumePodVolumes()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x66F4;&#x65B0;&#x4E86;<code>AssumeCache</code>&#x7F13;&#x5B58;&#x548C;&#x539F;<code>PodVolumes</code>&#x5BF9;&#x8C61;&#x4E2D;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x5176;&#x4E2D;&#x7684;<code>pvcCache</code>&#x3001;<code>pvcCache</code>&#x548C;Pod&#x7684;<code>Assume</code>&#x539F;&#x7406;&#x7C7B;&#x4F3C;&#xFF0C;&#x90FD;&#x662F;&#x5BF9;&#x9884;&#x671F;&#x5C06;&#x4F1A;&#x5B58;&#x5728;&#x7684;&#x5BF9;&#x8C61;&#x505A;&#x4E00;&#x4EFD;&#x5728;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x8BB0;&#x5F55;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">// AssumePodVolumes will take the matching PVs and PVCs to provision in pod&apos;s
+// volume information for the chosen node, and:
+// 1. Update the pvCache with the new prebound PV.
+// 2. Update the pvcCache with the new PVCs with annotations set
+// 3. Update PodVolumes again with cached API updates for PVs and PVCs.
+func (b *volumeBinder) AssumePodVolumes(logger klog.Logger, assumedPod *v1.Pod, nodeName string, podVolumes *PodVolumes) (allFullyBound bool, err error) {
+    logger.V(4).Info(&quot;AssumePodVolumes&quot;, &quot;pod&quot;, klog.KObj(assumedPod), &quot;node&quot;, klog.KRef(&quot;&quot;, nodeName))
+    defer func() {
+        if err != nil {
+            metrics.VolumeSchedulingStageFailed.WithLabelValues(&quot;assume&quot;).Inc()
+        }
+    }()
+    // &#x68C0;&#x67E5;Pod&#x9700;&#x8981;&#x7684;&#x6240;&#x6709;&#x5377;&#x662F;&#x5426;&#x90FD;&#x5DF2;&#x7ECF;&#x88AB;&#x7ED1;&#x5B9A;
+    // &#x5982;&#x679C;&#x5DF2;&#x7ECF;&#x7ED1;&#x5B9A;&#x4E86;&#x5C31;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;
+    if allBound := b.arePodVolumesBound(logger, assumedPod); allBound {
+        logger.V(4).Info(&quot;AssumePodVolumes: all PVCs bound and nothing to do&quot;, &quot;pod&quot;, klog.KObj(assumedPod), &quot;node&quot;, klog.KRef(&quot;&quot;, nodeName))
+        return true, nil
+    }
+
+    // &#x9759;&#x6001;&#x5377;&#x9884;&#x5360; PV
+    newBindings := []*BindingInfo{}
+    for _, binding := range podVolumes.StaticBindings {
+        newPV, dirty, err := volume.GetBindVolumeToClaim(binding.pv, binding.pvc)
+        logger.V(5).Info(&quot;AssumePodVolumes: GetBindVolumeToClaim&quot;,
+            &quot;pod&quot;, klog.KObj(assumedPod),
+            &quot;PV&quot;, klog.KObj(binding.pv),
+            &quot;PVC&quot;, klog.KObj(binding.pvc),
+            &quot;newPV&quot;, klog.KObj(newPV),
+            &quot;dirty&quot;, dirty,
+        )
+        if err != nil {
+            logger.Error(err, &quot;AssumePodVolumes: fail to GetBindVolumeToClaim&quot;)
+            b.revertAssumedPVs(newBindings)
+            return false, err
+        }
+        // TODO: can we assume every time?
+        if dirty {
+            // &#x7F13;&#x5B58;&#x66F4;&#x65B0;
+            err = b.pvCache.Assume(newPV)
+            if err != nil {
+                b.revertAssumedPVs(newBindings)
+                return false, err
+            }
+        }
+        newBindings = append(newBindings, &amp;BindingInfo{pv: newPV, pvc: binding.pvc})
+    }
+
+    // &#x52A8;&#x6001;&#x5377;&#x9884;&#x5360; PVC
+    newProvisionedPVCs := []*v1.PersistentVolumeClaim{}
+    for _, claim := range podVolumes.DynamicProvisions {
+        // The claims from method args can be pointing to watcher cache. We must not
+        // modify these, therefore create a copy.
+        claimClone := claim.DeepCopy()
+        metav1.SetMetaDataAnnotation(&amp;claimClone.ObjectMeta, volume.AnnSelectedNode, nodeName)
+        // &#x7F13;&#x5B58;&#x66F4;&#x65B0;
+        err = b.pvcCache.Assume(claimClone)
+        if err != nil {
+            b.revertAssumedPVs(newBindings)
+            b.revertAssumedPVCs(newProvisionedPVCs)
+            return
+        }
+
+        newProvisionedPVCs = append(newProvisionedPVCs, claimClone)
+    }
+    // PodVolumes&#x5BF9;&#x8C61;&#x66F4;&#x65B0;
+    podVolumes.StaticBindings = newBindings
+    podVolumes.DynamicProvisions = newProvisionedPVCs
+    return
+}
+</code></pre>
+<h4 id="&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;"><a name="&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;" class="plugin-anchor" href="#&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;</h4>
+<p>&#x4ECD;&#x4EE5;<code>VolumeBinding</code>&#x4E3A;&#x4F8B;&#xFF0C;&#x5931;&#x8D25;&#x540E;&#x7684;<code>Unreserve</code>&#x63D2;&#x4EF6;&#x83B7;&#x53D6;&#x8C03;&#x5EA6;&#x5F00;&#x59CB;&#x65F6;&#x4ECE;<code>ApiServer</code>&#x4E2D;&#x83B7;&#x53D6;&#x5230;&#x7684;&#x5BF9;&#x8C61;&#x4FE1;&#x606F;&#xFF0C;&#x5E76;&#x501F;&#x52A9;<code>Restore()</code>&#x65B9;&#x6CD5;&#x5411;<code>FIFO</code>&#x4E2D;&#x53D1;&#x9001;&#x66F4;&#x65B0;&#x4E8B;&#x4EF6;&#xFF0C;&#x4F7F;&#x672C;&#x5730;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x6570;&#x636E;&#x56DE;&#x6EDA;&#x5230;&#x6700;&#x521D;&#x72B6;&#x6001;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) runReservePluginUnreserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName string) {
+    if !state.ShouldRecordPluginMetrics() {
+        pl.Unreserve(ctx, state, pod, nodeName)
+        return
+    }
+    startTime := time.Now()
+    pl.Unreserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Unreserve, pl.Name(), framework.Success.String(), metrics.SinceInSeconds(startTime))
+}
+
+func (pl *VolumeBinding) Unreserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) {
+    s, err := getStateData(cs)
+    if err != nil {
+        return
+    }
+    // we don&apos;t need to hold the lock as only one node may be unreserved
+    podVolumes, ok := s.podVolumesByNode[nodeName]
+    if !ok {
+        return
+    }
+    pl.Binder.RevertAssumedPodVolumes(podVolumes)
+}
+
+func (b *volumeBinder) RevertAssumedPodVolumes(podVolumes *PodVolumes) {
+    b.revertAssumedPVs(podVolumes.StaticBindings)
+    b.revertAssumedPVCs(podVolumes.DynamicProvisions)
+}
+
+func (b *volumeBinder) revertAssumedPVs(bindings []*BindingInfo) {
+    for _, BindingInfo := range bindings {
+        b.pvCache.Restore(BindingInfo.pv.Name)
+    }
+}
+
+func (c *AssumeCache) Restore(objName string) {
+    defer c.emitEvents()
+    c.rwMutex.Lock()
+    defer c.rwMutex.Unlock()
+
+    objInfo, err := c.getObjInfo(objName)
+    if err != nil {
+        // This could be expected if object got deleted
+        c.logger.V(5).Info(&quot;Restore object&quot;, &quot;description&quot;, c.description, &quot;cacheKey&quot;, objName, &quot;err&quot;, err)
+    } else {
+        if objInfo.latestObj != objInfo.apiObj {
+            c.pushEvent(objInfo.latestObj, objInfo.apiObj)
+            objInfo.latestObj = objInfo.apiObj
+        }
+        c.logger.V(4).Info(&quot;Restored object&quot;, &quot;description&quot;, c.description, &quot;cacheKey&quot;, objName)
+    }
+}
+</code></pre>
+<p>&#x7136;&#x540E;&#x8C03;&#x7528;<code>Cache.ForgetPod()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x628A;Pod&#x7684;&#x4FE1;&#x606F;&#x4ECE;&#x672C;&#x5730;&#x7F13;&#x5B58;&#x7684;<code>cache.podStates</code>&#x4EE5;&#x53CA;<code>cache.assumedPods</code>&#x96C6;&#x5408;&#x4E2D;&#x5220;&#x9664;&#x3002;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5931;&#x8D25;&#x5904;&#x7406;&#x4E0E;&#x4E4B;&#x5B8C;&#x5168;&#x76F8;&#x540C;&#x3002;</p>
+<h3 id="permit&#x6269;&#x5C55;&#x70B9;"><a name="permit&#x6269;&#x5C55;&#x70B9;" class="plugin-anchor" href="#permit&#x6269;&#x5C55;&#x70B9;"><i class="fa fa-link" aria-hidden="true"></i></a>Permit&#x6269;&#x5C55;&#x70B9;</h3>
+<p><code>Reserve</code>&#x6269;&#x5C55;&#x70B9;&#x4E4B;&#x540E;&#x7D27;&#x63A5;&#x7740;&#x5C31;&#x662F;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x901A;&#x8FC7;&#x4EE3;&#x7801;&#x903B;&#x8F91;&#x53EF;&#x4EE5;&#x770B;&#x51FA;&#xFF0C;&#x5728;&#x6267;&#x884C;&#x5B8C;&#x5177;&#x4F53;&#x63D2;&#x4EF6;&#x4E4B;&#x540E;&#x4F1A;&#x5BF9;&#x8FD4;&#x56DE;&#x7684;&#x72B6;&#x6001;<code>status</code>&#x505A;&#x51FA;&#x5224;&#x65AD;&#xFF0C;&#x8FD9;&#x91CC;&#x548C;&#x5176;&#x4ED6;&#x63D2;&#x4EF6;&#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x76F8;&#x6BD4;&#xFF0C;&#x591A;&#x4E86;&#x4E00;&#x4E2A;<code>Wait</code>&#x72B6;&#x6001;&#xFF0C;&#x5982;&#x679C;&#x6CA1;&#x6709;&#x8FD4;&#x56DE;<code>Success</code>&#x800C;&#x662F;<code>Wait</code>&#x65F6;&#xFF0C;&#x6839;&#x636E;&#x8FD4;&#x56DE;&#x503C;&#x8BBE;&#x7F6E;&#x63D2;&#x4EF6;&#x7B49;&#x5F85;&#x7684;&#x8D85;&#x65F6;&#x65F6;&#x957F;(&#x6700;&#x5927;&#x4E0D;&#x8D85;&#x8FC7;<code>15&#x5206;&#x949F;</code>)&#xFF0C;&#x5E76;&#x4FEE;&#x6539;<code>statusCode</code>&#x6807;&#x8BC6;&#x4F4D;&#xFF0C;&#x5728;&#x904D;&#x5386;&#x6267;&#x884C;&#x5B8C;&#x6240;&#x6709;&#x7684;&#x63D2;&#x4EF6;&#x4E4B;&#x540E;&#xFF0C;&#x5982;&#x679C;&#x662F;&#x9700;&#x8981;&#x7B49;&#x5F85;&#x7684;&#xFF0C;&#x5C31;&#x5C06;&#x5176;&#x52A0;&#x5165;&#x5230;&#x7B49;&#x5F85;&#x961F;&#x5217;&#x4E2D;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) RunPermitPlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+    startTime := time.Now()
+    defer func() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Permit, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    pluginsWaitTime := make(map[string]time.Duration)
+    statusCode := framework.Success
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(4).Enabled()
+    if verboseLogs {
+        logger = klog.LoggerWithName(logger, &quot;Permit&quot;)
+        logger = klog.LoggerWithValues(logger, &quot;node&quot;, klog.ObjectRef{Name: nodeName})
+    }
+    for _, pl := range f.permitPlugins {
+        ctx := ctx
+        if verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status, timeout := f.runPermitPlugin(ctx, pl, state, pod, nodeName)
+        // &#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x5224;&#x65AD;
+        if !status.IsSuccess() {
+            if status.IsRejected() {
+                logger.V(4).Info(&quot;Pod rejected by plugin&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;plugin&quot;, pl.Name(), &quot;status&quot;, status.Message())
+                return status.WithPlugin(pl.Name())
+            }
+            if status.IsWait() {
+                // &#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x662F;Wait &#x8BBE;&#x7F6E;&#x8D85;&#x65F6;&#x65F6;&#x95F4;
+                // &#x6700;&#x5927;&#x662F;15&#x5206;&#x949F;
+                if timeout &gt; maxTimeout {
+                    timeout = maxTimeout
+                }
+                // &#x8BBE;&#x7F6E;&#x63D2;&#x4EF6;&#x7B49;&#x5F85;&#x8D85;&#x65F6;&#x65F6;&#x957F;&#x5E76;&#x4FEE;&#x6539;&#x6807;statusCode&#x8BC6;&#x4F4D;
+                pluginsWaitTime[pl.Name()] = timeout
+                statusCode = framework.Wait
+            } else {
+                err := status.AsError()
+                logger.Error(err, &quot;Plugin failed&quot;, &quot;plugin&quot;, pl.Name(), &quot;pod&quot;, klog.KObj(pod))
+                return framework.AsStatus(fmt.Errorf(&quot;running Permit plugin %q: %w&quot;, pl.Name(), err)).WithPlugin(pl.Name())
+            }
+        }
+    }
+    // &#x5982;&#x679C;&#x904D;&#x5386;&#x7ED3;&#x675F;&#x540E;&#x6700;&#x7EC8;&#x72B6;&#x6001;&#x662F;Wait
+    if statusCode == framework.Wait {
+        waitingPod := newWaitingPod(pod, pluginsWaitTime)
+        f.waitingPods.add(waitingPod)
+        msg := fmt.Sprintf(&quot;one or more plugins asked to wait and no plugin rejected pod %q&quot;, pod.Name)
+        logger.V(4).Info(&quot;One or more plugins asked to wait and no plugin rejected pod&quot;, &quot;pod&quot;, klog.KObj(pod))
+        return framework.NewStatus(framework.Wait, msg)
+    }
+    return nil
+}
+</code></pre>
+<p>&#x5728;<code>frameworkImpl</code>&#x4E2D;&#x5305;&#x542B;&#x4E00;&#x4E2A;&#x7B49;&#x5F85;&#x961F;&#x5217;<code>waitingPods</code>&#x7684;&#x7ED3;&#x6784;&#xFF0C;&#x5176;&#x7C7B;&#x578B;&#x662F;<code>waitingPodsMap</code>&#xFF0C;&#x7531;<code>waitingPod</code>&#x7684;&#x96C6;&#x5408;&#x548C;&#x4E00;&#x4E2A;&#x8BFB;&#x5199;&#x9501;&#x7EC4;&#x6210;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">type waitingPodsMap struct {
+    pods map[types.UID]*waitingPod
+    mu   sync.RWMutex
+}
+
+type waitingPod struct {
+    pod            *v1.Pod
+    // &#x5B9A;&#x65F6;&#x5668;
+    pendingPlugins map[string]*time.Timer
+    // &#x63A5;&#x6536;&#x7ED3;&#x679C;
+    s              chan *framework.Status
+    mu             sync.RWMutex
+}
+</code></pre>
+<p>&#x8FD9;&#x91CC;&#x5F88;&#x597D;&#x7406;&#x89E3;&#x4E86;&#xFF0C;&#x5C31;&#x662F;&#x7EC4;&#x88C5;&#x4E00;&#x4E2A;<code>waitingPod</code>&#x7ED3;&#x6784;&#xFF0C;&#x4E3A;&#x6BCF;&#x4E2A;&#x5176;&#x4E2D;&#x8981;&#x7B49;&#x5F85;&#x7684;&#x63D2;&#x4EF6;&#x8BBE;&#x7F6E;&#x4E00;&#x4E0B;&#x5B9A;&#x65F6;&#x5668;&#xFF0C;&#x7136;&#x540E;&#x628A;&#x8FD9;&#x4E2A;<code>waitingPod</code>&#x5BF9;&#x8C61;&#x52A0;&#x5165;&#x96C6;&#x5408;&#x4E2D;&#xFF0C;&#x5982;&#x679C;&#x65F6;&#x95F4;&#x5230;&#x4E86;&#x5C31;&#x4F1A;&#x81EA;&#x52A8;&#x6267;&#x884C;<code>Reject()</code>&#x65B9;&#x6CD5;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func newWaitingPod(pod *v1.Pod, pluginsMaxWaitTime map[string]time.Duration) *waitingPod {
+    // &#x7EC4;&#x88C5;waitingPod&#x7ED3;&#x6784;
+    wp := &amp;waitingPod{
+        pod: pod,
+        s: make(chan *framework.Status, 1),
+    }
+
+    wp.pendingPlugins = make(map[string]*time.Timer, len(pluginsMaxWaitTime))
+    wp.mu.Lock()
+    defer wp.mu.Unlock()
+    // &#x904D;&#x5386;&#x7B49;&#x5F85;&#x7ED3;&#x679C;&#x7684;&#x63D2;&#x4EF6; &#x5206;&#x522B;&#x8BBE;&#x7F6E;&#x5B9A;&#x65F6;&#x5668;
+    for k, v := range pluginsMaxWaitTime {
+        plugin, waitTime := k, v
+        wp.pendingPlugins[plugin] = time.AfterFunc(waitTime, func() {
+            msg := fmt.Sprintf(&quot;rejected due to timeout after waiting %v at plugin %v&quot;,
+                waitTime, plugin)
+            // &#x5982;&#x679C;&#x8D85;&#x65F6;&#x4F1A;&#x6267;&#x884C;Reject&#x65B9;&#x6CD5;
+            wp.Reject(plugin, msg)
+        })
+    }
+
+    return wp
+}
+</code></pre>
+<p>&#x5982;&#x679C;&#x63D2;&#x4EF6;&#x8FD4;&#x56DE;&#x6210;&#x529F;&#x4F1A;&#x8C03;&#x7528;<code>Allow()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x4ECE;<code>pendingPlugins</code>&#x7684;&#x96C6;&#x5408;&#x4E2D;&#x83B7;&#x53D6;&#x63D2;&#x4EF6;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x505C;&#x6B62;&#x5B9A;&#x65F6;&#x5668;&#x5E76;&#x5220;&#x9664;&#x5F53;&#x524D;&#x5143;&#x7D20;&#x3002;&#x901A;&#x8FC7;&#x5BF9;&#x96C6;&#x5408;&#x957F;&#x5EA6;&#x7684;&#x5224;&#x65AD;&#xFF0C;&#x5728;&#x957F;&#x5EA6;&#x4E3A;0&#x65F6;&#x8868;&#x793A;&#x6240;&#x6709;&#x7684;<code>Permit</code>&#x63D2;&#x4EF6;&#x90FD;&#x5DF2;&#x7ECF;&#x5141;&#x8BB8;&#x8FD9;&#x4E2A;Pod&#x7684;&#x8C03;&#x5EA6;&#x4E86;&#xFF0C;&#x5C31;&#x5411;<code>waitingPod</code>&#x7684;<code>s</code>&#x901A;&#x9053;&#x4E2D;&#x53D1;&#x9001;&#x4E00;&#x4E2A;<code>framework.Success</code>&#x7684;&#x4FE1;&#x53F7;&#xFF0C;&#x8BE5;&#x4FE1;&#x53F7;&#x4F1A;&#x5728;&#x7ED1;&#x5B9A;&#x5468;&#x671F;&#x88AB;&#x63A5;&#x6536;&#x5E76;&#x5224;&#x65AD;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (w *waitingPod) Allow(pluginName string) {
+    w.mu.Lock()
+    defer w.mu.Unlock()
+    if timer, exist := w.pendingPlugins[pluginName]; exist {
+        // &#x505C;&#x6B62;&#x5F53;&#x524D;&#x5B9A;&#x65F6;&#x5668;
+        timer.Stop()
+        // &#x4ECE;&#x63D2;&#x4EF6;&#x5217;&#x8868;&#x4E2D;&#x5220;&#x9664;&#x5F53;&#x524D;&#x63D2;&#x4EF6;
+        delete(w.pendingPlugins, pluginName)
+    }
+
+    // &#x8FD8;&#x9700;&#x8981;&#x7B49;&#x5F85;&#x5176;&#x4ED6;&#x63D2;&#x4EF6;&#x7684;&#x7ED3;&#x679C;
+    if len(w.pendingPlugins) != 0 {
+        return
+    }
+
+    // pendingPlugins&#x4E2D;&#x5DF2;&#x7ECF;&#x6CA1;&#x6709;&#x5143;&#x7D20;&#x4E86; &#x5411;channel&#x4E2D;&#x53D1;&#x9001;&#x6210;&#x529F;&#x4FE1;&#x53F7;
+    select {
+    case w.s &lt;- framework.NewStatus(framework.Success, &quot;&quot;):
+    default:
+    }
+}
+</code></pre>
+<p><code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x8FD0;&#x884C;&#x4E4B;&#x540E;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x5728;&#x6574;&#x4E2A;<code>SchedulingCycle</code>&#x7ED3;&#x675F;&#x4E4B;&#x524D;&#xFF0C;&#x4F1A;&#x6FC0;&#x6D3B;<code>podsToActivate</code>&#x96C6;&#x5408;&#x4E2D;&#x7684;Pod&#xFF0C;&#x628A;&#x5B83;&#x4EEC;&#x91CD;&#x65B0;&#x52A0;&#x5165;&#x5230;<code>ActiveQ</code>&#x91CC;&#xFF0C;&#x4E3A;&#x4E0B;&#x4E00;&#x6B21;&#x8C03;&#x5EA6;&#x7684;<code>SchedulingCycle</code>&#x505A;&#x597D;&#x51C6;&#x5907;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">    // At the end of a successful scheduling cycle, pop and move up Pods if needed.
+    if len(podsToActivate.Map) != 0 {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        // Clear the entries after activation.
+        podsToActivate.Map = make(map[string]*v1.Pod)
+    }
+    return scheduleResult, assumedPodInfo, nil
+}
+</code></pre>
+<h4 id="permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;"><a name="permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;" class="plugin-anchor" href="#permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;"><i class="fa fa-link" aria-hidden="true"></i></a>Permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;</h4>
+<p>&#x5728;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x4E2D;&#xFF0C;<code>Permit</code>&#x9636;&#x6BB5;&#x5982;&#x679C;&#x8FD4;&#x56DE;&#x7684;&#x662F;<code>Wait</code>&#x72B6;&#x6001;&#xFF0C;&#x8C03;&#x5EA6;&#x5668;&#x4E0D;&#x4F1A;&#x56E0;&#x4E3A;&#x7B49;&#x5F85;&#x5B83;&#x8FD4;&#x56DE;&#x7684;&#x7ED3;&#x679C;&#x800C;&#x53BB;&#x5F71;&#x54CD;&#x5176;&#x4ED6;Pod&#x8C03;&#x5EA6;&#x7684;&#x6548;&#x7387;&#xFF0C;&#x800C;&#x662F;&#x5728;&#x5F02;&#x6B65;&#x6267;&#x884C;&#x7ED1;&#x5B9A;&#x5468;&#x671F;<code>BindingCycle</code>&#x7684;&#x5F00;&#x59CB;&#x5904;&#x786E;&#x8BA4;<code>waitingPod</code>&#x7684;&#x6700;&#x7EC8;&#x7ED3;&#x679C;&#x662F;<code>Success</code>&#x8FD8;&#x662F;<code>Rejected</code>&#x3002;</p>
+<pre class="language-"><code class="lang-Go">    // Run &quot;permit&quot; plugins.
+    if status := fwk.WaitOnPermit(ctx, assumedPod); !status.IsSuccess() {
+        if status.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: 1,
+                Pod:         assumedPodInfo.Pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus:         framework.NewDefaultNodeToStatus(),
+                    UnschedulablePlugins: sets.New(status.Plugin()),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, status)
+            return framework.NewStatus(status.Code()).WithError(fitErr)
+        }
+        return status
+    }
+</code></pre>
+<p>&#x5148;&#x5224;&#x65AD;&#x8981;&#x7ED1;&#x5B9A;&#x7684;Pod&#x662F;&#x5426;&#x662F;<code>waitingPod</code>&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x5B58;&#x5728;&#x5C31;&#x76F4;&#x63A5;&#x8FDB;&#x5165;&#x540E;&#x9762;&#x7684;&#x6D41;&#x7A0B;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (f *frameworkImpl) WaitOnPermit(ctx context.Context, pod *v1.Pod) *framework.Status {
+    // &#x4ECE;waitingPods&#x96C6;&#x5408;&#x4E2D;&#x83B7;&#x53D6;&#x5F53;&#x524D;Pod
+    waitingPod := f.waitingPods.get(pod.UID)
+    // &#x96C6;&#x5408;&#x4E2D;&#x4E0D;&#x5B58;&#x5728;&#x8FD9;&#x4E2A;&#x5BF9;&#x8C61;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;
+    if waitingPod == nil {
+        return nil
+    }
+    // WaitOnPermit&#x6D41;&#x7A0B;&#x7684;&#x6700;&#x540E;&#x4ECE;waitingPods&#x96C6;&#x5408;&#x4E2D;&#x79FB;&#x9664;&#x5F53;&#x524D;&#x5BF9;&#x8C61;
+    defer f.waitingPods.remove(pod.UID)
+
+    logger := klog.FromContext(ctx)
+    logger.V(4).Info(&quot;Pod waiting on permit&quot;, &quot;pod&quot;, klog.KObj(pod))
+
+    startTime := time.Now()
+    // waitingPod&#x7684;s&#x662F;&#x4E00;&#x4E2A;channel &#x7528;&#x4E8E;&#x63A5;&#x6536;&#x6700;&#x7EC8;&#x7684;Permit&#x7ED3;&#x679C;
+    s := &lt;-waitingPod.s
+    metrics.PermitWaitDuration.WithLabelValues(s.Code().String()).Observe(metrics.SinceInSeconds(startTime))
+    // &#x9519;&#x8BEF;&#x5904;&#x7406;
+    if !s.IsSuccess() {
+        if s.IsRejected() {
+            logger.V(4).Info(&quot;Pod rejected while waiting on permit&quot;, &quot;pod&quot;, klog.KObj(pod), &quot;status&quot;, s.Message())
+            return s
+        }
+        err := s.AsError()
+        logger.Error(err, &quot;Failed waiting on permit for pod&quot;, &quot;pod&quot;, klog.KObj(pod))
+        return framework.AsStatus(fmt.Errorf(&quot;waiting on permit for pod: %w&quot;, err)).WithPlugin(s.Plugin())
+    }
+    return nil
+}
+</code></pre>
+<p>&#x81F3;&#x6B64;&#xFF0C;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x7684;&#x6807;&#x51C6;&#x903B;&#x8F91;&#x5B8C;&#x5168;&#x7ED3;&#x675F;&#xFF0C;&#x5173;&#x4E8E;&#x5931;&#x8D25;&#x5904;&#x7406;&#x903B;&#x8F91;<code>FailureHandler</code>&#x4F1A;&#x653E;&#x5230;&#x5173;&#x4E8E;<code>Preemption</code>&#x7684;&#x7AE0;&#x8282;&#x91CC;&#x4E00;&#x8D77;&#x8BF4;&#x660E;&#x3002; </p>
+<footer class="page-footer"><span class="copyright">&#xA9; 2025 lts0609. All rights reserved. all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x6700;&#x540E;&#x66F4;&#x65B0;&#x65F6;&#x95F4;&#xFF1A;
+2025-07-16 14:59:34
+</span></footer>
+<script>console.log("plugin-popup....");document.onclick = function(e){ e.target.tagName === "IMG" && window.open(e.target.src,e.target.src)}</script><style>img{cursor:pointer}</style> <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css"> <script>     window.klipse_settings = {         selector: ".language-klipse, .lang-eval-clojure",         selector_eval_js: ".lang-eval-js",         selector_eval_python_client: ".lang-eval-python",         selector_eval_php: ".lang-eval-php",         selector_eval_scheme: ".lang-eval-scheme",         selector_eval_ruby: ".lang-eval-ruby",         selector_reagent: ".lang-reagent",        selector_google_charts: ".lang-google-chart",        selector_es2017: ".lang-eval-es2017",        selector_jsx: ".lang-eval-jsx",        selector_transpile_jsx: ".lang-transpile-jsx",        selector_render_jsx: ".lang-render-jsx",        selector_react: ".lang-react",        selector_eval_markdown: ".lang-render-markdown",        selector_eval_lambdaway: ".lang-render-lambdaway",        selector_eval_cpp: ".lang-eval-cpp",        selector_eval_html: ".lang-render-html",        selector_sql: ".lang-eval-sql",        selector_brainfuck: "lang-eval-brainfuck",        selector_js: ".lang-transpile-cljs"    }; </script> <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="04-详解调度周期SchedulingCycle-上.html" class="navigation navigation-prev " aria-label="Previous page: 详解调度周期SchedulingCycle(上)">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="06-详解绑定周期BindingCycle.html" class="navigation navigation-next " aria-label="Next page: 详解绑定周期BindingCycle">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"详解调度周期SchedulingCycle(下)","level":"1.2.5","depth":2,"next":{"title":"详解绑定周期BindingCycle","level":"1.2.6","depth":2,"path":"kube-scheduler/06-详解绑定周期BindingCycle.md","ref":"kube-scheduler/06-详解绑定周期BindingCycle.md","articles":[]},"previous":{"title":"详解调度周期SchedulingCycle(上)","level":"1.2.4","depth":2,"path":"kube-scheduler/04-详解调度周期SchedulingCycle-上.md","ref":"kube-scheduler/04-详解调度周期SchedulingCycle-上.md","articles":[]},"dir":"ltr"},"config":{"plugins":["-highlight","-lunr","-search","-sharing","-sharing-plus","pageview-count","page-toc-button","page-treeview","back-to-top-button","splitter","code","search-pro","popup","scroll-to-top","auto-scroll-table","anchors","klipse","prism","tbfed-pagefooter","livereload"],"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"© 2025 lts0609. All rights reserved.","modify_label":"最后更新时间：","modify_format":"YYYY-MM-DD HH:mm:ss"},"page-treeview":{"collapsed":false,"copyright":"","minHeaderCount":"1","minHeaderDeep":"1","sidebarHeader":"目录","collapse":true},"prism":{"css":["prismjs/themes/prism-tomorrow.css"],"lang":{"go":"go","yaml":"yaml"}},"scroll-to-top":{},"livereload":{},"splitter":{},"search-pro":{"multilingual":false,"indexing":{"delay":500,"minLength":2}},"auto-scroll-table":{},"popup":{},"code":{"copyButtons":true},"fontsettings":{"theme":"white","family":"sans","size":2},"page-toc-button":{"maxDepth":3,"minDepth":1,"position":"left"},"back-to-top-button":{},"pageview-count":{},"klipse":{"myConfigKey":"it's the default value","languages":["go","yaml"]},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false},"anchors":{}},"theme":"default","author":"lts0609","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"Kubernetes Learning","language":"zh-hans","gitbook":"*","description":"Kubernetes源码学习"},"file":{"path":"kube-scheduler/05-详解调度周期SchedulingCycle-下.md","mtime":"2025-07-16T06:59:34.691Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-16T08:21:27.573Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-pageview-count/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-page-toc-button/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-back-to-top-button/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-splitter/splitter.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/jquery.mark.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-scroll-to-top/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-auto-scroll-table/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-livereload/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

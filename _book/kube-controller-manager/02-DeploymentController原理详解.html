@@ -1,0 +1,2024 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>DeploymentController原理详解 · Kubernetes Learning</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        <meta name="author" content="lts0609">
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-pageview-count/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-page-toc-button/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-page-treeview/style.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-back-to-top-button/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-splitter/splitter.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search-pro/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-auto-scroll-table/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-anchors/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-prism/prism-tomorrow.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-tbfed-pagefooter/footer.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    
+    <link rel="prev" href="01-ControllerManager创建流程.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Kubernetes源码学习
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../kube-scheduler/">
+            
+                <a href="../kube-scheduler/">
+            
+                    
+                    Scheduler
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../kube-scheduler/01-Scheduler创建流程与调度队列.html">
+            
+                <a href="../kube-scheduler/01-Scheduler创建流程与调度队列.html">
+            
+                    
+                    Scheduler创建流程与调度队列
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../kube-scheduler/02-调度器缓存Cache的实现.html">
+            
+                <a href="../kube-scheduler/02-调度器缓存Cache的实现.html">
+            
+                    
+                    调度器缓存Cache的实现
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../kube-scheduler/03-Framework框架和调度流程.html">
+            
+                <a href="../kube-scheduler/03-Framework框架和调度流程.html">
+            
+                    
+                    Framework框架和调度流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.4" data-path="../kube-scheduler/04-详解调度周期SchedulingCycle-上.html">
+            
+                <a href="../kube-scheduler/04-详解调度周期SchedulingCycle-上.html">
+            
+                    
+                    详解调度周期SchedulingCycle(上)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.5" data-path="../kube-scheduler/05-详解调度周期SchedulingCycle-下.html">
+            
+                <a href="../kube-scheduler/05-详解调度周期SchedulingCycle-下.html">
+            
+                    
+                    详解调度周期SchedulingCycle(下)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.6" data-path="../kube-scheduler/06-详解绑定周期BindingCycle.html">
+            
+                <a href="../kube-scheduler/06-详解绑定周期BindingCycle.html">
+            
+                    
+                    详解绑定周期BindingCycle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.7" data-path="../kube-scheduler/07-失败处理与抢占调度Preemption.html">
+            
+                <a href="../kube-scheduler/07-失败处理与抢占调度Preemption.html">
+            
+                    
+                    失败处理与抢占调度Preemption
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.8" data-path="../kube-scheduler/08-调度器扩展与实践.html">
+            
+                <a href="../kube-scheduler/08-调度器扩展与实践.html">
+            
+                    
+                    调度器扩展与实践
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Controller Manager
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="01-ControllerManager创建流程.html">
+            
+                <a href="01-ControllerManager创建流程.html">
+            
+                    
+                    ControllerManager创建流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.3.2" data-path="02-DeploymentController原理详解.html">
+            
+                <a href="02-DeploymentController原理详解.html">
+            
+                    
+                    DeploymentController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >DeploymentController原理详解</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <div class="treeview__container"><ul>
+<li><div><a href="#&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;">&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;</a><i></i></div></li>
+<li><div><a href="#&#x542F;&#x52A8;&#x903B;&#x8F91;">&#x542F;&#x52A8;&#x903B;&#x8F91;</a><i></i></div></li>
+<li><div><a href="#&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;">&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;</a><i></i></div></li>
+<li><div><a href="#&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;">&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#api&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;">API&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;</a><i></i></div></li>
+<li><div><a href="#&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;">&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;</a><i></i></div></li>
+<li><div><a href="#deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;">Deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#replicaset&#x7684;&#x83B7;&#x53D6;">ReplicaSet&#x7684;&#x83B7;&#x53D6;</a><i></i></div></li>
+<li><div><a href="#pod&#x7684;&#x83B7;&#x53D6;">Pod&#x7684;&#x83B7;&#x53D6;</a><i></i></div></li>
+</ul></li>
+</ul></li>
+<li><div><a href="#&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;">&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;">Deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x83B7;&#x53D6;&#x65E7;&#x7684;replicaset&#x5BF9;&#x8C61;">&#x83B7;&#x53D6;&#x65E7;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</a><i></i></div></li>
+<li><div><a href="#&#x83B7;&#x53D6;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;">&#x83B7;&#x53D6;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</a><i></i></div></li>
+<li><div><a href="#&#x5904;&#x7406;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;">&#x5904;&#x7406;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x7ED9;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;">&#x7ED9;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#&#x540C;&#x6B65;deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;">&#x540C;&#x6B65;Deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;">Deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;">&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x573A;&#x666F;&#x4E00;">&#x573A;&#x666F;&#x4E00;</a><i></i></div></li>
+<li><div><a href="#&#x573A;&#x666F;&#x4E8C;">&#x573A;&#x666F;&#x4E8C;</a><i></i></div></li>
+<li><div><a href="#&#x573A;&#x666F;&#x4E09;&#x6838;&#x5FC3;&#x573A;&#x666F;">&#x573A;&#x666F;&#x4E09;(&#x6838;&#x5FC3;&#x573A;&#x666F;)</a><i></i></div></li>
+<li><div><a href="#&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;replicaset&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;">&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;ReplicaSet&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;</a><i></i></div></li>
+<li><div><a href="#&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;">&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;</a><i></i></div></li>
+</ul></li>
+</ul></li>
+<li><div><a href="#deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;">Deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;</a><i></i></div></li>
+<li><div><a href="#deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;">Deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#recreate&#x7B56;&#x7565;">Recreate&#x7B56;&#x7565;</a><i></i></div></li>
+<li><div><a href="#rollingupdate&#x7B56;&#x7565;">RollingUpdate&#x7B56;&#x7565;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;replicaset">&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;ReplicaSet</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;">&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;replicaset">&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;ReplicaSet</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;">&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;</a><i></i></div></li>
+<li><div><a href="#&#x6B63;&#x5E38;&#x7F29;&#x5BB9;">&#x6B63;&#x5E38;&#x7F29;&#x5BB9;</a><i></i></div></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+
+<h1 id="deploymentcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;"><a name="deploymentcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;" class="plugin-anchor" href="#deploymentcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;"><i class="fa fa-link" aria-hidden="true"></i></a>DeploymentController&#x539F;&#x7406;&#x8BE6;&#x89E3;</h1>
+<p>&#x5728;&#x4E0A;&#x4E00;&#x7AE0;&#x8282;&#x4E2D;&#xFF0C;&#x6211;&#x4EEC;&#x7B80;&#x5355;&#x4E86;&#x89E3;&#x4E86;ControllerManager&#x7684;&#x521B;&#x5EFA;&#xFF0C;&#x672C;&#x7BC7;&#x6587;&#x7AE0;&#x4E2D;&#x6DF1;&#x5165;&#x5B66;&#x4E60;Kubernetes&#x4E2D;&#x6700;&#x91CD;&#x8981;&#x7684;&#x63A7;&#x5236;&#x5668;&#x4E4B;&#x4E00;<code>DeploymentController</code>&#x3002;</p>
+<p>&#x5F53;&#x4E00;&#x4E2A;<code>Deployment</code>&#x521B;&#x5EFA;&#x7684;&#x65F6;&#x5019;&#xFF0C;&#x5176;&#x5B9E;&#x603B;&#x5171;&#x521B;&#x5EFA;&#x4E86;&#x4E09;&#x79CD;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#xFF0C;&#x5206;&#x522B;&#x662F;<code>Deployment</code>&#x3001;<code>ReplicaSet</code>&#x3001;<code>Pod</code>&#xFF0C;&#x8FD9;&#x662F;&#x975E;&#x5E38;&#x91CD;&#x8981;&#x7684;&#xFF0C;&#x56E0;&#x4E3A;<code>Deployment</code>&#x8D44;&#x6E90;&#x5E76;&#x4E0D;&#x4F1A;&#x76F4;&#x63A5;&#x7BA1;&#x7406;<code>Pod</code>&#xFF0C;&#x800C;&#x662F;&#x901A;&#x8FC7;&#x7BA1;&#x7406;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6765;&#x95F4;&#x63A5;&#x5730;&#x7BA1;&#x7406;<code>Pod</code>&#xFF0C;&#x6240;&#x4EE5;&#x4E00;&#x4E2A;&#x65E0;&#x72B6;&#x6001;&#x8D1F;&#x8F7D;&#x7684;<code>Pod</code>&#x7684;&#x76F4;&#x63A5;&#x5F52;&#x5C5E;&#x662F;<code>ReplicaSet</code>&#x3002;&#x8FD9;&#x79CD;&#x8BBE;&#x8BA1;&#x548C;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x76F8;&#x5173;&#xFF0C;&#x5F53;&#x4E00;&#x4E2A;<code>Deployment</code>&#x4E2D;&#x5B9A;&#x4E49;&#x7684;<code>Pod</code>&#x6A21;&#x677F;&#x53D1;&#x751F;&#x53D8;&#x5316;&#x65F6;&#xFF0C;&#x4F1A;&#x521B;&#x5EFA;&#x51FA;&#x4E00;&#x4E2A;&#x65B0;&#x7684;<code>ReplicaSet</code>&#xFF0C;&#x518D;&#x6839;&#x636E;&#x4E00;&#x5B9A;&#x7684;&#x89C4;&#x5219;&#x53BB;&#x66FF;&#x6362;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x3002;</p>
+<h2 id="&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;"><a name="&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;" class="plugin-anchor" href="#&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;</h2>
+<p>&#x4E0B;&#x9762;&#x5148;&#x4ECE;<code>DeploymentController</code>&#x7684;&#x521B;&#x5EFA;&#x5F00;&#x59CB;&#x5B66;&#x4E60;&#xFF0C;&#x5B83;&#x7684;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x5982;&#x4E0B;&#xFF0C;&#x5176;&#x4E2D;&#x5305;&#x542B;&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;&#x548C;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;&#x4E24;&#x4E2A;&#x903B;&#x8F91;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func startDeploymentController(ctx context.Context, controllerContext ControllerContext, controllerName string) (controller.Interface, bool, error) {
+    dc, err := deployment.NewDeploymentController(
+        ctx,
+        controllerContext.InformerFactory.Apps().V1().Deployments(),
+        controllerContext.InformerFactory.Apps().V1().ReplicaSets(),
+        controllerContext.InformerFactory.Core().V1().Pods(),
+        controllerContext.ClientBuilder.ClientOrDie(&quot;deployment-controller&quot;),
+    )
+    if err != nil {
+        return nil, true, fmt.Errorf(&quot;error creating Deployment controller: %v&quot;, err)
+    }
+    go dc.Run(ctx, int(controllerContext.ComponentConfig.DeploymentController.ConcurrentDeploymentSyncs))
+    return nil, true, nil
+}
+</code></pre>
+<p><code>DeploymentController</code>&#x7684;&#x5B9E;&#x73B0;&#x903B;&#x8F91;&#x90FD;&#x5728;<code>pkg/controller/deployment</code>&#x8DEF;&#x5F84;&#x4E0B;&#xFF0C;<code>NewDeploymentController()</code>&#x65B9;&#x6CD5;&#x521B;&#x5EFA;&#x4E86;&#x4E00;&#x4E2A;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;&#xFF0C;&#x6839;&#x636E;&#x51FD;&#x6570;&#x7B7E;&#x540D;&#x6765;&#x770B;&#xFF0C;&#x5B83;&#x63A5;&#x6536;&#x4E0A;&#x4E0B;&#x6587;&#x53C2;&#x6570;<code>ctx</code>&#xFF0C;&#x4E09;&#x79CD;<code>Informer</code>&#x5BF9;&#x8C61;&#x7528;&#x6765;&#x76D1;&#x6D4B;<code>Deployment/ReplicaSet/Pod</code>&#x8D44;&#x6E90;&#x7684;&#x53D8;&#x5316;&#xFF0C;&#x4EE5;&#x53CA;&#x5BA2;&#x6237;&#x7AEF;<code>client</code>&#x3002;&#x7167;&#x60EF;&#x4F8B;&#x5148;&#x521B;&#x5EFA;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;&#x548C;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;&#xFF0C;&#x7136;&#x540E;&#x521D;&#x59CB;&#x5316;<code>DeploymentController</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5176;&#x4E2D;&#x5305;&#x62EC;&#x5BA2;&#x6237;&#x7AEF;&#x3001;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;&#x3001;&#x4E8B;&#x4EF6;&#x8BB0;&#x5F55;&#x5668;&#x3001;&#x9650;&#x901F;&#x5DE5;&#x4F5C;&#x961F;&#x5217;&#x3001;&#x548C;&#x7528;&#x4E8E;&#x5BF9;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x8FDB;&#x884C;<code>Patch</code>&#x7684;&#x64CD;&#x4F5C;&#x5668;<code>rsControl</code>&#x3002;&#x518D;&#x901A;&#x8FC7;<code>AddEventHandler()</code>&#x6CE8;&#x518C;&#x4E8B;&#x4EF6;&#x7684;&#x5904;&#x7406;&#x51FD;&#x6570;&#xFF0C;&#x5E76;&#x521D;&#x59CB;&#x5316;&#x5404;&#x79CD;&#x8D44;&#x6E90;&#x7684;<code>Lister</code></p>
+<pre class="language-"><code class="lang-Go">func NewDeploymentController(ctx context.Context, dInformer appsinformers.DeploymentInformer, rsInformer appsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, client clientset.Interface) (*DeploymentController, error) {
+    // &#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5904;&#x7406;&#x5668;&#x548C;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;
+    eventBroadcaster := record.NewBroadcaster(record.WithContext(ctx))
+    logger := klog.FromContext(ctx)
+    // &#x521D;&#x59CB;&#x5316;DeploymentController&#x5B9E;&#x4F8B;
+    dc := &amp;DeploymentController{
+        client:           client,
+        eventBroadcaster: eventBroadcaster,
+        eventRecorder:    eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: &quot;deployment-controller&quot;}),
+        queue: workqueue.NewTypedRateLimitingQueueWithConfig(
+            workqueue.DefaultTypedControllerRateLimiter[string](),
+            workqueue.TypedRateLimitingQueueConfig[string]{
+                Name: &quot;deployment&quot;,
+            },
+        ),
+    }
+    dc.rsControl = controller.RealRSControl{
+        KubeClient: client,
+        Recorder:   dc.eventRecorder,
+    }
+    // &#x6CE8;&#x518C;Deployment&#x8D44;&#x6E90;&#x53D8;&#x5316;&#x5904;&#x7406;&#x51FD;&#x6570;
+    dInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+        AddFunc: func(obj interface{}) {
+            dc.addDeployment(logger, obj)
+        },
+        UpdateFunc: func(oldObj, newObj interface{}) {
+            dc.updateDeployment(logger, oldObj, newObj)
+        },
+        // This will enter the sync loop and no-op, because the deployment has been deleted from the store.
+        DeleteFunc: func(obj interface{}) {
+            dc.deleteDeployment(logger, obj)
+        },
+    })
+    // &#x6CE8;&#x518C;ReplicaSet&#x8D44;&#x6E90;&#x53D8;&#x5316;&#x5904;&#x7406;&#x51FD;&#x6570;
+    rsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+        AddFunc: func(obj interface{}) {
+            dc.addReplicaSet(logger, obj)
+        },
+        UpdateFunc: func(oldObj, newObj interface{}) {
+            dc.updateReplicaSet(logger, oldObj, newObj)
+        },
+        DeleteFunc: func(obj interface{}) {
+            dc.deleteReplicaSet(logger, obj)
+        },
+    })
+    // &#x6CE8;&#x518C;Pod&#x8D44;&#x6E90;&#x53D8;&#x5316;&#x5904;&#x7406;&#x51FD;&#x6570;
+    podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+        DeleteFunc: func(obj interface{}) {
+            dc.deletePod(logger, obj)
+        },
+    })
+    // &#x6CE8;&#x518C;&#x8C03;&#x8C10;&#x51FD;&#x6570;
+    dc.syncHandler = dc.syncDeployment
+    // &#x6CE8;&#x518C;&#x4E8B;&#x4EF6;&#x5165;&#x961F;&#x51FD;&#x6570;
+    dc.enqueueDeployment = dc.enqueue
+    // &#x521D;&#x59CB;&#x5316;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;Lister
+    dc.dLister = dInformer.Lister()
+    dc.rsLister = rsInformer.Lister()
+    dc.podLister = podInformer.Lister()
+    // &#x521D;&#x59CB;&#x5316;&#x7F13;&#x5B58;&#x72B6;&#x6001;&#x68C0;&#x67E5;&#x51FD;&#x6570;
+    dc.dListerSynced = dInformer.Informer().HasSynced
+    dc.rsListerSynced = rsInformer.Informer().HasSynced
+    dc.podListerSynced = podInformer.Informer().HasSynced
+    return dc, nil
+}
+</code></pre>
+<p>&#x6700;&#x540E;&#x5C31;&#x8FD4;&#x56DE;&#x4E86;&#x4E00;&#x4E2A;&#x5B8C;&#x6574;&#x7684;<code>DeploymentController</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5176;&#x7ED3;&#x6784;&#x5982;&#x4E0B;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">type DeploymentController struct {
+    // &#x7528;&#x4E8E;&#x64CD;&#x4F5C;ReplicaSet&#x5BF9;&#x8C61;
+    rsControl controller.RSControlInterface
+    // Kubernetes&#x5BA2;&#x6237;&#x7AEF;
+    client    clientset.Interface
+    // &#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;
+    eventBroadcaster record.EventBroadcaster
+    // &#x4E8B;&#x4EF6;&#x8BB0;&#x5F55;&#x5668;
+    eventRecorder    record.EventRecorder
+    // &#x540C;&#x6B65;&#x51FD;&#x6570;
+    syncHandler func(ctx context.Context, dKey string) error
+    // &#x5355;&#x6D4B;&#x4F7F;&#x7528; &#x5165;&#x961F;&#x51FD;&#x6570;
+    enqueueDeployment func(deployment *apps.Deployment)
+    // Deployments&#x8D44;&#x6E90;&#x7684;Lister
+    dLister appslisters.DeploymentLister
+    // ReplicaSet&#x8D44;&#x6E90;&#x7684;Lister
+    rsLister appslisters.ReplicaSetLister
+    // Pod&#x8D44;&#x6E90;&#x7684;Lister
+    podLister corelisters.PodLister
+    // &#x7F13;&#x5B58;&#x72B6;&#x6001;&#x68C0;&#x67E5;&#x51FD;&#x6570;
+    dListerSynced cache.InformerSynced
+    rsListerSynced cache.InformerSynced
+    podListerSynced cache.InformerSynced
+    // &#x9650;&#x901F;&#x961F;&#x5217;
+    queue workqueue.TypedRateLimitingInterface[string]
+}
+</code></pre>
+<h2 id="&#x542F;&#x52A8;&#x903B;&#x8F91;"><a name="&#x542F;&#x52A8;&#x903B;&#x8F91;" class="plugin-anchor" href="#&#x542F;&#x52A8;&#x903B;&#x8F91;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x542F;&#x52A8;&#x903B;&#x8F91;</h2>
+<p>&#x8FD0;&#x884C;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;&#x7684;&#x4EE3;&#x7801;&#x5982;&#x4E0B;&#xFF0C;&#x53E6;&#x8D77;&#x4E00;&#x4E2A;&#x534F;&#x7A0B;&#xFF0C;&#x4F20;&#x5165;&#x4E0A;&#x4E0B;&#x6587;&#x63A7;&#x5236;&#x751F;&#x547D;&#x5468;&#x671F;&#xFF0C;&#x8FD8;&#x6709;&#x4E00;&#x4E2A;&#x53C2;&#x6570;&#x8868;&#x793A;&#x5141;&#x8BB8;&#x5E76;&#x53D1;&#x540C;&#x6B65;&#x7684;<code>Deployment</code>&#x5BF9;&#x8C61;&#x6570;&#x91CF;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">go dc.Run(ctx, int(controllerContext.ComponentConfig.DeploymentController.ConcurrentDeploymentSyncs))
+</code></pre>
+<p>&#x6765;&#x770B;<code>Run()</code>&#x65B9;&#x6CD5;&#x7684;&#x5177;&#x4F53;&#x5B9E;&#x73B0;&#x903B;&#x8F91;&#xFF0C;&#x9996;&#x5148;&#x8FD8;&#x662F;&#x6807;&#x51C6;&#x7684;&#x521D;&#x59CB;&#x5316;&#x6D41;&#x7A0B;&#x548C;&#x65E5;&#x5FD7;&#x6253;&#x5370;&#xFF0C;&#x7136;&#x540E;&#x4F1A;&#x901A;&#x8FC7;<code>WaitForNamedCacheSync()</code>&#x65B9;&#x6CD5;&#x786E;&#x8BA4;<code>Informer</code>&#x76D1;&#x542C;&#x7684;&#x8D44;&#x6E90;&#x662F;&#x5426;&#x540C;&#x6B65;&#x6210;&#x529F;&#xFF0C;&#x5185;&#x90E8;&#x4F1A;&#x8C03;&#x7528;<code>PollImmediateUntil()</code>&#x51FD;&#x6570;&#x963B;&#x585E;&#x7B49;&#x5F85;<code>InformerSynced</code>&#x8FD4;&#x56DE;&#x7684;&#x7ED3;&#x679C;&#x3002;&#x7136;&#x540E;&#x6839;&#x636E;&#x4F20;&#x5165;&#x7684;<code>worker</code>&#x6570;&#x503C;&#x542F;&#x52A8;&#x5BF9;&#x5E94;&#x6570;&#x91CF;&#x7684;&#x534F;&#x7A0B;&#x53BB;&#x5904;&#x7406;&#x4E8B;&#x4EF6;&#xFF0C;&#x6700;&#x540E;&#x901A;&#x8FC7;&#x63A5;&#x6536;<code>Done</code>&#x4FE1;&#x53F7;&#x7684;&#x65B9;&#x5F0F;&#x963B;&#x585E;&#x4E3B;&#x7EBF;&#x7A0B;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) Run(ctx context.Context, workers int) {
+  // &#x5F02;&#x5E38;&#x5904;&#x7406; &#x7528;&#x4E8E;&#x6355;&#x83B7;panic
+    defer utilruntime.HandleCrash()
+
+    // &#x542F;&#x52A8;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;
+    dc.eventBroadcaster.StartStructuredLogging(3)
+    dc.eventBroadcaster.StartRecordingToSink(&amp;v1core.EventSinkImpl{Interface: dc.client.CoreV1().Events(&quot;&quot;)})
+    // &#x9000;&#x51FA;&#x65F6;&#x505C;&#x6B62;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;&#x548C;&#x63A7;&#x5236;&#x5668;&#x7684;&#x5DE5;&#x4F5C;&#x961F;&#x5217;
+  defer dc.eventBroadcaster.Shutdown()
+    defer dc.queue.ShutDown()
+    // &#x65E5;&#x5FD7;&#x8BB0;&#x5F55;
+    logger := klog.FromContext(ctx)
+    logger.Info(&quot;Starting controller&quot;, &quot;controller&quot;, &quot;deployment&quot;)
+    defer logger.Info(&quot;Shutting down controller&quot;, &quot;controller&quot;, &quot;deployment&quot;)
+    // &#x786E;&#x8BA4;&#x7F13;&#x5B58;&#x540C;&#x6B65;&#x6210;&#x529F;
+    if !cache.WaitForNamedCacheSync(&quot;deployment&quot;, ctx.Done(), dc.dListerSynced, dc.rsListerSynced, dc.podListerSynced) {
+        return
+    }
+    // &#x542F;&#x52A8;worker&#x7EBF;&#x7A0B;
+    for i := 0; i &lt; workers; i++ {
+        go wait.UntilWithContext(ctx, dc.worker, time.Second)
+    }
+    // &#x963B;&#x585E;&#x4E3B;&#x8FDB;&#x7A0B;
+    &lt;-ctx.Done()
+}
+</code></pre>
+<h2 id="&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;"><a name="&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;" class="plugin-anchor" href="#&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x8C03;&#x8C10;&#x57FA;&#x672C;&#x6D41;&#x7A0B;</h2>
+<p>&#x5FAA;&#x73AF;&#x6267;&#x884C;&#x7684;&#x903B;&#x8F91;&#x662F;<code>worker()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x6839;&#x636E;&#x5176;&#x4E2D;&#x65B9;&#x6CD5;&#x7684;&#x547D;&#x540D;&#xFF0C;&#x5F88;&#x660E;&#x663E;&#x5B83;&#x8981;&#x505A;&#x7684;&#x5C31;&#x662F;&#x4E0D;&#x505C;&#x5730;&#x5904;&#x7406;&#x4E0B;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) worker(ctx context.Context) {
+    for dc.processNextWorkItem(ctx) {
+    }
+}
+</code></pre>
+<p>&#x6765;&#x770B;&#x5143;&#x7D20;&#x662F;&#x5982;&#x4F55;&#x88AB;&#x5904;&#x7406;&#x7684;&#xFF0C;&#x9996;&#x5148;&#x4ECE;&#x5DE5;&#x4F5C;&#x961F;&#x5217;&#x4E2D;&#x53D6;&#x51FA;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#xFF0C;&#x8FD4;&#x56DE;&#x7684;&#x662F;&#x4E00;&#x4E2A;&#x5B57;&#x7B26;&#x4E32;&#x7C7B;&#x578B;&#x7684;&#x5BF9;&#x8C61;&#x540D;&#x79F0;&#xFF0C;&#x7136;&#x540E;&#x4EA4;&#x7ED9;&#x8C03;&#x8C10;&#x65B9;&#x6CD5;&#x4E5F;&#x5C31;&#x662F;<code>syncHandler()</code>&#x53BB;&#x5904;&#x7406;&#x3002;&#x5982;&#x679C;&#x83B7;&#x53D6;&#x5143;&#x7D20;&#x65F6;&#x53D1;&#x73B0;&#x961F;&#x5217;&#x5DF2;&#x7ECF;&#x5173;&#x95ED;&#x4E86;&#x5C31;&#x8FD4;&#x56DE;&#x4E00;&#x4E2A;<code>false</code>&#xFF0C;<code>worker</code>&#x534F;&#x7A0B;&#x4E5F;&#x968F;&#x4E4B;&#x5173;&#x95ED;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
+    // &#x53D6;&#x51FA;&#x4E00;&#x4E2A;&#x5143;&#x7D20;
+    key, quit := dc.queue.Get()
+    // &#x5982;&#x679C;&#x961F;&#x5217;&#x4E3A;&#x7A7A;&#x4E14;&#x5DF2;&#x7ECF;&#x8C03;&#x7528;&#x8FC7;shutdown&#x5173;&#x95ED; quit&#x4F1A;&#x8FD4;&#x56DE;true
+    if quit {
+        return false
+    }
+    // &#x7ED3;&#x675F;&#x65F6;&#x901A;&#x77E5;&#x961F;&#x5217;&#x5904;&#x7406;&#x5B8C;&#x6210;(&#x6210;&#x529F;/&#x5931;&#x8D25;&#x91CD;&#x65B0;&#x5165;&#x961F;)
+    defer dc.queue.Done(key)
+    // &#x901A;&#x8FC7;&#x8C03;&#x8C10;&#x65B9;&#x6CD5;&#x5904;&#x7406;
+    err := dc.syncHandler(ctx, key)
+    // &#x9519;&#x8BEF;&#x5904;&#x7406;
+    dc.handleErr(ctx, err, key)
+
+    return true
+}
+</code></pre>
+<p>&#x4E0B;&#x9762;&#x5C31;&#x662F;&#x63A7;&#x5236;&#x5668;&#x4E2D;&#x6700;&#x6838;&#x5FC3;&#x7684;&#x903B;&#x8F91;&#x4E86;&#xFF0C;&#x4E00;&#x822C;&#x6765;&#x8BF4;&#x4F1A;&#x53EB;&#x505A;<code>reconciler()</code>&#xFF0C;&#x6B64;&#x5904;&#x4EC5;&#x547D;&#x540D;&#x4E0D;&#x540C;&#x3002;&#x5728;&#x961F;&#x5217;&#x4E2D;&#x53D6;&#x51FA;<code>key</code>&#x7684;&#x683C;&#x5F0F;&#x4E3A;<code>namespcae/deploymentname</code>&#xFF0C;&#x8C03;&#x8C10;&#x65F6;&#x4F1A;&#x5148;&#x5207;&#x5206;&#x51FA;<code>namespace</code>&#x548C;<code>name</code>&#xFF0C;&#x7136;&#x540E;&#x901A;&#x8FC7;<code>Lister</code>&#x4ECE;&#x7F13;&#x5B58;&#x4E2D;&#x83B7;&#x53D6;&#x5230;&#x5177;&#x4F53;&#x7684;<code>Deployment</code>&#x5BF9;&#x8C61;&#x5E76;&#x62F7;&#x8D1D;&#xFF0C;&#x5728;&#x8C03;&#x5EA6;&#x5668;&#x7684;&#x5B66;&#x4E60;&#x8FC7;&#x7A0B;&#x4E2D;&#x5BF9;&#x4E8E;Pod&#x7684;&#x5904;&#x7406;&#x4E5F;&#x662F;&#x8981;&#x62F7;&#x8D1D;&#x7684;&#xFF0C;&#x56E0;&#x4E3A;&#x7F13;&#x5B58;&#x4E2D;&#x662F;&#x53CD;&#x6620;&#x7CFB;&#x7EDF;&#x5B9E;&#x9645;&#x72B6;&#x6001;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x907F;&#x514D;&#x5728;&#x5904;&#x7406;&#x8FC7;&#x7A0B;&#x4E2D;&#x5F71;&#x54CD;&#x539F;&#x59CB;&#x5185;&#x5BB9;&#xFF0C;&#x6240;&#x4EE5;&#x540E;&#x7EED;&#x64CD;&#x4F5C;&#x90FD;&#x8981;&#x7528;&#x6DF1;&#x62F7;&#x8D1D;&#x7684;&#x5BF9;&#x8C61;&#x3002;&#x5728;&#x5F00;&#x59CB;&#x8C03;&#x8C10;&#x903B;&#x8F91;&#x4E4B;&#x524D;&#x4F1A;&#x5148;&#x68C0;&#x67E5;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;<code>Selector</code>&#x5B57;&#x6BB5;&#x662F;&#x5426;&#x4E3A;&#x7A7A;&#xFF0C;&#x5982;&#x679C;&#x662F;&#x5219;&#x8BB0;&#x5F55;&#x9519;&#x8BEF;&#x5E76;&#x8DF3;&#x8FC7;&#x5F53;&#x524D;&#x5BF9;&#x8C61;&#x7684;&#x8C03;&#x8C10;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) error {
+    logger := klog.FromContext(ctx)
+    // &#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x548C;&#x5BF9;&#x8C61;&#x540D;&#x79F0;
+    namespace, name, err := cache.SplitMetaNamespaceKey(key)
+    if err != nil {
+        logger.Error(err, &quot;Failed to split meta namespace cache key&quot;, &quot;cacheKey&quot;, key)
+        return err
+    }
+    // &#x8BB0;&#x5F55;&#x5F00;&#x59CB;&#x65F6;&#x95F4;
+    startTime := time.Now()
+    logger.V(4).Info(&quot;Started syncing deployment&quot;, &quot;deployment&quot;, klog.KRef(namespace, name), &quot;startTime&quot;, startTime)
+    // &#x5EF6;&#x8FDF;&#x6253;&#x5370;&#x7ED3;&#x675F;&#x65E5;&#x5FD7;
+    defer func() {
+        logger.V(4).Info(&quot;Finished syncing deployment&quot;, &quot;deployment&quot;, klog.KRef(namespace, name), &quot;duration&quot;, time.Since(startTime))
+    }()
+    // &#x901A;&#x8FC7;Lister&#x83B7;&#x53D6;Deployment
+    deployment, err := dc.dLister.Deployments(namespace).Get(name)
+    if errors.IsNotFound(err) {
+        logger.V(2).Info(&quot;Deployment has been deleted&quot;, &quot;deployment&quot;, klog.KRef(namespace, name))
+        return nil
+    }
+    if err != nil {
+        return err
+    }
+
+    // &#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x5BF9;&#x8C61;&#x53EA;&#x8BFB; &#x6DF1;&#x62F7;&#x8D1D;&#x5BF9;&#x8C61;&#x4EE5;&#x907F;&#x514D;&#x5F71;&#x54CD;&#x7F13;&#x5B58;&#x5185;&#x5BB9;
+    d := deployment.DeepCopy()
+
+    everything := metav1.LabelSelector{}
+    // &#x4FDD;&#x62A4;&#x903B;&#x8F91; Selector&#x4E3A;&#x7A7A;&#x65F6;&#x610F;&#x5473;&#x7740;&#x9009;&#x62E9;&#x6240;&#x6709;Pod &#x8FD9;&#x662F;&#x4E00;&#x4E2A;&#x9519;&#x8BEF;&#x4E8B;&#x4EF6;
+    if reflect.DeepEqual(d.Spec.Selector, &amp;everything) {
+        dc.eventRecorder.Eventf(d, v1.EventTypeWarning, &quot;SelectingAll&quot;, &quot;This deployment is selecting all pods. A non-empty selector is required.&quot;)
+        // &#x76F4;&#x63A5;&#x66F4;&#x65B0;Generation&#x5E76;&#x8FD4;&#x56DE; &#x4E0D;&#x6267;&#x884C;&#x540E;&#x7EED;&#x8C03;&#x8C10;&#x52A8;&#x4F5C;
+        if d.Status.ObservedGeneration &lt; d.Generation {
+            d.Status.ObservedGeneration = d.Generation
+            dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+        }
+        return nil
+    }
+
+    // &#x83B7;&#x53D6;&#x5C5E;&#x4E8E;&#x8BE5;Deployment&#x5BF9;&#x8C61;&#x7684;ReplicaSet&#x5BF9;&#x8C61;
+    rsList, err := dc.getReplicaSetsForDeployment(ctx, d)
+    if err != nil {
+        return err
+    }
+    // &#x6839;&#x636E;rsList&#x83B7;&#x53D6;&#x8BE5;Deployment&#x4E0B;&#x7684;&#x6240;&#x6709;Pod
+    podMap, err := dc.getPodMapForDeployment(d, rsList)
+    if err != nil {
+        return err
+    }
+    // &#x5982;&#x679C;Deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D; &#x53EA;&#x66F4;&#x65B0;&#x72B6;&#x6001;&#x5E76;&#x8FD4;&#x56DE;
+    if d.DeletionTimestamp != nil {
+        return dc.syncStatusOnly(ctx, d, rsList)
+    }
+
+    // &#x6682;&#x505C;&#x6216;&#x6062;&#x590D;&#x65F6;&#x7528;unknown&#x66F4;&#x65B0;&#x72B6;&#x6001;
+    if err = dc.checkPausedConditions(ctx, d); err != nil {
+        return err
+    }
+    // &#x6682;&#x505C;&#x7684;&#x5904;&#x7406;&#x903B;&#x8F91;
+    if d.Spec.Paused {
+        return dc.sync(ctx, d, rsList)
+    }
+
+    // &#x56DE;&#x6EDA;&#x7684;&#x5904;&#x7406;&#x903B;&#x8F91;
+    if getRollbackTo(d) != nil {
+        return dc.rollback(ctx, d, rsList)
+    }
+    // &#x6269;&#x7F29;&#x5BB9;&#x7684;&#x5904;&#x7406;&#x903B;&#x8F91;
+    scalingEvent, err := dc.isScalingEvent(ctx, d, rsList)
+    if err != nil {
+        return err
+    }
+
+    if scalingEvent {
+        return dc.sync(ctx, d, rsList)
+    }
+    // &#x6839;&#x636E;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x7684;&#x7B56;&#x7565;&#x5904;&#x7406;
+    switch d.Spec.Strategy.Type {
+    case apps.RecreateDeploymentStrategyType:
+        return dc.rolloutRecreate(ctx, d, rsList, podMap)
+    case apps.RollingUpdateDeploymentStrategyType:
+        return dc.rolloutRolling(ctx, d, rsList)
+    }
+    return fmt.Errorf(&quot;unexpected deployment strategy type: %s&quot;, d.Spec.Strategy.Type)
+}
+</code></pre>
+<h2 id="&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;"><a name="&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;" class="plugin-anchor" href="#&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x83B7;&#x53D6;</h2>
+<p>&#x6211;&#x4EEC;&#x77E5;&#x9053;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x5F52;&#x5C5E;&#x5173;&#x7CFB;&#x7684;&#x5339;&#x914D;&#x662F;&#x57FA;&#x4E8E;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#xFF0C;&#x5728;&#x4E00;&#x4E2A;<code>yaml</code>&#x6587;&#x4EF6;&#x7684;&#x58F0;&#x660E;&#x4E2D;&#xFF0C;&#x4E0A;&#x5C42;&#x8D44;&#x6E90;&#x5982;<code>Deployment</code>&#x3001;</p>
+<p><code>StatefulSet</code>&#x7B49;&#x5BF9;&#x4E0B;&#x5C42;&#x8D44;&#x6E90;&#x5982;<code>Pod</code>&#x7684;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5E38;&#x6709;&#x4EE5;&#x4E0B;&#x7684;&#x8868;&#x793A;&#x5F62;&#x5F0F;&#xFF1A;</p>
+<pre class="language-"><code class="lang-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> apps/v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>
+      <span class="token key atrule">component</span><span class="token punctuation">:</span> redis
+    <span class="token key atrule">matchExpressions</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token punctuation">{</span> <span class="token key atrule">key</span><span class="token punctuation">:</span> tier<span class="token punctuation">,</span> <span class="token key atrule">operator</span><span class="token punctuation">:</span> In<span class="token punctuation">,</span> <span class="token key atrule">values</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>cache<span class="token punctuation">]</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token punctuation">{</span> <span class="token key atrule">key</span><span class="token punctuation">:</span> environment<span class="token punctuation">,</span> <span class="token key atrule">operator</span><span class="token punctuation">:</span> NotIn<span class="token punctuation">,</span> <span class="token key atrule">values</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>dev<span class="token punctuation">]</span> <span class="token punctuation">}</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">component</span><span class="token punctuation">:</span> redis
+        <span class="token key atrule">tier</span><span class="token punctuation">:</span> cache
+        <span class="token key atrule">environment</span><span class="token punctuation">:</span> test
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">...</span><span class="token punctuation">...</span>
+</code></pre>
+<p>&#x6807;&#x7B7E;&#x7684;&#x9009;&#x62E9;&#x89C4;&#x5219;&#x5B9A;&#x4E49;&#x5728;&#x5B57;&#x6BB5;<code>spec.selector</code>&#x4E0B;&#xFF0C;&#x5728;&#x548C;&#x4E0B;&#x5C42;&#x8D44;&#x6E90;&#x5339;&#x914D;&#x65F6;&#x5FC5;&#x987B;&#x5168;&#x90E8;&#x6EE1;&#x8DB3;&#xFF0C;&#x6240;&#x4EE5;&#x5728;&#x5185;&#x90E8;&#x5339;&#x914D;&#x65F6;&#x4F1A;&#x8FDB;&#x884C;&#x4E00;&#x4E2A;&#x975E;&#x5E38;&#x91CD;&#x8981;&#x7684;&#x9636;&#x6BB5;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x628A;&#x89C4;&#x5219;&#x6216;&#x4E00;&#x7EC4;&#x89C4;&#x5219;&#x7684;&#x96C6;&#x5408;&#x8F6C;&#x6362;&#x4E3A;&#x7EDF;&#x4E00;&#x7684;&#x6807;&#x8BC6;&#x65B9;&#x6CD5;&#xFF0C;&#x7136;&#x540E;&#x5728;&#x6240;&#x6709;&#x4E0B;&#x5C42;&#x8D44;&#x6E90;&#x4E2D;&#x8FC7;&#x6EE4;&#x7B26;&#x5408;&#x6240;&#x6709;&#x6761;&#x4EF6;&#x7684;&#xFF0C;&#x5373;&#x8BA4;&#x4E3A;&#x4E24;&#x8005;&#x5177;&#x6709;&#x4ECE;&#x5C5E;&#x5173;&#x7CFB;&#x3002;</p>
+<h3 id="api&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;"><a name="api&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;" class="plugin-anchor" href="#api&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;"><i class="fa fa-link" aria-hidden="true"></i></a>API&#x8D44;&#x6E90;&#x7684;&#x63CF;&#x8FF0;</h3>
+<p>&#x6839;&#x636E;<code>Deployment</code>&#x7C7B;&#x578B;&#x4E3A;&#x5F00;&#x59CB;&#x5C42;&#x5C42;&#x5206;&#x6790;&#xFF0C;&#x9996;&#x5148;<code>Deployment</code>&#x7ED3;&#x6784;&#x4F53;&#x4E2D;&#x5305;&#x542B;<code>DeploymentSpec</code>&#x7C7B;&#x578B;&#x7684;&#x63CF;&#x8FF0;&#x4FE1;&#x606F;&#xFF0C;&#x540E;&#x9762;&#x5982;&#x679C;&#x5B66;&#x4E60;<code>Operator</code>&#x5F00;&#x53D1;&#x4F1A;&#x4E86;&#x89E3;&#x5230;&#xFF0C;&#x4E00;&#x822C;&#x5B9A;&#x4E49;&#x4E00;&#x4E2A;<code>API</code>&#x5BF9;&#x8C61;&#xFF0C;&#x901A;&#x5E38;&#x4F1A;&#x5305;&#x542B;<code>metav1.TypeMeta</code>&#x3001;<code>metav1.ObjectMeta</code>&#x3001;<code>Spec</code>&#x4EE5;&#x53CA;<code>Status</code>&#x56DB;&#x4E2A;&#x5B57;&#x6BB5;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">type Deployment struct {
+    metav1.TypeMeta
+    // +optional
+    metav1.ObjectMeta
+
+    // Specification of the desired behavior of the Deployment.
+    // +optional
+    Spec DeploymentSpec
+
+    // Most recently observed status of the Deployment.
+    // +optional
+    Status DeploymentStatus
+}
+</code></pre>
+<p>&#x5728;&#x4E00;&#x4E2A;<code>yaml</code>&#x6587;&#x4EF6;&#x4E2D;&#xFF0C;<code>apiVersion</code>&#x548C;<code>kind</code>&#x8FD9;&#x4E24;&#x4E2A;&#x5B57;&#x6BB5;&#x5C5E;&#x4E8E;<code>TypeMeta</code>&#xFF0C;&#x8BF4;&#x660E;&#x4E86;<code>API</code>&#x7684;&#x7248;&#x672C;&#x548C;&#x7C7B;&#x578B;&#x4FE1;&#x606F;(GVK)&#xFF0C;<code>metadata</code>&#x5B57;&#x6BB5;&#x5C5E;&#x4E8E;<code>ObjectMeta</code>&#xFF0C;&#x63CF;&#x8FF0;&#x4E86;&#x5BF9;&#x8C61;&#x5143;&#x6570;&#x636E;&#xFF0C;&#x5305;&#x62EC;&#x540D;&#x79F0;&#x3001;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x3001;&#x6807;&#x7B7E;&#x548C;&#x6CE8;&#x89E3;&#xFF0C;<code>spec</code>&#x5B57;&#x6BB5;&#x5C5E;&#x4E8E;&#x7C7B;&#x578B;&#x7684;<code>Spec</code>&#xFF0C;&#x8868;&#x793A;&#x8BE5;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x7684;&#x671F;&#x671B;&#x72B6;&#x6001;&#xFF0C;&#x5305;&#x62EC;&#x526F;&#x672C;&#x6570;&#x91CF;&#x548C;&#x5BB9;&#x5668;&#x914D;&#x7F6E;&#x7B49;&#x3002;</p>
+<pre class="language-"><code class="lang-yaml"><span class="token comment"># TypeMeta</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> apps/v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">-</span>
+<span class="token comment"># ObjectMeta</span>
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>deployment
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> default
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+    <span class="token key atrule">tier</span><span class="token punctuation">:</span> frontend
+  <span class="token key atrule">annotations</span><span class="token punctuation">:</span>
+    <span class="token key atrule">description</span><span class="token punctuation">:</span> This is my deployment
+<span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">---</span><span class="token punctuation">-</span>
+<span class="token comment"># Spec</span>
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">3</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>
+      <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+        <span class="token key atrule">image</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>image
+</code></pre>
+<p>&#x56DE;&#x5230;<code>DeploymentSpec</code>&#x7C7B;&#x578B;&#x4E2D;&#xFF0C;&#x5176;<code>Selector</code>&#x5B57;&#x6BB5;&#x4E3A;<code>metav1.LabelSelector</code>&#x7C7B;&#x578B;&#x7684;&#x6307;&#x9488;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">type DeploymentSpec struct {
+    Replicas int32
+    Selector *metav1.LabelSelector
+    Template api.PodTemplateSpec
+    Strategy DeploymentStrategy
+    MinReadySeconds int32
+    RevisionHistoryLimit *int32
+    Paused bool
+    RollbackTo *RollbackConfig
+    ProgressDeadlineSeconds *int32
+}
+</code></pre>
+<p>&#x7EE7;&#x7EED;&#x770B;<code>LabelSelector</code>&#x7C7B;&#x578B;&#x7684;&#x5B9A;&#x4E49;&#xFF0C;&#x5B83;&#x6B63;&#x7B26;&#x5408;&#x5728;&#x4E00;&#x4E2A;<code>yaml</code>&#x6587;&#x4EF6;&#x4E2D;&#x5BF9;&#x4E8E;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x5B9A;&#x4E49;&#x89C4;&#x8303;&#xFF0C;&#x5373;&#xFF1A;1.&#x9009;&#x62E9;&#x6807;&#x7B7E;&#x4E0E;&#x67D0;&#x4E2A;&#x503C;&#x662F;&#x5339;&#x914D;&#x7684;;2.&#x6807;&#x7B7E;&#x548C;&#x67D0;&#x4E9B;&#x503C;&#x5B58;&#x5728;<code>In/NotIn/Exists/DoesNotExist</code>&#x7684;&#x5173;&#x7CFB;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">type LabelSelector struct {
+    // matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+    // map is equivalent to an element of matchExpressions, whose key field is &quot;key&quot;, the
+    // operator is &quot;In&quot;, and the values array contains only &quot;value&quot;. The requirements are ANDed.
+    // +optional
+    MatchLabels map[string]string `json:&quot;matchLabels,omitempty&quot; protobuf:&quot;bytes,1,rep,name=matchLabels&quot;`
+    // matchExpressions is a list of label selector requirements. The requirements are ANDed.
+    // +optional
+    // +listType=atomic
+    MatchExpressions []LabelSelectorRequirement `json:&quot;matchExpressions,omitempty&quot; protobuf:&quot;bytes,2,rep,name=matchExpressions&quot;`
+}
+</code></pre>
+<h3 id="&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;"><a name="&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;" class="plugin-anchor" href="#&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x7684;&#x8F6C;&#x6362;</h3>
+<p>&#x4E0A;&#x9762;&#x8BF4;&#x5230;&#x8FC7;&#xFF0C;&#x5728;&#x63A7;&#x5236;&#x5668;&#x5185;&#x90E8;&#x8FDB;&#x884C;&#x4ECE;&#x5C5E;&#x8D44;&#x6E90;&#x9009;&#x62E9;&#x65F6;&#xFF0C;&#x4F1A;&#x5BF9;&#x4E0A;&#x5C42;&#x8D44;&#x6E90;&#x8FDB;&#x884C;&#x6807;&#x7B7E;&#x7684;&#x8F6C;&#x6362;&#x4EE5;&#x5339;&#x914D;&#x6240;&#x5C5E;&#x8D44;&#xFF0C;<code>metav1.LabelSelectorAsSelector()</code>&#x65B9;&#x6CD5;&#x5B9E;&#x73B0;&#x4E86;&#x8FD9;&#x4E00;&#x903B;&#x8F91;&#xFF0C;&#x628A;<code>metav1.LabelSelector</code>&#x7C7B;&#x578B;&#x8F6C;&#x6362;&#x4E3A;<code>labels.Selector</code>&#x5BF9;&#x8C61;&#xFF0C;&#x4E0B;&#x9762;&#x6765;&#x770B;&#x5B83;&#x7684;&#x5B9E;&#x73B0;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x5BF9;&#x4F20;&#x5165;&#x7684;<code>LabelSelector</code>&#x5BF9;&#x8C61;&#x8FDB;&#x884C;&#x68C0;&#x67E5;&#xFF0C;&#x5982;&#x679C;&#x662F;&#x7A7A;&#x5219;&#x8868;&#x793A;&#x4E0D;&#x5339;&#x914D;&#x6807;&#x7B7E;&#xFF0C;&#x4E0D;&#x4E3A;&#x7A7A;&#x4F46;&#x957F;&#x5EA6;&#x662F;0&#x8868;&#x793A;&#x5339;&#x914D;&#x6240;&#x6709;&#x6807;&#x7B7E;&#x3002;&#x9996;&#x5148;&#x5904;&#x7406;<code>MatchLabels</code>&#x5B57;&#x6BB5;&#xFF0C;&#x8FD9;&#x4E00;&#x90E8;&#x5206;&#x90FD;&#x662F;&#x671F;&#x671B;&#x6807;&#x7B7E;&#x4E0E;&#x76EE;&#x6807;&#x503C;&#x4E00;&#x81F4;&#x7684;&#xFF0C;&#x6240;&#x4EE5;&#x64CD;&#x4F5C;&#x7B26;&#x4F7F;&#x7528;<code>Equals</code>&#x3002;&#x7136;&#x540E;&#x904D;&#x5386;&#x5904;&#x7406;<code>MatchExpressions</code>&#x5B57;&#x6BB5;&#xFF0C;&#x6839;&#x636E;&#x5176;&#x4E2D;<code>Operator</code>&#x7684;&#x503C;&#x8FDB;&#x884C;&#x8F6C;&#x6362;&#xFF0C;&#x7136;&#x540E;&#x521D;&#x59CB;&#x5316;&#x4E00;&#x4E2A;<code>labels.Selector</code>&#x63A5;&#x53E3;&#xFF0C;&#x7136;&#x540E;&#x8C03;&#x7528;<code>Add()</code>&#x65B9;&#x6CD5;&#x6DFB;&#x52A0;&#x4E4B;&#x524D;&#x5904;&#x7406;&#x597D;&#x7684;&#x6807;&#x7B7E;&#xFF0C;&#x6700;&#x7EC8;<code>Api</code>&#x5BF9;&#x8C61;&#x4E2D;&#x7684;&#x6807;&#x7B7E;&#x4F1A;&#x4EE5;<code>labelkey--operator--labelvalue</code>&#x5207;&#x7247;&#x7684;&#x5185;&#x90E8;&#x6807;&#x7B7E;&#x5F62;&#x5F0F;&#x7EDF;&#x4E00;&#x5B58;&#x5728;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
+    // &#x5BF9;&#x8C61;&#x68C0;&#x67E5;
+    if ps == nil {
+        return labels.Nothing(), nil
+    }
+    if len(ps.MatchLabels)+len(ps.MatchExpressions) == 0 {
+        return labels.Everything(), nil
+    }
+    requirements := make([]labels.Requirement, 0, len(ps.MatchLabels)+len(ps.MatchExpressions))
+    // &#x5904;&#x7406;MatchLabels&#x5B57;&#x6BB5;
+    for k, v := range ps.MatchLabels {
+        r, err := labels.NewRequirement(k, selection.Equals, []string{v})
+        if err != nil {
+            return nil, err
+        }
+        requirements = append(requirements, *r)
+    }
+    // &#x5904;&#x7406;MatchExpressions&#x5B57;&#x6BB5;
+    for _, expr := range ps.MatchExpressions {
+        var op selection.Operator
+        switch expr.Operator {
+        case LabelSelectorOpIn:
+            op = selection.In
+        case LabelSelectorOpNotIn:
+            op = selection.NotIn
+        case LabelSelectorOpExists:
+            op = selection.Exists
+        case LabelSelectorOpDoesNotExist:
+            op = selection.DoesNotExist
+        default:
+            return nil, fmt.Errorf(&quot;%q is not a valid label selector operator&quot;, expr.Operator)
+        }
+        r, err := labels.NewRequirement(expr.Key, op, append([]string(nil), expr.Values...))
+        if err != nil {
+            return nil, err
+        }
+        requirements = append(requirements, *r)
+    }
+    // &#x521D;&#x59CB;&#x5316;&#x4E00;&#x4E2A;internalSelector&#x7C7B;&#x578B;
+    selector := labels.NewSelector()
+    // &#x6DFB;&#x52A0;requirements
+    selector = selector.Add(requirements...)
+    return selector, nil
+}
+</code></pre>
+<h3 id="deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;"><a name="deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;" class="plugin-anchor" href="#deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;"><i class="fa fa-link" aria-hidden="true"></i></a>Deployment&#x4E0B;&#x5C5E;&#x8D44;&#x6E90;&#x7684;&#x83B7;&#x53D6;</h3>
+<h4 id="replicaset&#x7684;&#x83B7;&#x53D6;"><a name="replicaset&#x7684;&#x83B7;&#x53D6;" class="plugin-anchor" href="#replicaset&#x7684;&#x83B7;&#x53D6;"><i class="fa fa-link" aria-hidden="true"></i></a>ReplicaSet&#x7684;&#x83B7;&#x53D6;</h4>
+<p><code>getReplicaSetsForDeployment()</code>&#x65B9;&#x6CD5;&#x7528;&#x4E8E;&#x83B7;&#x53D6;<code>Deployment</code>&#x4E0B;&#x5C5E;&#x7684;<code>ReplicaSet</code>&#x5B9E;&#x4F8B;&#xFF0C;&#x9996;&#x5148;&#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x7684;&#x6240;&#x6709;<code>ReplocaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x7136;&#x540E;&#x628A;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;&#x6807;&#x7B7E;&#x89E3;&#x6790;&#x4E3A;&#x5185;&#x90E8;&#x5F62;&#x5F0F;&#x3002;&#x57FA;&#x4E8E;<code>rsControl</code>&#x3001;<code>Selector</code>&#x7B49;&#x5C01;&#x88C5;&#x51FA;&#x4E00;&#x4E2A;<code>ReplicaSetControllerRefManager</code>&#x7ED3;&#x6784;&#x5BF9;&#x8C61;&#x7528;&#x4E8E;&#x5904;&#x7406;&#x8BE5;<code>Deployment</code>&#x4E0E;<code>ReplicaSet</code>&#x4E4B;&#x95F4;&#x7684;&#x4ECE;&#x5C5E;&#x5173;&#x7CFB;&#xFF0C;&#x6700;&#x540E;&#x8C03;&#x7528;&#x5176;<code>ClaimReplicaSets()</code>&#x65B9;&#x6CD5;&#x8BA4;&#x9886;&#x5C5E;&#x4E8E;&#x5F53;&#x524D;<code>Deployment</code>&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context, d *apps.Deployment) ([]*apps.ReplicaSet, error) {
+    // &#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x6240;&#x6709;ReplicaSet
+    rsList, err := dc.rsLister.ReplicaSets(d.Namespace).List(labels.Everything())
+    if err != nil {
+        return nil, err
+    }
+    // Deployment&#x6807;&#x7B7E;&#x8F6C;&#x6362;
+    deploymentSelector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
+    if err != nil {
+        return nil, fmt.Errorf(&quot;deployment %s/%s has invalid label selector: %v&quot;, d.Namespace, d.Name, err)
+    }
+    // &#x8BA4;&#x9886;ReplicaSet&#x524D;&#x4F1A;&#x518D;&#x6B21;&#x68C0;&#x67E5; &#x907F;&#x514D;List&#x548C;Adopt&#x4E4B;&#x95F4;&#x7684;Deployment&#x5BF9;&#x8C61;&#x7684;&#x53D8;&#x66F4;
+    canAdoptFunc := controller.RecheckDeletionTimestamp(func(ctx context.Context) (metav1.Object, error) {
+        //&#x76F4;&#x63A5;&#x4ECE;ApiServer&#x83B7;&#x53D6;&#x6700;&#x65B0;&#x5BF9;&#x8C61; &#x5E76;&#x901A;&#x8FC7;UID&#x8FDB;&#x884C;&#x4E00;&#x81F4;&#x6027;&#x786E;&#x8BA4;
+        fresh, err := dc.client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+        if err != nil {
+            return nil, err
+        }
+        if fresh.UID != d.UID {
+            return nil, fmt.Errorf(&quot;original Deployment %v/%v is gone: got uid %v, wanted %v&quot;, d.Namespace, d.Name, fresh.UID, d.UID)
+        }
+        return fresh, nil
+    })
+    // &#x521B;&#x5EFA;Replicaset&#x5BF9;&#x8C61;&#x7684;&#x5F15;&#x7528;&#x7BA1;&#x7406;&#x5668;
+    cm := controller.NewReplicaSetControllerRefManager(dc.rsControl, d, deploymentSelector, controllerKind, canAdoptFunc)
+    // &#x8BA4;&#x9886;ReplicaSet
+    return cm.ClaimReplicaSets(ctx, rsList)
+}
+</code></pre>
+<p><code>ReplicaSet</code>&#x7684;&#x8BA4;&#x9886;&#x903B;&#x8F91;&#x5728;<code>ClaimReplicaSets()</code>&#x65B9;&#x6CD5;&#x4E2D;&#x5B9E;&#x73B0;&#xFF0C;&#x5176;&#x4E2D;&#x5B9A;&#x4E49;&#x4E86;&#x4E09;&#x4E2A;&#x51FD;&#x6570;&#xFF0C;&#x5206;&#x522B;&#x5BF9;&#x5E94;<code>&#x6807;&#x7B7E;&#x9009;&#x62E9;</code>&#x3001;<code>&#x8BA4;&#x9886;</code>&#x548C;<code>&#x91CA;&#x653E;</code>&#x3002;&#x904D;&#x5386;<code>ReplicaSet</code>&#x5217;&#x8868;&#xFF0C;&#x7136;&#x540E;&#x628A;&#x8BA4;&#x9886;&#x7684;&#x5BF9;&#x8C61;&#x52A0;&#x5165;<code>claimed</code>&#x53D8;&#x91CF;&#x5E76;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (m *ReplicaSetControllerRefManager) ClaimReplicaSets(ctx context.Context, sets []*apps.ReplicaSet) ([]*apps.ReplicaSet, error) {
+    var claimed []*apps.ReplicaSet
+    var errlist []error
+    // &#x4E09;&#x4E2A;&#x8F85;&#x52A9;&#x51FD;&#x6570;
+    match := func(obj metav1.Object) bool {
+        return m.Selector.Matches(labels.Set(obj.GetLabels()))
+    }
+    adopt := func(ctx context.Context, obj metav1.Object) error {
+        return m.AdoptReplicaSet(ctx, obj.(*apps.ReplicaSet))
+    }
+    release := func(ctx context.Context, obj metav1.Object) error {
+        return m.ReleaseReplicaSet(ctx, obj.(*apps.ReplicaSet))
+    }
+    // &#x904D;&#x5386;&#x5904;&#x7406;
+    for _, rs := range sets {
+        ok, err := m.ClaimObject(ctx, rs, match, adopt, release)
+        if err != nil {
+            errlist = append(errlist, err)
+            continue
+        }
+        if ok {
+            claimed = append(claimed, rs)
+        }
+    }
+    return claimed, utilerrors.NewAggregate(errlist)
+}
+</code></pre>
+<p>&#x5177;&#x4F53;&#x7684;&#x5904;&#x7406;&#x903B;&#x8F91;&#x4F53;&#x73B0;&#x5728;<code>ClaimObkect()</code>&#x65B9;&#x6CD5;&#x4E2D;&#xFF0C;&#x5176;&#x4E2D;&#x5305;&#x542B;&#x5F88;&#x591A;&#x7684;<code>if-else</code>&#xFF0C;&#x4E0B;&#x9762;&#x8FDB;&#x884C;&#x5206;&#x6790;&#x3002;</p>
+<p>&#x62FF;&#x5230;<code>RepicaSet</code>&#x5BF9;&#x8C61;&#x7684;&#x7B2C;&#x4E00;&#x6B65;&#x662F;&#x83B7;&#x53D6;&#x5B83;&#x7684;<code>OwnerReferences</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5224;&#x65AD;&#x903B;&#x8F91;&#x5982;&#x4E0B;&#xFF1A;</p>
+<ul>
+<li>&#x7B2C;&#x4E00;&#x79CD;&#x60C5;&#x51B5;&#xFF1A;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x5B58;&#x5728;<ul>
+<li>&#x5176;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x5B58;&#x5728;&#xFF0C;&#x4F46;&#x4E0D;&#x662F;&#x5F53;&#x524D;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x8DF3;&#x8FC7;&#x5904;&#x7406;;</li>
+<li>&#x5176;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x5B58;&#x5728;&#xFF0C;&#x662F;&#x5F53;&#x524D;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x8FD8;&#x9700;&#x8981;&#x68C0;&#x67E5;&#x4E00;&#x6B21;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#xFF0C;&#x907F;&#x514D;&#x7531;&#x4E8E;<code>Selector</code>&#x52A8;&#x6001;&#x4FEE;&#x6539;&#x5BFC;&#x81F4;&#x7684;&#x4E0D;&#x5339;&#x914D;;</li>
+<li>&#x5176;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x5B58;&#x5728;&#xFF0C;&#x662F;&#x5F53;&#x524D;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x4F46;&#x6807;&#x7B7E;&#x4E0D;&#x5339;&#x914D;&#xFF0C;&#x5982;&#x679C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;&#xFF0C;&#x4E5F;&#x8DF3;&#x8FC7;&#x5904;&#x7406;;</li>
+<li>&#x5176;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x5B58;&#x5728;&#xFF0C;&#x662F;&#x5F53;&#x524D;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x4F46;&#x6807;&#x7B7E;&#x4E0D;&#x5339;&#x914D;&#xFF0C;&#x63A7;&#x5236;&#x5668;&#x6B63;&#x5E38;&#xFF0C;&#x5C1D;&#x8BD5;&#x91CA;&#x653E;&#x5BF9;&#x8C61;;</li>
+</ul>
+</li>
+<li>&#x7B2C;&#x4E8C;&#x79CD;&#x60C5;&#x51B5;&#xFF1A;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#x4E0D;&#x5B58;&#x5728;&#xFF0C;&#x5B64;&#x513F;&#x5BF9;&#x8C61;<ul>
+<li>&#x63A7;&#x5236;&#x5668;&#x88AB;&#x5220;&#x9664;&#x6216;&#x6807;&#x7B7E;&#x4E0D;&#x5339;&#x914D;&#xFF0C;&#x8DF3;&#x8FC7;&#x5904;&#x7406;;</li>
+<li>&#x63A7;&#x5236;&#x5668;&#x88AB;&#x5220;&#x9664;&#x6216;&#x6807;&#x7B7E;&#x5339;&#x914D;&#xFF0C;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x88AB;&#x5220;&#x9664;&#xFF0C;&#x8DF3;&#x8FC7;&#x5904;&#x7406;;</li>
+<li>&#x63A7;&#x5236;&#x5668;&#x88AB;&#x5220;&#x9664;&#x6216;&#x6807;&#x7B7E;&#x5339;&#x914D;&#xFF0C;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6B63;&#x5E38;&#xFF0C;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0D;&#x5339;&#x914D;&#xFF0C;&#x8DF3;&#x8FC7;&#x5904;&#x7406;;</li>
+<li>&#x63A7;&#x5236;&#x5668;&#x88AB;&#x5220;&#x9664;&#x6216;&#x6807;&#x7B7E;&#x5339;&#x914D;&#xFF0C;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6B63;&#x5E38;&#xFF0C;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x5339;&#x914D;&#xFF0C;&#x5C1D;&#x8BD5;&#x8BA4;&#x9886;;</li>
+</ul>
+</li>
+</ul>
+<pre class="language-"><code class="lang-Go">func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.Object, match func(metav1.Object) bool, adopt, release func(context.Context, metav1.Object) error) (bool, error) {
+    controllerRef := metav1.GetControllerOfNoCopy(obj)
+    // &#x6709;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;
+    if controllerRef != nil {
+        // &#x4E0D;&#x5C5E;&#x4E8E;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;
+        if controllerRef.UID != m.Controller.GetUID() {
+            // &#x5FFD;&#x7565;
+            return false, nil
+        }
+        // &#x5C5E;&#x4E8E;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;
+        if match(obj) {
+            // &#x6807;&#x7B7E;&#x5339;&#x914D; &#x8FD4;&#x56DE;
+            return true, nil
+        }
+        // &#x5C5E;&#x4E8E;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668; &#x6807;&#x7B7E;&#x4E0D;&#x5339;&#x914D;
+        if m.Controller.GetDeletionTimestamp() != nil {
+            // &#x63A7;&#x5236;&#x5668;&#x5728;&#x88AB;&#x5220;&#x9664; &#x5FFD;&#x7565;
+            return false, nil
+        }
+        // &#x63A7;&#x5236;&#x5668;&#x6CA1;&#x88AB;&#x5220;&#x9664; &#x91CA;&#x653E;
+        if err := release(ctx, obj); err != nil {
+            // &#x5BF9;&#x8C61;&#x5DF2;&#x7ECF;&#x4E0D;&#x5B58;&#x5728;&#x4E86; &#x5FFD;&#x7565;
+            if errors.IsNotFound(err) {
+                return false, nil
+            }
+            // &#x53EF;&#x80FD;&#x88AB;&#x5176;&#x4ED6;&#x4EBA;&#x91CA;&#x653E; &#x5FFD;&#x7565;
+            return false, err
+        }
+        // &#x6210;&#x529F;&#x91CA;&#x653E;
+        return false, nil
+    }
+
+    // &#x53E6;&#x4E00;&#x79CD;&#x60C5;&#x51B5; &#x6CA1;&#x6709;&#x6240;&#x5C5E;&#x63A7;&#x5236;&#x5668;&#xFF1A;&#x5B64;&#x513F;&#x5BF9;&#x8C61;
+    if m.Controller.GetDeletionTimestamp() != nil || !match(obj) {
+        // &#x63A7;&#x5236;&#x5668;&#x6B63;&#x5728;&#x88AB;&#x5220;&#x9664;&#x6216;&#x6807;&#x7B7E;&#x4E0D;&#x5339;&#x914D; &#x5FFD;&#x7565;
+        return false, nil
+    }
+    // &#x63A7;&#x5236;&#x5668;&#x6CA1;&#x88AB;&#x5220;&#x9664; &#x6807;&#x7B7E;&#x4E5F;&#x5339;&#x914D;
+    if obj.GetDeletionTimestamp() != nil {
+        // &#x76EE;&#x6807;&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x88AB;&#x5220;&#x9664; &#x5FFD;&#x7565;
+        return false, nil
+    }
+
+    if len(m.Controller.GetNamespace()) &gt; 0 &amp;&amp; m.Controller.GetNamespace() != obj.GetNamespace() {
+        // &#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0D;&#x5339;&#x914D; &#x5FFD;&#x7565;
+        return false, nil
+    }
+
+    // &#x63A7;&#x5236;&#x5668;&#x6B63;&#x5E38; &#x6807;&#x7B7E;&#x5339;&#x914D; &#x547D;&#x540D;&#x7A7A;&#x95F4;&#x5339;&#x914D; &#x5C1D;&#x8BD5;&#x8BA4;&#x9886;
+    if err := adopt(ctx, obj); err != nil {
+        // &#x5BF9;&#x8C61;&#x5DF2;&#x7ECF;&#x88AB;&#x5220;&#x9664; &#x5FFD;&#x7565;
+        if errors.IsNotFound(err) {
+            return false, nil
+        }
+        // &#x5DF2;&#x88AB;&#x5176;&#x4ED6;&#x4EBA;&#x8BA4;&#x9886; &#x5FFD;&#x7565;
+        return false, err
+    }
+    // &#x8BA4;&#x9886;&#x6210;&#x529F;
+    return true, nil
+}
+</code></pre>
+<h4 id="pod&#x7684;&#x83B7;&#x53D6;"><a name="pod&#x7684;&#x83B7;&#x53D6;" class="plugin-anchor" href="#pod&#x7684;&#x83B7;&#x53D6;"><i class="fa fa-link" aria-hidden="true"></i></a>Pod&#x7684;&#x83B7;&#x53D6;</h4>
+<p>&#x786E;&#x8BA4;&#x4E86;<code>Deployment</code>&#x4E0B;&#x5C5E;&#x7684;<code>ReplicaSet</code>&#x5217;&#x8868;&#x540E;&#xFF0C;&#x4F7F;&#x7528;<code>getPodMapForDeployment()</code>&#x65B9;&#x6CD5;&#x83B7;&#x53D6;<code>Pod</code>&#x7684;&#x5217;&#x8868;&#x3002;&#x6839;&#x636E;&#x51FD;&#x6570;&#x7B7E;&#x540D;&#xFF0C;&#x5165;&#x53C2;&#x662F;<code>Deployment</code>&#x548C;<code>ReplicaSet</code>&#x5217;&#x8868;&#xFF0C;&#x8FD4;&#x56DE;&#x7684;&#x662F;&#x4E00;&#x4E2A;&#x4EE5;<code>ReplicaSet</code>&#x7684;<code>UID</code>&#x4E3A;key&#xFF0C;<code>Pod</code>&#x5BF9;&#x8C61;&#x4E3A;value&#x7684;&#x5217;&#x8868;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x8FDB;&#x884C;&#x63A7;&#x5236;&#x5668;&#x7684;&#x6807;&#x7B7E;&#x8F6C;&#x6362;&#xFF0C;&#x518D;&#x83B7;&#x53D6;&#x5230;&#x540C;&#x4E00;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x6807;&#x7B7E;&#x5339;&#x914D;&#x7684;<code>Pod</code>&#x5217;&#x8868;&#x3002;&#x5728;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x53EF;&#x80FD;&#x5B58;&#x5728;&#x591A;&#x4E2A;<code>ReplicaSet</code>&#x5B9E;&#x4F8B;&#xFF0C;&#x5E76;&#x4E14;&#x6BCF;&#x4E2A;&#x5B9E;&#x4F8B;&#x4E0B;&#x90FD;&#x8FD8;&#x5305;&#x542B;<code>Pod</code>&#xFF0C;&#x6240;&#x4EE5;&#x4F1A;&#x5148;&#x4EE5;<code>ReplicaSet</code>&#x5B9E;&#x4F8B;&#x7684;<code>UID</code>&#x4E3A;key&#x521D;&#x59CB;&#x5316;&#x4E00;&#x4E2A;Map&#xFF0C;&#x7136;&#x540E;&#x904D;&#x5386;&#x6240;&#x6709;<code>Pod</code>&#xFF0C;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsList []*apps.ReplicaSet) (map[types.UID][]*v1.Pod, error) {
+    // &#x6807;&#x7B7E;&#x8F6C;&#x6362;
+    selector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
+    if err != nil {
+        return nil, err
+    }
+    // &#x5217;&#x51FA;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x6240;&#x6709;&#x6807;&#x7B7E;&#x5339;&#x914D;Pod
+    pods, err := dc.podLister.Pods(d.Namespace).List(selector)
+    if err != nil {
+        return nil, err
+    }
+    // &#x4EE5;UID&#x4E3A;key&#x521D;&#x59CB;&#x5316;&#x7A7A;&#x96C6;&#x5408;
+    podMap := make(map[types.UID][]*v1.Pod, len(rsList))
+    for _, rs := range rsList {
+        podMap[rs.UID] = []*v1.Pod{}
+    }
+    // &#x904D;&#x5386;Pod &#x6839;&#x636E;&#x5176;OwnerReference&#x7684;UID&#x52A0;&#x5165;&#x5BF9;&#x5E94;&#x96C6;&#x5408;
+    for _, pod := range pods {
+        controllerRef := metav1.GetControllerOf(pod)
+        if controllerRef == nil {
+            continue
+        }
+        // Only append if we care about this UID.
+        if _, ok := podMap[controllerRef.UID]; ok {
+            podMap[controllerRef.UID] = append(podMap[controllerRef.UID], pod)
+        }
+    }
+    return podMap, nil
+}
+</code></pre>
+<h2 id="&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;"><a name="&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;" class="plugin-anchor" href="#&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x8C03;&#x8C10;&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;</h2>
+<p>&#x6839;&#x636E;&#x4E0D;&#x540C;&#x7684;&#x573A;&#x666F;&#x4F1A;&#x6709;&#x4E0D;&#x540C;&#x7684;&#x8C03;&#x8C10;&#x52A8;&#x4F5C;&#xFF0C;&#x573A;&#x666F;&#x5927;&#x6982;&#x53EF;&#x4EE5;&#x5206;&#x4E3A;&#x51E0;&#x7C7B;&#xFF1A;</p>
+<ul>
+<li><code>Deployment</code>&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;</li>
+<li><code>Deployment</code>&#x5BF9;&#x8C61;&#x624B;&#x52A8;&#x6682;&#x505C;</li>
+<li><code>Deployment</code>&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;</li>
+<li><code>Deployment</code>&#x5BF9;&#x8C61;&#x526F;&#x672C;&#x6269;&#x7F29;&#x5BB9;</li>
+<li><code>Deployment</code>&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;</li>
+</ul>
+<p>&#x4E0B;&#x9762;&#x6839;&#x636E;&#x51E0;&#x79CD;&#x573A;&#x666F;&#xFF0C;&#x7ED3;&#x5408;&#x4EE3;&#x7801;&#x5206;&#x522B;&#x8FDB;&#x884C;&#x8BE6;&#x7EC6;&#x7684;&#x8BF4;&#x660E;&#x3002;</p>
+<h3 id="deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;"><a name="deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;" class="plugin-anchor" href="#deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;"><i class="fa fa-link" aria-hidden="true"></i></a>Deployment&#x5BF9;&#x8C61;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;</h3>
+<p>&#x5728;&#x8FD9;&#x79CD;&#x60C5;&#x51B5;&#x4E0B;&#xFF0C;&#x4EC5;&#x4F1A;&#x540C;&#x6B65;&#x72B6;&#x6001;&#xFF0C;&#x4F46;&#x4E0D;&#x505A;&#x4EFB;&#x4F55;&#x53EF;&#x80FD;&#x5F71;&#x54CD;&#x8D44;&#x6E90;&#x72B6;&#x6001;&#x7684;&#x64CD;&#x4F5C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    // &#x83B7;&#x53D6;&#x65B0;&#x5C31;&#x7248;&#x672C;&#x7684;ReplicaSet
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    // &#x5408;&#x5E76;ReplicaSet
+    allRSs := append(oldRSs, newRS)
+    // &#x540C;&#x6B65;Deployment&#x7684;status
+    return dc.syncDeploymentStatus(ctx, allRSs, newRS, d)
+}
+</code></pre>
+<p>&#x5176;&#x4E2D;<code>getAllReplicaSetsAndSyncRevision()</code>&#x65B9;&#x6CD5;&#x7528;&#x4E8E;&#x83B7;&#x53D6;&#x6240;&#x6709;&#x65B0;&#x65E7;&#x7248;&#x672C;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x662F;<code>Deployment Controller</code>&#x8C03;&#x8C10;&#x8FC7;&#x7A0B;&#x4E2D;&#x7684;&#x4E00;&#x4E2A;&#x901A;&#x7528;&#x65B9;&#x6CD5;&#xFF0C;&#x5728;<code>rolling\rollback\recreate</code>&#x8FC7;&#x7A0B;&#x4E2D;&#x4E5F;&#x88AB;&#x4F7F;&#x7528;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, []*apps.ReplicaSet, error) {
+   // &#x627E;&#x5230;&#x6240;&#x6709;&#x65E7;&#x7684;ReplicaSet
+    _, allOldRSs := deploymentutil.FindOldReplicaSets(d, rsList)
+
+    // &#x83B7;&#x53D6;&#x65B0;&#x7684;ReplicaSet&#x5E76;&#x66F4;&#x65B0;&#x7248;&#x672C;&#x53F7;
+    newRS, err := dc.getNewReplicaSet(ctx, d, rsList, allOldRSs, createIfNotExisted)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    return newRS, allOldRSs, nil
+}
+</code></pre>
+<h4 id="&#x83B7;&#x53D6;&#x65E7;&#x7684;replicaset&#x5BF9;&#x8C61;"><a name="&#x83B7;&#x53D6;&#x65E7;&#x7684;replicaset&#x5BF9;&#x8C61;" class="plugin-anchor" href="#&#x83B7;&#x53D6;&#x65E7;&#x7684;replicaset&#x5BF9;&#x8C61;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x83B7;&#x53D6;&#x65E7;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</h4>
+<p>&#x8FD9;&#x90E8;&#x5206;&#x7684;&#x903B;&#x8F91;&#x4E5F;&#x6BD4;&#x8F83;&#x7B80;&#x5355;&#xFF0C;&#x9996;&#x5148;&#x83B7;&#x53D6;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x7136;&#x540E;&#x904D;&#x5386;&#x6240;&#x6709;<code>ReplicaSet</code>&#x5E76;&#x6839;&#x636E;<code>UID</code>&#x5224;&#x65AD;&#x662F;&#x5426;&#x662F;&#x65E7;&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x5E76;&#x4E14;&#x5982;&#x679C;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x8FD8;&#x5173;&#x8054;<code>Pod</code>&#xFF0C;&#x5355;&#x72EC;&#x5B58;&#x653E;&#x4E00;&#x4EFD;&#x5230;<code>requiredRSs</code>&#x4E2D;&#xFF0C;&#x8FD4;&#x56DE;&#x7684;&#x4E24;&#x4E2A;&#x5217;&#x8868;&#x5206;&#x522B;&#x662F;&#xFF1A;&#x6709;<code>Pod</code>&#x5B58;&#x5728;&#x7684;&#x65E7;<code>ReplicaSet</code>&#x548C;&#x65E7;<code>ReplicaSet</code>&#x5168;&#x96C6;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) ([]*apps.ReplicaSet, []*apps.ReplicaSet) {
+    var requiredRSs []*apps.ReplicaSet
+    var allRSs []*apps.ReplicaSet
+    newRS := FindNewReplicaSet(deployment, rsList)
+    for _, rs := range rsList {
+        // Filter out new replica set
+        if newRS != nil &amp;&amp; rs.UID == newRS.UID {
+            continue
+        }
+        allRSs = append(allRSs, rs)
+        if *(rs.Spec.Replicas) != 0 {
+            requiredRSs = append(requiredRSs, rs)
+        }
+    }
+    return requiredRSs, allRSs
+}
+</code></pre>
+<h4 id="&#x83B7;&#x53D6;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;"><a name="&#x83B7;&#x53D6;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;" class="plugin-anchor" href="#&#x83B7;&#x53D6;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x83B7;&#x53D6;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</h4>
+<p>&#x6765;&#x770B;&#x65B0;&#x7684;&#x5BF9;&#x8C61;&#x662F;&#x5982;&#x4F55;&#x83B7;&#x53D6;&#x7684;&#xFF0C;<code>ReplicaSetsByCreationTimestamp</code>&#x7C7B;&#x578B;&#x662F;<code>[]*apps.ReplicaSet</code>&#x7C7B;&#x578B;&#x7684;&#x522B;&#x540D;&#xFF0C;&#x4E13;&#x95E8;&#x4E3A;&#x4E86;&#x5B9E;&#x73B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x57FA;&#x4E8E;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x6233;&#x7684;&#x6392;&#x5E8F;&#x800C;&#x5B58;&#x5728;&#x3002;&#x7B2C;&#x4E00;&#x6B65;&#x662F;&#x5148;&#x5BF9;&#x6240;&#x6709;&#x7684;<code>ReplicaSet</code>&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#xFF0C;&#x6309;&#x7167;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x6233;&#x5347;&#x5E8F;&#x6392;&#x5217;&#x3002;&#x7B2C;&#x4E8C;&#x6B65;&#x4F1A;&#x904D;&#x5386;&#x6240;&#x6709;&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x8FD4;&#x56DE;&#x548C;&#x6700;&#x65B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x7684;<code>Template</code>&#x63CF;&#x8FF0;&#x5B8C;&#x5168;&#x4E00;&#x81F4;&#x7684;&#x6700;&#x65E9;&#x7248;&#x672C;&#xFF0C;&#x8FD9;&#x662F;Kubernetes&#x4E2D;<strong>&#x786E;&#x5B9A;&#x6027;&#x539F;&#x5219;</strong>&#x7684;&#x4F53;&#x73B0;&#xFF1A;&#x907F;&#x514D;&#x4E86;&#x968F;&#x673A;&#x9009;&#x62E9;&#xFF0C;&#x5E76;&#x4E14;&#x907F;&#x514D;&#x4E86;&#x96C6;&#x7FA4;&#x4FE1;&#x606F;&#x4E2D;&#x5B58;&#x5728;&#x591A;&#x4E2A;&#x76F8;&#x540C;<code>Template</code>&#x7684;<code>ReplicaSet</code>&#x60C5;&#x51B5;&#x4E0B;&#x7684;&#x5904;&#x7406;&#x5F02;&#x5E38;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func FindNewReplicaSet(deployment *apps.Deployment, rsList []*apps.ReplicaSet) *apps.ReplicaSet {
+  // &#x6309;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x5347;&#x5E8F;&#x6392;&#x5217;ReplicaSet
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(rsList))
+    for i := range rsList {
+        if EqualIgnoreHash(&amp;rsList[i].Spec.Template, &amp;deployment.Spec.Template) {
+            // In rare cases, such as after cluster upgrades, Deployment may end up with
+            // having more than one new ReplicaSets that have the same template as its template,
+            // see https://github.com/kubernetes/kubernetes/issues/40415
+            // We deterministically choose the oldest new ReplicaSet.
+            return rsList[i]
+        }
+    }
+    // new ReplicaSet does not exist.
+    return nil
+}
+</code></pre>
+<p><code>Template</code>&#x5B57;&#x6BB5;&#x7684;&#x6BD4;&#x8F83;&#x51FD;&#x6570;&#x5982;&#x4E0B;&#xFF0C;&#x5148;&#x5BF9;&#x4E24;&#x4E2A;&#x5BF9;&#x8C61;&#x505A;&#x6DF1;&#x62F7;&#x8D1D;&#xFF0C;&#x7136;&#x540E;&#x5220;&#x9664;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x7684;<code>pod-template-hash</code>&#x6807;&#x7B7E;&#xFF0C;&#x8BE5;&#x6807;&#x7B7E;&#x662F;&#x5728;<code>ReplicaSet</code>&#x521B;&#x5EFA;&#x65F6;&#x81EA;&#x52A8;&#x6DFB;&#x52A0;&#x7684;&#x6839;&#x636E;Pod&#x6A21;&#x677F;&#x54C8;&#x5E0C;&#x800C;&#x6765;&#x7684;&#x4E00;&#x4E2A;<code>Label</code>&#xFF0C;&#x7528;&#x4E8E;&#x5E2E;&#x52A9;<code>ReplicaSet</code>&#x9009;&#x62E9;&#x5E76;&#x9694;&#x79BB;&#x4E0D;&#x540C;&#x7248;&#x672C;&#x7684;<code>Pod</code>&#xFF0C;&#x6B64;&#x5904;&#x7684;&#x4E00;&#x81F4;&#x6027;&#x5224;&#x65AD;&#x903B;&#x8F91;&#x5173;&#x6CE8;&#x4E8E;&#x7528;&#x6237;&#x7684;&#x914D;&#x7F6E;&#xFF0C;&#x5220;&#x9664;&#x8BE5;&#x6807;&#x7B7E;&#x907F;&#x514D;&#x4E86;&#x7528;&#x6237;&#x914D;&#x7F6E;&#x76F8;&#x540C;&#x4F46;&#x54C8;&#x5E0C;&#x7ED3;&#x679C;&#x4E0D;&#x540C;&#x7684;&#x7279;&#x6B8A;&#x60C5;&#x51B5;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
+    t1Copy := template1.DeepCopy()
+    t2Copy := template2.DeepCopy()
+    // Remove hash labels from template.Labels before comparing
+    delete(t1Copy.Labels, apps.DefaultDeploymentUniqueLabelKey)
+    delete(t2Copy.Labels, apps.DefaultDeploymentUniqueLabelKey)
+    return apiequality.Semantic.DeepEqual(t1Copy, t2Copy)
+}
+</code></pre>
+<h4 id="&#x5904;&#x7406;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;"><a name="&#x5904;&#x7406;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;" class="plugin-anchor" href="#&#x5904;&#x7406;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x5904;&#x7406;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</h4>
+<p>&#x5728;<code>getAllReplicaSetsAndSyncRevision()</code>&#x65B9;&#x6CD5;&#x4E2D;&#xFF0C;&#x65B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x662F;&#x7531;<code>getNewReplicaSet()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x7684;&#xFF0C;&#x7528;&#x4E8E;&#x751F;&#x6210;&#x548C;&#x7BA1;&#x7406;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x8FC7;&#x7A0B;&#x4E2D;&#x7684;<code>ReplicaSet</code>&#x65B0;&#x5BF9;&#x8C61;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x5C1D;&#x8BD5;&#x83B7;&#x53D6;&#x6700;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x548C;&#x6700;&#x65B0;&#x5BF9;&#x8C61;&#x7684;&#x9884;&#x671F;&#x7248;&#x672C;&#x53F7;<code>Revision</code>&#xFF0C;&#x5982;&#x679C;&#x8BE5;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x5B58;&#x5728;&#x68C0;&#x67E5;&#x5176;&#x662F;&#x5426;&#x9700;&#x8981;&#x66F4;&#x65B0;&#xFF0C;&#x5982;&#x679C;&#x8981;&#x66F4;&#x65B0;&#x5C31;&#x5411;<code>ApiServer</code>&#x53D1;&#x9001;&#x4E00;&#x4E2A;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;&#x5E76;&#x8FD4;&#x56DE;&#xFF0C;&#x7136;&#x540E;&#x68C0;&#x67E5;<code>Deployment</code>&#x5BF9;&#x8C61;&#x662F;&#x5426;&#x9700;&#x8981;&#x66F4;&#x65B0;&#xFF0C;&#x5982;&#x679C;&#x9700;&#x8981;&#x66F4;&#x65B0;&#x540C;&#x6837;&#x5411;<code>ApiServer</code>&#x8BF7;&#x6C42;&#x3002;&#x5982;&#x679C;<code>ReplicaSet</code>&#x66F4;&#x65B0;&#x4F7F;&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#xFF0C;&#x4E0D;&#x7528;&#x62C5;&#x5FC3;<code>Deployment</code>&#x5BF9;&#x8C61;&#x65E0;&#x6CD5;&#x88AB;&#x66F4;&#x65B0;&#xFF0C;&#x56E0;&#x4E3A;<code>ReplicaSet</code>&#x7684;&#x66F4;&#x65B0;&#x53EF;&#x4EE5;&#x89E6;&#x53D1;&#x63A7;&#x5236;&#x5668;&#x7684;&#x8C03;&#x8C10;&#x52A8;&#x4F5C;&#xFF0C;&#x5982;&#x679C;<code>Deployment</code>&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x66F4;&#x65B0;&#x4E5F;&#x4F1A;&#x5728;&#x4E0B;&#x4E2A;&#x8C03;&#x8C10;&#x5468;&#x671F;&#x88AB;&#x5904;&#x7406;&#x3002;</p>
+<p>&#x5982;&#x679C;&#x9884;&#x671F;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x4E0D;&#x5B58;&#x5728;&#xFF0C;&#x5C31;&#x9700;&#x8981;&#x53BB;&#x521B;&#x5EFA;&#x5B83;&#xFF0C;&#x7136;&#x540E;&#x66F4;&#x65B0;<code>Deployment</code>&#x5BF9;&#x8C61;&#xFF0C;&#x6700;&#x540E;&#x8FD4;&#x56DE;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.Deployment, rsList, oldRSs []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, error) {
+    logger := klog.FromContext(ctx)
+    // &#x83B7;&#x53D6;&#x6700;&#x65B0;ReplicaSet
+    existingNewRS := deploymentutil.FindNewReplicaSet(d, rsList)
+
+    // &#x83B7;&#x53D6;&#x65E7;ReplicaSet&#x7684;&#x6700;&#x5927;&#x7248;&#x672C;&#x53F7;
+    maxOldRevision := deploymentutil.MaxRevision(logger, oldRSs)
+    // &#x65B0;ReplicaSet&#x7684;&#x7248;&#x672C;&#x53F7;&#x8BBE;&#x7F6E;&#x4E3A;maxOldRevision+1
+    newRevision := strconv.FormatInt(maxOldRevision+1, 10)
+
+    // &#x6700;&#x65B0;&#x7684;ReplicaSet&#x5DF2;&#x7ECF;&#x5B58;&#x5728;&#x65F6;
+    if existingNewRS != nil {
+        rsCopy := existingNewRS.DeepCopy()
+
+        // ReplicaSet&#x5BF9;&#x8C61;&#x7684;&#x6CE8;&#x89E3;&#x662F;&#x5426;&#x66F4;&#x65B0;
+        annotationsUpdated := deploymentutil.SetNewReplicaSetAnnotations(ctx, d, rsCopy, newRevision, true, maxRevHistoryLengthInChars)
+        // MinReadySeconds&#x5B57;&#x6BB5;&#x662F;&#x5426;&#x66F4;&#x65B0;
+        minReadySecondsNeedsUpdate := rsCopy.Spec.MinReadySeconds != d.Spec.MinReadySeconds
+        // &#x5982;&#x679C;&#x9700;&#x8981;&#x66F4;&#x65B0; &#x5411;ApiServer&#x53D1;&#x9001;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;
+        if annotationsUpdated || minReadySecondsNeedsUpdate {
+            rsCopy.Spec.MinReadySeconds = d.Spec.MinReadySeconds
+            return dc.client.AppsV1().ReplicaSets(rsCopy.ObjectMeta.Namespace).Update(ctx, rsCopy, metav1.UpdateOptions{})
+        }
+
+        // Deployment&#x5BF9;&#x8C61;&#x7684;&#x7248;&#x672C;&#x53F7;&#x662F;&#x5426;&#x8981;&#x66F4;&#x65B0;
+        needsUpdate := deploymentutil.SetDeploymentRevision(d, rsCopy.Annotations[deploymentutil.RevisionAnnotation])
+        // Deployment&#x5BF9;&#x8C61;&#x662F;&#x5426;&#x6709;&#x8FDB;&#x5EA6;&#x72B6;&#x6001;&#x6761;&#x4EF6;&#x4FE1;&#x606F;
+        cond := deploymentutil.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
+        // &#x5982;&#x679C;&#x8BBE;&#x7F6E;&#x4E86;&#x8FDB;&#x5EA6;&#x622A;&#x6B62;&#x65F6;&#x95F4;&#x4F46;&#x6CA1;&#x6709;&#x72B6;&#x6001;&#x6761;&#x4EF6;&#x4FE1;&#x606F;
+        if deploymentutil.HasProgressDeadline(d) &amp;&amp; cond == nil {
+            msg := fmt.Sprintf(&quot;Found new replica set %q&quot;, rsCopy.Name)
+            // &#x66F4;&#x65B0;Deployment&#x72B6;&#x6001;&#x6761;&#x4EF6;&#x4FE1;&#x606F;&#x5B57;&#x6BB5;&#x548C;&#x6807;&#x8BC6;&#x4F4D;needsUpdate
+            condition := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, deploymentutil.FoundNewRSReason, msg)
+            deploymentutil.SetDeploymentCondition(&amp;d.Status, *condition)
+            needsUpdate = true
+        }
+        // &#x5982;&#x679C;Deployment&#x9700;&#x8981;&#x66F4;&#x65B0; &#x540C;&#x6837;&#x5411;ApiServer&#x53D1;&#x9001;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;
+        if needsUpdate {
+            var err error
+            if _, err = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{}); err != nil {
+                return nil, err
+            }
+        }
+        // &#x8FD4;&#x56DE;&#x6700;&#x7EC8;&#x7684;&#x65B0;ReplicaSet&#x5BF9;&#x8C61;
+        return rsCopy, nil
+    }
+    // &#x5982;&#x679C;&#x6700;&#x65B0;ReplicaSet&#x4E0D;&#x5B58;&#x5728; &#x4F46;&#x662F;&#x4E0D;&#x5141;&#x8BB8;&#x521B;&#x5EFA;
+    if !createIfNotExisted {
+        return nil, nil
+    }
+
+    // &#x5982;&#x679C;&#x6700;&#x65B0;ReplicaSet&#x4E0D;&#x5B58;&#x5728; &#x9700;&#x8981;&#x521B;&#x5EFA;
+    newRSTemplate := *d.Spec.Template.DeepCopy()
+    podTemplateSpecHash := controller.ComputeHash(&amp;newRSTemplate, d.Status.CollisionCount)
+    newRSTemplate.Labels = labelsutil.CloneAndAddLabel(d.Spec.Template.Labels, apps.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+    // Selector&#x4E2D;&#x4E5F;&#x9700;&#x8981;pod-template-hash
+    newRSSelector := labelsutil.CloneSelectorAndAddLabel(d.Spec.Selector, apps.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+
+    // &#x7EC4;&#x88C5;ReplicaSet&#x5BF9;&#x8C61;
+    newRS := apps.ReplicaSet{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:            d.Name + &quot;-&quot; + podTemplateSpecHash,
+            Namespace:       d.Namespace,
+            OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(d, controllerKind)},
+            Labels:          newRSTemplate.Labels,
+        },
+        Spec: apps.ReplicaSetSpec{
+            Replicas:        new(int32),
+            MinReadySeconds: d.Spec.MinReadySeconds,
+            Selector:        newRSSelector,
+            Template:        newRSTemplate,
+        },
+    }
+    allRSs := append(oldRSs, &amp;newRS)
+    // &#x83B7;&#x53D6;&#x76EE;&#x6807;&#x526F;&#x672C;&#x6570;
+    newReplicasCount, err := deploymentutil.NewRSNewReplicas(d, allRSs, &amp;newRS)
+    if err != nil {
+        return nil, err
+    }
+    // &#x66F4;&#x65B0;&#x526F;&#x672C;&#x6570;
+    *(newRS.Spec.Replicas) = newReplicasCount
+    // &#x8BBE;&#x7F6E;ReplicaSet&#x5BF9;&#x8C61;&#x7684;&#x6CE8;&#x89E3;
+    deploymentutil.SetNewReplicaSetAnnotations(ctx, d, &amp;newRS, newRevision, false, maxRevHistoryLengthInChars)
+    // &#x521B;&#x5EFA;ReplicaSet&#x5BF9;&#x8C61;&#x5E76;&#x5904;&#x7406;&#x5F02;&#x5E38;
+    alreadyExists := false
+    createdRS, err := dc.client.AppsV1().ReplicaSets(d.Namespace).Create(ctx, &amp;newRS, metav1.CreateOptions{})
+    switch {
+    // ReplicaSet&#x5BF9;&#x8C61;&#x5DF2;&#x7ECF;&#x5B58;&#x5728;(&#x54C8;&#x5E0C;&#x51B2;&#x7A81;)
+    case errors.IsAlreadyExists(err):
+        alreadyExists = true
+        rs, rsErr := dc.rsLister.ReplicaSets(newRS.Namespace).Get(newRS.Name)
+        if rsErr != nil {
+            return nil, rsErr
+        }
+
+        controllerRef := metav1.GetControllerOf(rs)
+        if controllerRef != nil &amp;&amp; controllerRef.UID == d.UID &amp;&amp; deploymentutil.EqualIgnoreHash(&amp;d.Spec.Template, &amp;rs.Spec.Template) {
+            createdRS = rs
+            err = nil
+            break
+        }
+
+        if d.Status.CollisionCount == nil {
+            d.Status.CollisionCount = new(int32)
+        }
+        preCollisionCount := *d.Status.CollisionCount
+        *d.Status.CollisionCount++
+        // Update the collisionCount for the Deployment and let it requeue by returning the original
+        // error.
+        _, dErr := dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+        if dErr == nil {
+            logger.V(2).Info(&quot;Found a hash collision for deployment - bumping collisionCount to resolve it&quot;, &quot;deployment&quot;, klog.KObj(d), &quot;oldCollisionCount&quot;, preCollisionCount, &quot;newCollisionCount&quot;, *d.Status.CollisionCount)
+        }
+        return nil, err
+  // &#x547D;&#x540D;&#x7A7A;&#x95F4;&#x6B63;&#x5728;&#x5220;&#x9664;&#x5BFC;&#x81F4;&#x7684;&#x5F02;&#x5E38;  
+    case errors.HasStatusCause(err, v1.NamespaceTerminatingCause):
+        // if the namespace is terminating, all subsequent creates will fail and we can safely do nothing
+        return nil, err
+    case err != nil:
+        msg := fmt.Sprintf(&quot;Failed to create new replica set %q: %v&quot;, newRS.Name, err)
+        if deploymentutil.HasProgressDeadline(d) {
+            cond := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionFalse, deploymentutil.FailedRSCreateReason, msg)
+            deploymentutil.SetDeploymentCondition(&amp;d.Status, *cond)
+            _, _ = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+        }
+        dc.eventRecorder.Eventf(d, v1.EventTypeWarning, deploymentutil.FailedRSCreateReason, msg)
+        return nil, err
+    }
+    // &#x521B;&#x5EFA;&#x6210;&#x529F;&#x8BB0;&#x5F55;&#x4E8B;&#x4EF6;
+    if !alreadyExists &amp;&amp; newReplicasCount &gt; 0 {
+        dc.eventRecorder.Eventf(d, v1.EventTypeNormal, &quot;ScalingReplicaSet&quot;, &quot;Scaled up replica set %s from 0 to %d&quot;, createdRS.Name, newReplicasCount)
+    }
+    // &#x68C0;&#x67E5;Deployment&#x662F;&#x5426;&#x9700;&#x8981;&#x66F4;&#x65B0;
+    needsUpdate := deploymentutil.SetDeploymentRevision(d, newRevision)
+    if !alreadyExists &amp;&amp; deploymentutil.HasProgressDeadline(d) {
+        msg := fmt.Sprintf(&quot;Created new replica set %q&quot;, createdRS.Name)
+        condition := deploymentutil.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, deploymentutil.NewReplicaSetReason, msg)
+        deploymentutil.SetDeploymentCondition(&amp;d.Status, *condition)
+        needsUpdate = true
+    }
+    // &#x66F4;&#x65B0;Deployment&#x5BF9;&#x8C61;
+    if needsUpdate {
+        _, err = dc.client.AppsV1().Deployments(d.Namespace).UpdateStatus(ctx, d, metav1.UpdateOptions{})
+    }
+    return createdRS, err
+}
+</code></pre>
+<h5 id="&#x7ED9;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;"><a name="&#x7ED9;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;" class="plugin-anchor" href="#&#x7ED9;&#x65B0;&#x7684;replicaset&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x7ED9;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;&#x8BBE;&#x7F6E;&#x6CE8;&#x89E3;</h5>
+<p><code>SetNewReplicaSetAnnotations()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x4E00;&#x4E2A;<code>bool</code>&#x503C;&#x6765;&#x8868;&#x793A;&#x6CE8;&#x89E3;&#x662F;&#x5426;&#x88AB;&#x4FEE;&#x6539;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, newRevision string, exists bool, revHistoryLimitInChars int) bool {
+    logger := klog.FromContext(ctx)
+    // &#x57FA;&#x4E8E;Deployment&#x5BF9;&#x8C61;&#x66F4;&#x65B0;&#x6CE8;&#x89E3;
+    annotationChanged := copyDeploymentAnnotationsToReplicaSet(deployment, newRS)
+    // &#x66F4;&#x65B0;&#x6CE8;&#x89E3;&#x90E8;&#x5206;&#x7684;&#x7248;&#x672C;&#x53F7;Revision
+    if newRS.Annotations == nil {
+        newRS.Annotations = make(map[string]string)
+    }
+    // &#x83B7;&#x53D6;ReplicaSet&#x5BF9;&#x8C61;&#x5F53;&#x524D;&#x7684;&#x7248;&#x672C;&#x53F7;
+    oldRevision, ok := newRS.Annotations[RevisionAnnotation]
+    oldRevisionInt, err := strconv.ParseInt(oldRevision, 10, 64)
+    if err != nil {
+        if oldRevision != &quot;&quot; {
+            logger.Info(&quot;Updating replica set revision OldRevision not int&quot;, &quot;err&quot;, err)
+            return false
+        }
+        //If the RS annotation is empty then initialise it to 0
+        oldRevisionInt = 0
+    }
+    newRevisionInt, err := strconv.ParseInt(newRevision, 10, 64)
+    if err != nil {
+        logger.Info(&quot;Updating replica set revision NewRevision not int&quot;, &quot;err&quot;, err)
+        return false
+    }
+    // &#x6BD4;&#x8F83;ReplicaSet&#x5BF9;&#x8C61;&#x5F53;&#x524D;&#x7248;&#x672C;&#x53F7;&#x548C;&#x76EE;&#x6807;&#x7248;&#x672C;&#x53F7;&#x662F;&#x5426;&#x76F8;&#x7B49;
+    if oldRevisionInt &lt; newRevisionInt {
+        // &#x9700;&#x8981;&#x66F4;&#x65B0;
+        newRS.Annotations[RevisionAnnotation] = newRevision
+        // &#x4FEE;&#x6539;&#x6807;&#x8BC6;&#x4F4D;
+        annotationChanged = true
+        logger.V(4).Info(&quot;Updating replica set revision&quot;, &quot;replicaSet&quot;, klog.KObj(newRS), &quot;newRevision&quot;, newRevision)
+    }
+    // &#x5982;&#x679C;&#x7248;&#x672C;&#x53F7;&#x4E0D;&#x4E00;&#x81F4;&#x8868;&#x660E;&#x6B64;&#x5904;&#x53D1;&#x751F;&#x66F4;&#x65B0;&#x52A8;&#x4F5C; &#x9700;&#x8981;&#x8BB0;&#x5F55;&#x4FE1;&#x606F;
+    if ok &amp;&amp; oldRevisionInt &lt; newRevisionInt {
+        revisionHistoryAnnotation := newRS.Annotations[RevisionHistoryAnnotation]
+        oldRevisions := strings.Split(revisionHistoryAnnotation, &quot;,&quot;)
+        // &#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x662F;&#x7A7A;&#x5B57;&#x7B26;&#x4E32;&#x8868;&#x793A;&#x4E4B;&#x524D;&#x6CA1;&#x6709;&#x8BB0;&#x5F55;&#x8FC7;revision&#x4FE1;&#x606F;
+        if len(oldRevisions[0]) == 0 {
+            newRS.Annotations[RevisionHistoryAnnotation] = oldRevision
+        } else {
+            // &#x8BA1;&#x7B97;&#x4E00;&#x4E2A;&#x65B0;&#x7684;&#x603B;&#x957F;&#x5EA6;
+            // &#x4F8B;&#x5982;revisionHistoryAnnotation&#x7684;&#x503C;&#x662F;&quot;1,2,3&quot; &#x957F;&#x5EA6;5 oldRevision&#x662F;&quot;4&quot; &#x90A3;&#x4E48;&#x65B0;&#x7684;&#x4F8B;&#x5982;revisionHistoryAnnotation&#x7684;&#x503C;&#x662F;&#x5E94;&#x8BE5;&#x662F;&quot;1,2,3,4&quot; &#x957F;&#x5EA6;7
+            totalLen := len(revisionHistoryAnnotation) + len(oldRevision) + 1
+            // &#x907F;&#x514D;RevisionHistoryAnnotation&#x5B57;&#x7B26;&#x4E32;&#x957F;&#x5EA6;&#x8D85;&#x8FC7;&#x6700;&#x5927;&#x9650;&#x5236;
+            start := 0
+            // &#x5982;&#x679C;&#x8D85;&#x8FC7;&#x9650;&#x5236; &#x6BCF;&#x6B21;&#x51CF;&#x53BB;&#x4E00;&#x4E2A;Revision&#x6570;&#x503C;&#x548C;&#x4E00;&#x4E2A;&#x9017;&#x53F7;
+            for totalLen &gt; revHistoryLimitInChars &amp;&amp; start &lt; len(oldRevisions) {
+                totalLen = totalLen - len(oldRevisions[start]) - 1
+                start++
+            }
+            // &#x957F;&#x5EA6;&#x7B26;&#x5408;&#x9650;&#x5236;&#x65F6; &#x628A;oldRevision&#x52A0;&#x5165;&#x5207;&#x7247; &#x5E76;Join&#x65B0;&#x7684;&#x5B57;&#x7B26;&#x4E32;&#x66FF;&#x6362;&#x539F;&#x6709;&#x6CE8;&#x89E3;
+            if totalLen &lt;= revHistoryLimitInChars {
+                oldRevisions = append(oldRevisions[start:], oldRevision)
+                newRS.Annotations[RevisionHistoryAnnotation] = strings.Join(oldRevisions, &quot;,&quot;)
+            } else {
+                logger.Info(&quot;Not appending revision due to revision history length limit reached&quot;, &quot;revisionHistoryLimit&quot;, revHistoryLimitInChars)
+            }
+        }
+    }
+    // &#x5982;&#x679C;&#x65B0;ReplicaSet&#x4E0D;&#x5B58;&#x5728;(&#x672C;&#x6B21;&#x4F20;&#x5165;&#x7684;&#x4E8B;false) &#x9700;&#x8981;&#x521B;&#x5EFA;&#x65B0;&#x7684;&#x5BF9;&#x8C61; &#x6B64;&#x65F6;&#x6807;&#x8BC6;&#x4F4D;&#x4E5F;&#x76F4;&#x4E3A;true
+    if !exists &amp;&amp; SetReplicasAnnotations(newRS, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+MaxSurge(*deployment)) {
+        annotationChanged = true
+    }
+    return annotationChanged
+}
+</code></pre>
+<h4 id="&#x540C;&#x6B65;deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;"><a name="&#x540C;&#x6B65;deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;" class="plugin-anchor" href="#&#x540C;&#x6B65;deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x540C;&#x6B65;Deployment&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;</h4>
+<p>&#x8BE5;&#x6D41;&#x7A0B;&#x7684;&#x6700;&#x540E;&#x4E00;&#x6B65;&#x662F;&#x540C;&#x6B65;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;&#xFF0C;&#x903B;&#x8F91;&#x5F88;&#x7B80;&#x5355;&#xFF0C;&#x9996;&#x5148;&#x8BA1;&#x7B97;&#x4E00;&#x4E2A;&#x9884;&#x671F;&#x7684;<code>Status</code>&#xFF0C;&#x7136;&#x540E;&#x548C;&#x539F;&#x59CB;&#x6570;&#x636E;&#x505A;&#x6BD4;&#x8F83;&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x540C;&#x5C31;&#x5411;<code>ApiServer</code>&#x53D1;&#x9001;&#x4E00;&#x4E2A;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
+    newStatus := calculateStatus(allRSs, newRS, d)
+
+    if reflect.DeepEqual(d.Status, newStatus) {
+        return nil
+    }
+
+    newDeployment := d
+    newDeployment.Status = newStatus
+    _, err := dc.client.AppsV1().Deployments(newDeployment.Namespace).UpdateStatus(ctx, newDeployment, metav1.UpdateOptions{})
+    return err
+}
+</code></pre>
+<h3 id="deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;"><a name="deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;" class="plugin-anchor" href="#deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;"><i class="fa fa-link" aria-hidden="true"></i></a>Deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;&#x6216;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;</h3>
+<p>&#x5728;<code>d.Spec.Paused</code>&#x7684;&#x503C;&#x4E3A;<code>true</code>&#x65F6;&#xFF0C;&#x8868;&#x793A;<code>Deployment</code>&#x5BF9;&#x8C61;&#x88AB;&#x624B;&#x52A8;&#x6682;&#x505C;&#xFF0C;<code>isScalingEvent()</code>&#x65B9;&#x6CD5;&#x6839;&#x636E;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;<code>Spec.Replicas</code>&#x4E0E;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;<code>&quot;desired-replicas&quot;</code>&#x7684;&#x503C;&#x662F;&#x5426;&#x4E00;&#x81F4;&#x6765;&#x5224;&#x65AD;&#x662F;&#x5426;&#x8981;&#x8FDB;&#x884C;&#x6269;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;&#x3002;&#x4E24;&#x79CD;&#x60C5;&#x51B5;&#x7684;&#x7ED3;&#x679C;&#x90FD;&#x662F;&#x76F4;&#x63A5;&#x8C03;&#x7528;<code>sync()</code>&#x65B9;&#x6CD5;&#x3002;
+&#x6269;&#x7F29;&#x5BB9;&#x7684;&#x5165;&#x53E3;<code>sync()</code>&#x65B9;&#x6CD5;&#x5BF9;&#x6BD4;<code>syncStatusOnly()</code>&#x65B9;&#x6CD5;&#x591A;&#x4E86;&#x4E24;&#x4E2A;&#x6B65;&#x9AA4;&#xFF0C;&#x4E00;&#x4E2A;&#x662F;&#x6267;&#x884C;&#x6269;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;<code>scale()</code>&#xFF0C;&#x53E6;&#x4E00;&#x4E2A;&#x5DEE;&#x522B;&#x662F;&#x5224;&#x65AD;&#x5982;&#x679C;&#x662F;&#x6682;&#x505C;&#x72B6;&#x6001;&#x4E14;&#x6CA1;&#x6709;&#x56DE;&#x6EDA;&#x76EE;&#x6807;&#xFF0C;&#x5C31;&#x9700;&#x8981;&#x6E05;&#x7406;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    if err := dc.scale(ctx, d, newRS, oldRSs); err != nil {
+        // If we get an error while trying to scale, the deployment will be requeued
+        // so we can abort this resync
+        return err
+    }
+
+    // Clean up the deployment when it&apos;s paused and no rollback is in flight.
+    if d.Spec.Paused &amp;&amp; getRollbackTo(d) == nil {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+
+    allRSs := append(oldRSs, newRS)
+    return dc.syncDeploymentStatus(ctx, allRSs, newRS, d)
+}
+</code></pre>
+<h4 id="&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;"><a name="&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;" class="plugin-anchor" href="#&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6269;&#x7F29;&#x5BB9;&#x903B;&#x8F91;</h4>
+<p><code>scale()</code>&#x662F;&#x7BA1;&#x7406;<code>ReplicaSet</code>&#x526F;&#x672C;&#x6570;&#x7684;&#x6838;&#x5FC3;&#x65B9;&#x6CD5;&#xFF0C;&#x5176;&#x4E2D;&#x5305;&#x542B;&#x4E09;&#x4E2A;&#x5B9E;&#x9645;&#x573A;&#x666F;&#x4EE5;&#x53CA;&#x5904;&#x7406;&#x903B;&#x8F91;&#x3002;</p>
+<h5 id="&#x573A;&#x666F;&#x4E00;"><a name="&#x573A;&#x666F;&#x4E00;" class="plugin-anchor" href="#&#x573A;&#x666F;&#x4E00;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x573A;&#x666F;&#x4E00;</h5>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    // &#x573A;&#x666F;&#x4E00;&#xFF1A;&#x5355;ReplicaSet&#x6D3B;&#x8DC3;
+    if activeOrLatest := deploymentutil.FindActiveOrLatest(newRS, oldRSs); activeOrLatest != nil {
+        if *(activeOrLatest.Spec.Replicas) == *(deployment.Spec.Replicas) {
+            return nil
+        }
+        // &#x5B9E;&#x9645;&#x526F;&#x672C;&#x6570;&#x548C;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x4E0D;&#x4E00;&#x81F4; &#x5BF9;&#x5176;&#x8FDB;&#x884C;&#x8C03;&#x8282;
+        _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, activeOrLatest, *(deployment.Spec.Replicas), deployment)
+        return err
+    }
+    ......
+}
+</code></pre>
+<p>&#x53EA;&#x6709;&#x4E00;&#x4E2A;<code>ReplicaSet</code>&#x5B9E;&#x4F8B;&#x5B58;&#x5728;<code>Pod</code>&#xFF0C;&#x5177;&#x4F53;&#x60C5;&#x51B5;&#x5305;&#x62EC;&#xFF1A;1.&#x65B0;&#x7684;<code>ReplicaSet</code>&#x88AB;&#x521B;&#x5EFA;;2.&#x56DE;&#x6EDA;&#x540E;&#x53EA;&#x5269;&#x4E0B;&#x65E7;<code>ReplicaSet</code>;3.&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x65F6;&#x65E7;<code>ReplicaSet</code>&#x526F;&#x672C;&#x5DF2;&#x7ECF;&#x5F52;&#x96F6;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x83B7;&#x53D6;&#x6D3B;&#x8DC3;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x6240;&#x8C13;&#x6D3B;&#x8DC3;&#x5C31;&#x662F;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;0&#x3002;&#x5176;&#x5185;&#x90E8;&#x903B;&#x8F91;&#x662F;&#x5728;&#x6240;&#x6709;&#x7684;<code>ReplicaSet</code>&#x4E2D;&#x67E5;&#x627E;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;0&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x5982;&#x679C;&#x7ED3;&#x679C;&#x662F;1&#x4E2A;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;;&#x5982;&#x679C;&#x662F;0&#x4E2A;&#xFF0C;&#x5148;&#x770B;&#x6700;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x662F;&#x5426;&#x5B58;&#x5728;&#xFF0C;&#x5982;&#x679C;&#x5B58;&#x5728;&#x5C31;&#x8FD4;&#x56DE;&#x5B83;&#xFF0C;&#x4E0D;&#x5B58;&#x5728;&#x5C31;&#x8FD4;&#x56DE;&#x5217;&#x8868;&#x4E2D;&#x7B2C;&#x4E00;&#x4E2A;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;;&#x5982;&#x679C;&#x8D85;&#x8FC7;1&#x4E2A;&#x8868;&#x793A;&#x6B63;&#x5728;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x8FD4;&#x56DE;<code>nil</code>&#x3002;&#x5982;&#x679C;<code>activeOrLatest</code>&#x4E0D;&#x4E3A;&#x7A7A;&#xFF0C;&#x5BF9;&#x6BD4;&#x6D3B;&#x8DC3;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x7684;&#x526F;&#x672C;&#x6570;&#x548C;<code>Deployment</code>&#x5BF9;&#x8C61;&#x4E2D;&#x662F;&#x5426;&#x662F;&#x4E00;&#x81F4;&#x7684;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x81F4;&#x5219;&#x4E0D;&#x505A;&#x5904;&#x7406;&#x3002;&#x6570;&#x91CF;&#x4E0D;&#x4E00;&#x81F4;&#x5219;&#x8C03;&#x7528;<code>scaleReplicaSetAndRecordEvent()</code>&#x65B9;&#x6CD5;&#x8C03;&#x6574;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x4FDD;&#x8BC1;&#x5728;&#x540E;&#x7EED;&#x903B;&#x8F91;&#x5F00;&#x59CB;&#x524D;<code>ReplicaSet</code>&#x526F;&#x672C;&#x5B9E;&#x9645;&#x72B6;&#x6001;&#x548C;&#x9884;&#x671F;&#x72B6;&#x6001;&#x7684;&#x4E00;&#x81F4;&#x6027;&#x3002;</p>
+<h5 id="&#x573A;&#x666F;&#x4E8C;"><a name="&#x573A;&#x666F;&#x4E8C;" class="plugin-anchor" href="#&#x573A;&#x666F;&#x4E8C;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x573A;&#x666F;&#x4E8C;</h5>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    ......
+    // &#x573A;&#x666F;&#x4E8C;&#xFF1A;&#x65B0;ReplicaSet&#x5DF2;&#x7ECF;&#x9971;&#x548C; &#x9700;&#x8981;&#x7F29;&#x5BB9;&#x65E7;ReplicaSet
+    if deploymentutil.IsSaturated(deployment, newRS) {
+        // &#x627E;&#x5230;&#x65E7;ReplicaSet&#x4E2D;&#x5B9E;&#x4F8B;&#x4E0D;&#x4E3A;0&#x7684;
+        for _, old := range controller.FilterActiveReplicaSets(oldRSs) {
+            // &#x4EE5;0&#x4E3A;&#x671F;&#x671B;&#x503C;&#x8FDB;&#x884C;&#x66F4;&#x65B0;
+            if _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, old, 0, deployment); err != nil {
+                return err
+            }
+        }
+        return nil
+    }
+  ......
+}
+</code></pre>
+<p>&#x6E05;&#x7406;&#x9636;&#x6BB5;&#xFF0C;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x5DF2;&#x7ECF;&#x9971;&#x548C;(&#x526F;&#x672C;&#x6570;&#x91CF;&#x8FBE;&#x5230;<code>Deployment</code>&#x7684;&#x671F;&#x671B;)&#xFF0C;&#x9700;&#x8981;&#x628A;&#x5269;&#x4F59;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x7684;&#x526F;&#x672C;&#x6570;&#x91CF;&#x7F29;&#x81F3;0&#x3002;&#x5224;&#x65AD;&#x4F9D;&#x636E;&#x662F;<code>ReplicaSet</code>&#x4E2D;&#x4E09;&#x4E2A;&#x5B57;&#x6BB5;&#x7684;&#x503C;&#x8981;&#x548C;<code>Deployment</code>&#x7684;<code>Spec.Replicas</code>&#x4E2D;&#x8BBE;&#x7F6E;&#x76F8;&#x540C;&#xFF1A;1.<code>Spec.Replicas</code>;2.<code>Annotations</code>&#x4E2D;<code>desired-replicas</code>&#x7684;&#x503C;;3.<code>Status.AvailableReplicas</code>&#x3002;&#x6B64;&#x5904;&#x53EF;&#x80FD;&#x4F1A;&#x6709;&#x7591;&#x95EE;&#xFF0C;&#x4E3A;&#x4EC0;&#x4E48;&#x8981;&#x540C;&#x65F6;&#x786E;&#x8BA4;<code>Spec</code>&#x548C;<code>Annotations</code>&#x4E2D;&#x7684;&#x503C;&#xFF0C;&#x5176;&#x5B9E;&#x4ED6;&#x4EEC;&#x8868;&#x793A;&#x7684;&#x8BED;&#x4E49;&#x662F;&#x4E0D;&#x540C;&#x7684;&#xFF0C;<code>Spec</code>&#x53EA;&#x80FD;&#x8868;&#x793A;&#x4E00;&#x4E2A;&#x5F53;&#x524D;&#x7684;&#x671F;&#x671B;&#x72B6;&#x6001;&#xFF0C;&#x53EF;&#x80FD;&#x4F1A;&#x52A8;&#x6001;&#x53D8;&#x5316;&#xFF0C;&#x800C;<code>Annotations</code>&#x662F;&#x5728;&#x521B;&#x5EFA;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6CE8;&#x5165;&#x7684;<code>Deployment</code>&#x6700;&#x7EC8;&#x671F;&#x671B;&#x3002;</p>
+<p>&#x6267;&#x884C;&#x7684;&#x52A8;&#x4F5C;&#x5C31;&#x662F;&#x627E;&#x51FA;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x4E2D;&#x526F;&#x672C;&#x6570;&#x4E0D;&#x4E3A;0&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x7136;&#x540E;&#x8C03;&#x7528;<code>scaleReplicaSetAndRecordEvent()</code>&#x65B9;&#x6CD5;&#x628A;&#x5B83;&#x4EEC;&#x7684;&#x671F;&#x671B;&#x503C;&#x66F4;&#x65B0;&#x4E3A;0&#xFF0C;&#x548C;&#x573A;&#x666F;&#x4E00;&#x7684;&#x5904;&#x7406;&#x65B9;&#x5F0F;&#x57FA;&#x672C;&#x76F8;&#x540C;&#x3002;</p>
+<h5 id="&#x573A;&#x666F;&#x4E09;&#x6838;&#x5FC3;&#x573A;&#x666F;"><a name="&#x573A;&#x666F;&#x4E09;&#x6838;&#x5FC3;&#x573A;&#x666F;" class="plugin-anchor" href="#&#x573A;&#x666F;&#x4E09;&#x6838;&#x5FC3;&#x573A;&#x666F;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x573A;&#x666F;&#x4E09;(&#x6838;&#x5FC3;&#x573A;&#x666F;)</h5>
+<p>&#x6B64;&#x4E3A;&#x591A;<code>ReplicaSet</code>&#x5171;&#x5B58;&#x7684;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x4E2D;&#x95F4;&#x573A;&#x666F;&#xFF0C;&#x9996;&#x5148;&#x786E;&#x5B9A;&#x7B56;&#x7565;&#x662F;&#x5426;&#x4E3A;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#xFF0C;&#x7136;&#x540E;&#x83B7;&#x53D6;&#x6240;&#x6709;&#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;0&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x6839;&#x636E;<code>Replicas</code>&#x548C;<code>MaxSurge</code>&#x8BA1;&#x7B97;&#x672C;&#x6B21;&#x8FDB;&#x884C;&#x8C03;&#x6574;&#x7684;&#x526F;&#x672C;&#x603B;&#x6570;&#x3002;&#x9700;&#x8981;&#x6CE8;&#x610F;&#x7684;&#x662F;&#xFF0C;&#x5728;&#x8BE5;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x64CD;&#x4F5C;&#x4E2D;&#xFF0C;&#x6269;/&#x7F29;&#x5BB9;&#x7684;&#x52A8;&#x4F5C;&#x662F;<strong>&#x5355;&#x5411;</strong>&#x7684;&#xFF0C;&#x4E0D;&#x4F1A;&#x6709;&#x4E00;&#x4E2A;&#x5BF9;&#x8C61;&#x6269;&#x5BB9;&#x7684;&#x540C;&#x65F6;&#x53E6;&#x4E00;&#x4E2A;&#x5BF9;&#x8C61;&#x7F29;&#x5BB9;&#x7684;&#x60C5;&#x51B5;&#x3002;&#x901A;&#x8FC7;&#x53CD;&#x590D;<code>&#x6269;&#x5BB9;-&#x7F29;&#x5BB9;</code>&#x7684;&#x52A8;&#x4F5C;&#xFF0C;&#x518D;&#x7ECF;&#x8FC7;&#x573A;&#x666F;&#x4E8C;&#x7684;&#x6536;&#x5C3E;&#xFF0C;&#x6700;&#x7EC8;&#x5B9E;&#x9645;&#x7684;&#x526F;&#x672C;&#x6570;&#x4E0E;&#x671F;&#x671B;&#x503C;&#x76F8;&#x540C;&#xFF0C;&#x5E76;&#x4E14;&#x7531;&#x65B0;<code>ReplicaSet</code>&#x66FF;&#x6362;&#x4E86;&#x65E7;&#x7684;&#x5BF9;&#x8C61;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
+    ......
+    // &#x573A;&#x666F;&#x4E09;&#xFF1A;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x8FDB;&#x884C;&#x4E2D;
+    // &#x5224;&#x65AD;&#x7B56;&#x7565;&#x662F;&#x5426;&#x4E3A;RollingUpdate
+    if deploymentutil.IsRollingUpdate(deployment) {
+        // &#x83B7;&#x53D6;&#x6240;&#x6709;&#x5B58;&#x5728;&#x526F;&#x672C;&#x7684;ReplicaSet&#x4EE5;&#x53CA;&#x5BF9;&#x5E94;&#x7684;&#x526F;&#x672C;&#x6570;&#x91CF;
+        allRSs := controller.FilterActiveReplicaSets(append(oldRSs, newRS))
+        allRSsReplicas := deploymentutil.GetReplicaCountForReplicaSets(allRSs)
+
+        allowedSize := int32(0)
+        // &#x8BA1;&#x7B97;&#x5141;&#x8BB8;&#x6700;&#x5927;&#x5B58;&#x5728;&#x526F;&#x672C;&#x6570;
+        if *(deployment.Spec.Replicas) &gt; 0 {
+            allowedSize = *(deployment.Spec.Replicas) + deploymentutil.MaxSurge(*deployment)
+        }
+        // &#x6839;&#x636E;&#x5F53;&#x524D;&#x603B;&#x526F;&#x672C;&#x6570;&#x5224;&#x65AD;&#x4E0B;&#x4E00;&#x6B65;&#x662F;&#x6269;&#x5BB9;&#x65B0;ReplicaSet&#x8FD8;&#x662F;&#x7F29;&#x5BB9;&#x65E7;ReplicaSet
+        deploymentReplicasToAdd := allowedSize - allRSsReplicas
+
+        switch {
+        case deploymentReplicasToAdd &gt; 0:
+            // &#x6269;&#x5BB9;&#x4F18;&#x5148;&#x5904;&#x7406;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;
+            sort.Sort(controller.ReplicaSetsBySizeNewer(allRSs))
+        case deploymentReplicasToAdd &lt; 0:
+            // &#x7F29;&#x5BB9;&#x4F18;&#x5148;&#x5904;&#x7406;&#x65E7;&#x7684;ReplicaSet&#x5BF9;&#x8C61;
+            sort.Sort(controller.ReplicaSetsBySizeOlder(allRSs))
+        }
+        // &#x521D;&#x59CB;&#x5316;&#x53D8;&#x91CF; &#x8868;&#x793A;&#x8981;&#x8C03;&#x6574;&#x7684;&#x526F;&#x672C;&#x603B;&#x6570;
+        deploymentReplicasAdded := int32(0)
+        nameToSize := make(map[string]int32)
+        logger := klog.FromContext(ctx)
+        // &#x904D;&#x5386;&#x6240;&#x6709;&#x6709;&#x526F;&#x672C;&#x6570;&#x7684;ReplicaSet
+        for i := range allRSs {
+            rs := allRSs[i]
+            if deploymentReplicasToAdd != 0 {
+                // &#x8BA1;&#x7B97;&#x8C03;&#x6574;&#x7684;&#x6570;&#x91CF;
+                proportion := deploymentutil.GetReplicaSetProportion(logger, rs, *deployment, deploymentReplicasToAdd, deploymentReplicasAdded)
+                // &#x8BB0;&#x5F55;&#x6BCF;&#x4E2A;RepicaSet&#x7684;&#x65B0;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;
+                nameToSize[rs.Name] = *(rs.Spec.Replicas) + proportion
+                // &#x7D2F;&#x52A0;&#x8C03;&#x6574;&#x7684;&#x526F;&#x672C;&#x6570; &#x5F71;&#x54CD;&#x4E0B;&#x4E00;&#x4E2A;&#x5BF9;&#x8C61;&#x53D8;&#x5316;&#x91CF;&#x7684;&#x4E0A;&#x9650;
+                // &#x5982;deploymentReplicasToAdd=5 &#x5F53;&#x524D;ReplicaSet&#x8BA1;&#x7B97;&#x8C03;&#x6574;&#x7684;&#x6570;&#x91CF;&#x662F;3 &#x4E0B;&#x4E00;&#x4E2A;ReplicaSet&#x8C03;&#x6574;&#x7684;&#x4E0A;&#x9650;&#x4E3A;5-3=2
+                deploymentReplicasAdded += proportion
+            } else {
+                nameToSize[rs.Name] = *(rs.Spec.Replicas)
+            }
+        }
+
+        // &#x518D;&#x6B21;&#x904D;&#x5386;ReplicaSet&#x5E76;&#x6267;&#x884C;&#x6269;&#x7F29;&#x5BB9;
+        for i := range allRSs {
+            rs := allRSs[i]
+            // Deployment&#x7684;&#x6700;&#x5927;&#x8C03;&#x6574;&#x6570;&#x91CF;&#x548C;&#x8BA1;&#x7B97;&#x540E;&#x7684;&#x8C03;&#x6574;&#x603B;&#x6570;&#x53EF;&#x80FD;&#x4E0D;&#x4E00;&#x81F4;
+            // &#x5BF9;&#x7B2C;&#x4E00;&#x4E2A;ReplicaSet&#x5BF9;&#x8C61;&#x8FDB;&#x884C;&#x5DEE;&#x989D;&#x5904;&#x7406;
+            if i == 0 &amp;&amp; deploymentReplicasToAdd != 0 {
+                // &#x4EE5;deploymentReplicasToAdd&#x7684;&#x503C;&#x4E3A;&#x8C03;&#x6574;&#x7684;&#x6570;&#x91CF;&#x6807;&#x51C6;
+                leftover := deploymentReplicasToAdd - deploymentReplicasAdded
+                nameToSize[rs.Name] = nameToSize[rs.Name] + leftover
+                if nameToSize[rs.Name] &lt; 0 {
+                    nameToSize[rs.Name] = 0
+                }
+            }
+
+            // &#x66F4;&#x65B0;&#x526F;&#x672C;&#x6570;
+            if _, _, err := dc.scaleReplicaSet(ctx, rs, nameToSize[rs.Name], deployment); err != nil {
+                // &#x5982;&#x679C;&#x66F4;&#x65B0;&#x5931;&#x8D25;Deployment&#x5BF9;&#x8C61;&#x4F1A;&#x91CD;&#x65B0;&#x5165;&#x961F;
+                return err
+            }
+        }
+    }
+    return nil
+}
+</code></pre>
+<h5 id="&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;replicaset&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;"><a name="&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;replicaset&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;" class="plugin-anchor" href="#&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;replicaset&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6269;&#x7F29;&#x5BB9;&#x8C03;&#x6574;ReplicaSet&#x5BF9;&#x8C61;&#x7684;&#x6BD4;&#x4F8B;</h5>
+<p>&#x5148;&#x6839;&#x636E;<code>Deployment</code>&#x5BF9;&#x8C61;&#x68C0;&#x67E5;&#x526F;&#x672C;&#x6570;&#x548C;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;&#x662F;&#x5426;&#x6709;&#x9700;&#x8981;&#x8C03;&#x6574;&#x7684;&#xFF0C;&#x5982;&#x679C;&#x9700;&#x8981;&#x8C03;&#x6574;&#x5C31;&#x6DF1;&#x62F7;&#x8D1D;&#x4E00;&#x4EFD;&#x6700;&#x65B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x7136;&#x540E;&#x5148;&#x5411;<code>ApiServer</code>&#x53D1;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;&#x7684;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;&#xFF0C;&#x7136;&#x540E;&#x5224;&#x65AD;&#x662F;&#x5426;&#x6709;&#x6269;/&#x7F29;&#x5BB9;&#x7684;&#x9700;&#x8981;&#xFF0C;&#x8BB0;&#x5F55;&#x5E76;&#x5C06;&#x6807;&#x8BC6;&#x4F4D;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) scaleReplicaSet(ctx context.Context, rs *apps.ReplicaSet, newScale int32, deployment *apps.Deployment) (bool, *apps.ReplicaSet, error) {
+    // &#x68C0;&#x67E5;&#x526F;&#x672C;&#x6570;&#x662F;&#x5426;&#x9700;&#x8981;&#x8C03;&#x6574;
+    sizeNeedsUpdate := *(rs.Spec.Replicas) != newScale
+    // &#x68C0;&#x67E5;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;&#x662F;&#x5426;&#x9700;&#x8981;&#x8C03;&#x6574;
+    annotationsNeedUpdate := deploymentutil.ReplicasAnnotationsNeedUpdate(rs, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+deploymentutil.MaxSurge(*deployment))
+
+    scaled := false
+    var err error
+    // &#x9700;&#x8981;&#x66F4;&#x65B0;&#x65F6;
+    if sizeNeedsUpdate || annotationsNeedUpdate {
+        oldScale := *(rs.Spec.Replicas)
+        // &#x6DF1;&#x62F7;&#x8D1D;&#x4FDD;&#x8BC1;&#x5BF9;&#x8C61;&#x4FE1;&#x606F;&#x6700;&#x65B0;
+        rsCopy := rs.DeepCopy()
+        *(rsCopy.Spec.Replicas) = newScale
+        // &#x8BBE;&#x7F6E;ReplicaSet&#x5BF9;&#x8C61;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;
+        deploymentutil.SetReplicasAnnotations(rsCopy, *(deployment.Spec.Replicas), *(deployment.Spec.Replicas)+deploymentutil.MaxSurge(*deployment))
+        // &#x53D1;&#x8D77;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;
+        rs, err = dc.client.AppsV1().ReplicaSets(rsCopy.Namespace).Update(ctx, rsCopy, metav1.UpdateOptions{})
+        if err == nil &amp;&amp; sizeNeedsUpdate {
+            var scalingOperation string
+            // &#x5224;&#x65AD;&#x540E;&#x7EED;&#x52A8;&#x4F5C;&#x662F;&#x6269;&#x5BB9;&#x8FD8;&#x662F;&#x7F29;&#x5BB9;
+            if oldScale &lt; newScale {
+                scalingOperation = &quot;up&quot;
+            } else {
+                scalingOperation = &quot;down&quot;
+            }
+            scaled = true
+            // &#x8BB0;&#x5F55;&#x4E8B;&#x4EF6;&#x548C;&#x7F29;&#x653E;&#x7C7B;&#x578B;
+            dc.eventRecorder.Eventf(deployment, v1.EventTypeNormal, &quot;ScalingReplicaSet&quot;, &quot;Scaled %s replica set %s from %d to %d&quot;, scalingOperation, rs.Name, oldScale, newScale)
+        }
+    }
+    // &#x8FD4;&#x56DE;&#x662F;&#x5426;&#x9700;&#x8981;&#x6269;&#x7F29;&#x5BB9;
+    return scaled, rs, err
+}
+</code></pre>
+<h5 id="&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;"><a name="&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;" class="plugin-anchor" href="#&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x6570;&#x91CF;&#x8BA1;&#x7B97;&#x89C4;&#x5219;</h5>
+<p>&#x7531;<code>GetReplicaSetProportion()</code>&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#x7ED9;&#x5916;&#x5C42;&#x4E00;&#x4E2A;&#x6574;&#x6570;&#xFF0C;&#x8FD9;&#x4E2A;&#x6570;&#x503C;&#x7684;&#x7EDD;&#x5BF9;&#x503C;&#x4E0D;&#x8D85;&#x8FC7;&#x5141;&#x8BB8;&#x503C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func GetReplicaSetProportion(logger klog.Logger, rs *apps.ReplicaSet, d apps.Deployment, deploymentReplicasToAdd, deploymentReplicasAdded int32) int32 {
+    if rs == nil || *(rs.Spec.Replicas) == 0 || deploymentReplicasToAdd == 0 || deploymentReplicasToAdd == deploymentReplicasAdded {
+        return int32(0)
+    }
+    // &#x8BA1;&#x7B97;&#x8C03;&#x6574;&#x6BD4;&#x4F8B;
+    rsFraction := getReplicaSetFraction(logger, *rs, d)
+    allowed := deploymentReplicasToAdd - deploymentReplicasAdded
+    // &#x9650;&#x5236;&#x8C03;&#x6574;&#x7684;&#x7EDD;&#x5BF9;&#x503C;&#x4E0D;&#x8D85;&#x8FC7;allowed&#x9650;&#x5236;
+    if deploymentReplicasToAdd &gt; 0 {
+        return min(rsFraction, allowed)
+    }
+    return max(rsFraction, allowed)
+}
+</code></pre>
+<p>&#x671F;&#x671B;&#x66F4;&#x65B0;&#x526F;&#x672C;&#x7684;&#x5DEE;&#x989D;&#x8BA1;&#x7B97;&#x903B;&#x8F91;&#x5728;<code>getReplicaSetFraction()</code>&#x51FD;&#x6570;&#x4E2D;&#x5B9E;&#x73B0;&#xFF0C;&#x5982;&#x679C;<code>Deployment</code>&#x8981;&#x628A;&#x526F;&#x672C;&#x6570;&#x7F29;&#x5BB9;&#x5230;0&#xFF0C;&#x5C31;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x526F;&#x672C;&#x6570;&#x4F5C;&#x4E3A;&#x5DEE;&#x989D;&#x3002;&#x7136;&#x540E;&#x68C0;&#x67E5;<code>ReplicaSet</code>&#x6CE8;&#x91CA;&#x4E2D;&#x7684;&#x6700;&#x5927;&#x5BB9;&#x91CF;&#xFF0C;&#x7136;&#x540E;&#x6839;&#x636E;&#x516C;&#x5F0F;<code>&#x671F;&#x671B;&#x5BB9;&#x91CF;=&#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;*&#x5F53;&#x524D;&#x6700;&#x5927;&#x5BB9;&#x91CF;/&#x4E0A;&#x4E00;&#x8F6E;&#x6700;&#x5927;&#x5BB9;&#x91CF;</code>&#xFF0C;&#x8FD4;&#x56DE;&#x672C;&#x8F6E;&#x8981;&#x6269;/&#x7F29;&#x5BB9;&#x7684;&#x6570;&#x91CF;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deployment) int32 {
+    // &#x5982;&#x679C;&#x60F3;&#x8981;&#x7F29;&#x5BB9;&#x81F3;0 &#x76F4;&#x63A5;&#x8FD4;&#x56DE;&#x5F53;&#x524D;&#x7684;&#x526F;&#x672C;&#x6570;
+    if *(d.Spec.Replicas) == int32(0) {
+        return -*(rs.Spec.Replicas)
+    }
+    // &#x83B7;&#x53D6;Deployment&#x7684;&#x5F53;&#x524D;&#x6700;&#x5927;&#x5BB9;&#x91CF;&#x548C;&#x4E0A;&#x4E00;&#x8F6E;&#x4E3A;ReplicaSet&#x5BF9;&#x8C61;&#x6CE8;&#x5165;&#x7684;&#x6700;&#x5927;&#x5BB9;&#x91CF;
+    deploymentMaxReplicas := *(d.Spec.Replicas) + MaxSurge(d)
+    deploymentMaxReplicasBeforeScale, ok := getMaxReplicasAnnotation(logger, &amp;rs)
+    // &#x5982;&#x679C;ReplicaSet&#x5BF9;&#x8C61;&#x7684;&#x6700;&#x5927;&#x5BB9;&#x91CF;&#x6CE8;&#x89E3;&#x7F3A;&#x5931;&#x6216;&#x503C;&#x4E3A;0
+    if !ok || deploymentMaxReplicasBeforeScale == 0 {
+        // &#x7528;&#x5F53;&#x524D;Deployment&#x7684;&#x526F;&#x672C;&#x6570;&#x91CD;&#x65B0;&#x5199;&#x5165;
+        deploymentMaxReplicasBeforeScale = d.Status.Replicas
+        // &#x5F02;&#x5E38;&#x60C5;&#x51B5; &#x8FD4;&#x56DE;0&#x7ED9;&#x4E0A;&#x5C42; &#x907F;&#x514D;&#x540E;&#x7EED;&#x8BA1;&#x7B97;&#x51FA;&#x65E0;&#x6548;&#x6BD4;&#x4F8B;0
+        if deploymentMaxReplicasBeforeScale == 0 {
+            return 0
+        }
+    }
+    // &#x83B7;&#x53D6;ReplicaSet&#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;
+    scaleBase := *(rs.Spec.Replicas)
+    // &#x8BA1;&#x7B97;&#x89C4;&#x5219;&#x4E3A; &#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;*&#x5F53;&#x524D;&#x6700;&#x5927;&#x5BB9;&#x91CF;/&#x4E0A;&#x4E00;&#x8F6E;&#x6700;&#x5927;&#x5BB9;&#x91CF;
+    newRSsize := (float64(scaleBase * deploymentMaxReplicas)) / float64(deploymentMaxReplicasBeforeScale)
+    // &#x8FD4;&#x56DE;&#x671F;&#x671B;&#x8C03;&#x6574;&#x7684;&#x526F;&#x672C;&#x6570;&#x91CF;
+    return integer.RoundToInt32(newRSsize) - *(rs.Spec.Replicas)
+}
+</code></pre>
+<h3 id="deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;"><a name="deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;" class="plugin-anchor" href="#deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;"><i class="fa fa-link" aria-hidden="true"></i></a>Deployment&#x5BF9;&#x8C61;&#x9700;&#x8981;&#x56DE;&#x6EDA;</h3>
+<p>&#x6839;&#x636E;<code>Deployment</code>&#x5BF9;&#x8C61;<code>Annotation</code>&#x4E2D;<code>&quot;deprecated.deployment.rollback.to&quot;</code>&#x7684;&#x503C;&#x6765;&#x663E;&#x5F0F;&#x6307;&#x5B9A;&#x56DE;&#x6EDA;&#x7684;&#x7248;&#x672C;&#xFF0C;&#x4F1A;&#x5728;&#x672A;&#x6765;&#x88AB;&#x9010;&#x6E10;&#x5F03;&#x7528;&#x5E76;&#x4F7F;&#x7528;<code>kubectl rollback</code>&#x547D;&#x4EE4;&#x63A7;&#x5236;&#x56DE;&#x6EDA;&#xFF0C;&#x4FEE;&#x6539;&#x8D44;&#x6E90;&#x5BF9;&#x8C61;&#x662F;&#x4E0D;&#x88AB;&#x63A8;&#x8350;&#x7684;&#x884C;&#x4E3A;&#xFF0C;&#x8BE5;&#x56DE;&#x6EDA;&#x903B;&#x8F91;&#x7684;&#x4EE3;&#x7801;&#x5728;<code>rollback()</code>&#x65B9;&#x6CD5;&#x4E2D;&#x5B9E;&#x73B0;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x83B7;&#x53D6;<code>ReplicaSet</code>&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x4ECE;&#x6CE8;&#x89E3;&#x4FE1;&#x606F;&#x4E2D;&#x627E;&#x51FA;&#x671F;&#x671B;&#x56DE;&#x6EDA;&#x7684;<code>Revision</code>&#x7248;&#x672C;&#x53F7;&#xFF0C;&#x5982;&#x679C;&#x662F;0&#x5C1D;&#x8BD5;&#x56DE;&#x6EDA;&#x5230;&#x6700;&#x8FD1;&#x7684;&#x4E00;&#x4E2A;&#x7248;&#x672C;&#x3002;&#x6B63;&#x5E38;&#x60C5;&#x51B5;&#x4E0B;&#x904D;&#x5386;&#x6240;&#x6709;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5E76;&#x5C1D;&#x8BD5;&#x6839;&#x636E;<code>Revision</code>&#x8FDB;&#x884C;&#x5339;&#x914D;&#xFF0C;&#x7136;&#x540E;&#x7528;<code>ReplicaSet</code>&#x7684;Pod&#x63CF;&#x8FF0;&#x4E5F;&#x5C31;&#x662F;<code>Template</code>&#x5B57;&#x6BB5;&#x66F4;&#x65B0;&#x5F53;&#x524D;<code>Deployment</code>&#x4E2D;&#x7684;&#x5185;&#x5BB9;&#xFF0C;&#x540C;&#x65F6;&#x4E5F;&#x66F4;&#x65B0;&#x6CE8;&#x91CA;&#x4FE1;&#x606F;&#xFF0C;&#x6700;&#x540E;&#x5411;<code>ApiServer</code>&#x53D1;&#x9001;&#x5BF9;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;&#x5E76;&#x8BF7;&#x6C42;&#x56DE;&#x6EDA;&#x6CE8;&#x89E3;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    logger := klog.FromContext(ctx)
+    // &#x83B7;&#x53D6;ReplicaSet&#x5BF9;&#x8C61;
+    newRS, allOldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+    if err != nil {
+        return err
+    }
+
+    allRSs := append(allOldRSs, newRS)
+    // &#x83B7;&#x53D6;&#x76EE;&#x6807;&#x7248;&#x672C;&#x53F7;
+    rollbackTo := getRollbackTo(d)
+    // &#x7279;&#x6B8A;&#x60C5;&#x51B5;&#x5904;&#x7406;
+    if rollbackTo.Revision == 0 {
+    // Revision&#x4E3A;0&#x65F6;&#x5C1D;&#x8BD5;&#x56DE;&#x6EDA;&#x5230;&#x4E0A;&#x4E00;&#x4E2A;&#x7248;&#x672C;
+        if rollbackTo.Revision = deploymentutil.LastRevision(logger, allRSs); rollbackTo.Revision == 0 {
+            dc.emitRollbackWarningEvent(d, deploymentutil.RollbackRevisionNotFound, &quot;Unable to find last revision.&quot;)
+            // &#x6E05;&#x9664;rollbackto&#x6CE8;&#x89E3;
+            return dc.updateDeploymentAndClearRollbackTo(ctx, d)
+        }
+    }
+    for _, rs := range allRSs {
+        v, err := deploymentutil.Revision(rs)
+        if err != nil {
+            logger.V(4).Info(&quot;Unable to extract revision from deployment&apos;s replica set&quot;, &quot;replicaSet&quot;, klog.KObj(rs), &quot;err&quot;, err)
+            continue
+        }
+        // &#x5339;&#x914D;Revision
+        if v == rollbackTo.Revision {
+            logger.V(4).Info(&quot;Found replica set with desired revision&quot;, &quot;replicaSet&quot;, klog.KObj(rs), &quot;revision&quot;, v)
+            // &#x66F4;&#x65B0;Template&#x548C;&#x6CE8;&#x89E3;&#x5E76;&#x5411;ApiServer&#x53D1;&#x9001;&#x66F4;&#x65B0;&#x8BF7;&#x6C42;
+            performedRollback, err := dc.rollbackToTemplate(ctx, d, rs)
+            if performedRollback &amp;&amp; err == nil {
+                dc.emitRollbackNormalEvent(d, fmt.Sprintf(&quot;Rolled back deployment %q to revision %d&quot;, d.Name, rollbackTo.Revision))
+            }
+            return err
+        }
+    }
+    dc.emitRollbackWarningEvent(d, deploymentutil.RollbackRevisionNotFound, &quot;Unable to find the revision to rollback to.&quot;)
+    // &#x6E05;&#x7406;rollbackto&#x6CE8;&#x89E3;
+    return dc.updateDeploymentAndClearRollbackTo(ctx, d)
+}
+</code></pre>
+<h3 id="deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;"><a name="deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;" class="plugin-anchor" href="#deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;"><i class="fa fa-link" aria-hidden="true"></i></a>Deployment&#x5BF9;&#x8C61;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;</h3>
+<h4 id="recreate&#x7B56;&#x7565;"><a name="recreate&#x7B56;&#x7565;" class="plugin-anchor" href="#recreate&#x7B56;&#x7565;"><i class="fa fa-link" aria-hidden="true"></i></a>Recreate&#x7B56;&#x7565;</h4>
+<p>&#x5982;&#x679C;&#x7ECF;&#x8FC7;&#x5224;&#x65AD;&#xFF0C;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x7684;&#x7B56;&#x7565;&#x4E3A;<code>Recreate</code>&#xFF0C;&#x5176;&#x66F4;&#x65B0;&#x7684;&#x5904;&#x7406;&#x65B9;&#x5F0F;&#x4E3A;&#x5148;&#x7EC8;&#x6B62;&#x65E7;&#x7684;<code>Pod</code>&#xFF0C;&#x518D;&#x542F;&#x52A8;&#x65B0;&#x7684;<code>Pod</code>&#xFF0C;&#x5728;&#x4EE3;&#x7801;&#x4E2D;&#x7531;<code>rolloutRecreate()</code>&#x65B9;&#x6CD5;&#x4E3A;&#x5165;&#x53E3;&#x8FDB;&#x5165;&#x540E;&#x7EED;&#x903B;&#x8F91;&#xFF0C;&#x4E00;&#x4E9B;&#x6838;&#x5FC3;&#x7684;&#x903B;&#x8F91;&#x5728;&#x4E4B;&#x524D;&#x7684;&#x6269;&#x7F29;&#x5BB9;&#x90E8;&#x5206;&#x5DF2;&#x7ECF;&#x6709;&#x6240;&#x6D89;&#x53CA;&#xFF0C;&#x4E0B;&#x9762;&#x5206;&#x6790;&#x8BE5;&#x90E8;&#x5206;&#x4EE3;&#x7801;&#x3002;</p>
+<p>&#x5728;&#x4E00;&#x5F00;&#x59CB;&#x5148;&#x83B7;&#x53D6;&#x65B0;&#x65E7;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x503C;&#x5F97;&#x6CE8;&#x610F;&#x7684;&#x662F;<code>getAllReplicaSetsAndSyncRevision()</code>&#x65B9;&#x6CD5;&#x4F20;&#x5165;&#x4E00;&#x4E2A;<code>false</code>&#xFF0C;&#x56E0;&#x4E3A;<code>Recreate</code>&#x903B;&#x8F91;&#x4E25;&#x683C;&#x8981;&#x6C42;&#x5148;&#x628A;&#x65E7;&#x7684;&#x5B9E;&#x4F8B;&#x5220;&#x6389;&#x624D;&#x80FD;&#x521B;&#x5EFA;&#x65B0;&#x7684;&#xFF0C;&#x5982;&#x679C;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;&#x524D;&#x521B;&#x5EFA;&#x65B0;<code>ReplicaSet</code>&#x4F1A;&#x5BFC;&#x81F4;&#x65B0;&#x65E7;&#x7248;&#x672C;&#x5B9E;&#x4F8B;&#x5171;&#x5B58;&#x3002;&#x7136;&#x540E;&#x83B7;&#x53D6;&#x65E7;&#x7248;&#x672C;&#x4E2D;&#x6709;<code>Pod</code>&#x5B9E;&#x4F8B;&#x5B58;&#x5728;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5E76;&#x4FEE;&#x6539;&#x5B83;&#x4EEC;&#x7684;<code>Spec.Replicas</code>&#x4E3A;0&#xFF0C;&#x7136;&#x540E;&#x5728;&#x76F4;&#x5230;&#x6CA1;&#x6709;&#x65E7;&#x7248;&#x672C;&#x7684;<code>Pod</code>&#x8FD0;&#x884C;&#x524D;&#x90FD;&#x5BF9;<code>Deployment</code>&#x7684;&#x72B6;&#x6001;&#x8FDB;&#x884C;&#x540C;&#x6B65;&#xFF0C;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;&#x5B8C;&#x6210;&#x540E;&#x5982;&#x679C;&#x65B0;&#x7684;<code>ReplicaSet</code>&#x4E0D;&#x5B58;&#x5728;&#xFF0C;&#x518D;&#x6B21;&#x8C03;&#x7528;<code>getAllReplicaSetsAndSyncRevision()</code>&#x65B9;&#x6CD5;&#x4F20;&#x5165;<code>true</code>&#xFF0C;&#x521B;&#x5EFA;&#x8BE5;&#x5BF9;&#x8C61;&#x3002;&#x6269;&#x5BB9;&#x65B0;<code>ReplicaSet</code>&#xFF0C;&#x6269;&#x5BB9;&#x5B8C;&#x6210;&#x540E;&#x6E05;&#x7406;&#x65E7;&#x7248;&#x672C;&#x5BF9;&#x8C61;&#x5E76;&#x540C;&#x6B65;<code>Deployment</code>&#x72B6;&#x6001;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) rolloutRecreate(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) error {
+    // &#x7B2C;&#x56DB;&#x4E2A;&#x5165;&#x53C2;&#x8868;&#x793A;&#x5982;&#x679C;ReplicaSet&#x4E0D;&#x5B58;&#x5728;&#x662F;&#x5426;&#x521B;&#x5EFA;
+    // &#x5728;&#x7F29;&#x5BB9;&#x9636;&#x6BB5;&#x907F;&#x514D;&#x65B0;&#x65E7;Pod&#x5171;&#x5B58; &#x6B64;&#x5904;&#x4E0D;&#x76F4;&#x63A5;&#x521B;&#x5EFA;
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
+    if err != nil {
+        return err
+    }
+    allRSs := append(oldRSs, newRS)
+    // &#x83B7;&#x53D6;&#x6D3B;&#x8DC3;&#x7684;&#x65E7;ReplicaSet&#x5BF9;&#x8C61;
+    activeOldRSs := controller.FilterActiveReplicaSets(oldRSs)
+    // &#x628A;&#x6240;&#x6709;&#x6D3B;&#x8DC3;&#x7684;&#x65E7;ReplicaSet&#x526F;&#x672C;&#x6570;&#x8BBE;&#x7F6E;&#x4E3A;0
+    scaledDown, err := dc.scaleDownOldReplicaSetsForRecreate(ctx, activeOldRSs, d)
+    if err != nil {
+        return err
+    }
+    // &#x7F29;&#x5BB9;&#x65E7;&#x7684;ReplicaSet
+    if scaledDown {
+        // &#x540C;&#x6B65;Deployment&#x72B6;&#x6001;
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // &#x7B49;&#x5F85;&#x7F29;&#x5BB9;&#x7ED3;&#x675F;
+    if oldPodsRunning(newRS, oldRSs, podMap) {
+        // &#x540C;&#x6B65;Deployment&#x72B6;&#x6001;
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // &#x5982;&#x679C;&#x65B0;&#x7684;ReplicaSet&#x5BF9;&#x8C61;&#x4E0D;&#x5B58;&#x5728; &#x81EA;&#x52A8;&#x521B;&#x5EFA;&#x5B83;
+    if newRS == nil {
+        newRS, oldRSs, err = dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+        if err != nil {
+            return err
+        }
+        // &#x8BB0;&#x5F55;&#x5BF9;&#x8C61;
+        allRSs = append(oldRSs, newRS)
+    }
+    // &#x6269;&#x5BB9;&#x65B0;&#x7684;ReplicaSet
+    if _, err := dc.scaleUpNewReplicaSetForRecreate(ctx, newRS, d); err != nil {
+        return err
+    }
+    // &#x6E05;&#x7406;&#x65E7;&#x7684;ReplicaSet
+    if util.DeploymentComplete(d, &amp;d.Status) {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+    // &#x540C;&#x6B65;Deployment&#x72B6;&#x6001;
+    return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+}
+</code></pre>
+<p><code>oldPodsRunning()</code>&#x51FD;&#x6570;&#x7528;&#x6765;&#x68C0;&#x67E5;&#x662F;&#x5426;&#x6709;<code>Pod</code>&#x5B9E;&#x4F8B;&#x5728;&#x8FD0;&#x884C;&#x4E2D;&#xFF0C;&#x9996;&#x5148;&#x83B7;&#x53D6;&#x6240;&#x6709;&#x7684;<code>Pod</code>&#x96C6;&#x5408;&#xFF0C;&#x7136;&#x540E;&#x68C0;&#x67E5;&#x5176;<code>Status.Phase</code>&#x5B57;&#x6BB5;&#xFF0C;&#x8BE5;&#x5B57;&#x6BB5;&#x8868;&#x793A;<code>Pod</code>&#x7684;&#x72B6;&#x6001;&#xFF0C;&#x5305;&#x62EC;<code>Pending/Running/Running/Failed/Unknown</code>&#xFF0C;&#x5BF9;&#x5E94;&#x5404;&#x751F;&#x547D;&#x5468;&#x671F;&#x72B6;&#x6001;&#x3002;&#x5BF9;&#x4E8E;&#x5C5E;&#x4E8E;&#x65B0;&#x7248;&#x672C;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x7684;&#x8DF3;&#x8FC7;&#x5904;&#x7406;&#xFF0C;&#x8BE5;&#x903B;&#x8F91;&#x53EA;&#x786E;&#x8BA4;&#x65E7;&#x7248;&#x672C;&#x7684;<code>Pod</code>&#x662F;&#x5426;&#x6709;&#x4ECD;&#x5904;&#x4E8E;&#x6216;&#x53EF;&#x80FD;&#x5904;&#x4E8E;&#x8FD0;&#x884C;&#x72B6;&#x6001;&#x7684;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func oldPodsRunning(newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) bool {
+    if oldPods := util.GetActualReplicaCountForReplicaSets(oldRSs); oldPods &gt; 0 {
+        return true
+    }
+    // &#x904D;&#x5386;Pod
+    for rsUID, podList := range podMap {
+        // &#x8DF3;&#x8FC7;&#x5C5E;&#x4E8E;&#x65B0;ReplicaSet&#x7BA1;&#x7406;&#x7684;Pod
+        if newRS != nil &amp;&amp; newRS.UID == rsUID {
+            continue
+        }
+        for _, pod := range podList {
+            switch pod.Status.Phase {
+            case v1.PodFailed, v1.PodSucceeded:
+                // &#x9000;&#x51FA;&#x72B6;&#x6001;
+                continue
+            case v1.PodUnknown:
+                // &#x5F02;&#x5E38;&#x72B6;&#x6001;
+                return true
+            default:
+                // &#x5176;&#x4ED6;&#x8FD0;&#x884C;&#x72B6;&#x6001;
+                return true
+            }
+        }
+    }
+    return false
+}
+</code></pre>
+<p><code>syncRolloutStatus()</code>&#x65B9;&#x6CD5;&#x7528;&#x6765;&#x540C;&#x6B65;&#x7F29;&#x5BB9;&#x7684;&#x72B6;&#x6001;&#xFF0C;&#x9996;&#x5148;&#x4F1A;&#x6839;&#x636E;&#x5F53;&#x524D;&#x89C2;&#x6D4B;&#x5230;&#x7684;<code>Generation</code>&#x3001;<code>Replicas</code>&#x3001;<code>UpdatedReplicas</code>&#x3001;<code>ReadyReplicas</code>&#x3001;<code>AvailableReplicas</code>&#x7B49;&#x526F;&#x672C;&#x6570;&#x91CF;&#x4FE1;&#x606F;&#xFF0C;&#x5224;&#x65AD;&#x5F53;&#x524D;<code>Deployment</code>&#x5BF9;&#x8C61;&#x7684;&#x72B6;&#x6001;&#x662F;&#x5426;&#x8FBE;&#x6210;&#x4E86;&#x6700;&#x4F4E;&#x7684;&#x53EF;&#x7528;&#x6761;&#x4EF6;&#xFF0C;&#x7136;&#x540E;&#x66F4;&#x65B0;<code>CondType</code>&#x4E3A;<code>DeploymentAvailable</code>&#x7684;&#x72B6;&#x6001;&#x5E76;&#x7EC4;&#x88C5;&#x4E00;&#x4E2A;&#x6700;&#x65B0;&#x7684;<code>DeploymentStatus</code>&#x7C7B;&#x578B;&#x7684;&#x72B6;&#x6001;&#x4FE1;&#x606F;&#x3002;&#x7136;&#x540E;&#x5C1D;&#x8BD5;&#x83B7;&#x53D6;<code>DeploymentProgressing</code>&#x7684;&#x72B6;&#x6001;&#x4FE1;&#x606F;&#xFF0C;&#x5E76;&#x5BF9;<code>Deployment</code>&#x72B6;&#x6001;&#x8FDB;&#x884C;&#x5224;&#x65AD;&#xFF0C;&#x5982;&#x679C;&#x526F;&#x672C;&#x6570;&#x548C;&#x65B0;&#x7248;&#x672C;&#x526F;&#x672C;&#x6570;&#x76F8;&#x7B49;&#x4E14;&#x72B6;&#x6001;&#x4FE1;&#x606F;&#x4E3A;&#x65B0;<code>ReplicaSet</code>&#x53EF;&#x7528;(<code>NewReplicaSetAvailable</code>)&#x8868;&#x793A;&#x90E8;&#x7F72;&#x5B8C;&#x6210;&#x3002;&#x5982;&#x679C;&#x7ED3;&#x679C;&#x8868;&#x793A;&#x672A;&#x5B8C;&#x6210;&#x90E8;&#x7F72;&#xFF0C;&#x5219;&#x5BF9;&#x7ED3;&#x679C;&#x8FDB;&#x884C;&#x786E;&#x8BA4;&#x5E76;&#x5411;<code>ApiServer</code>&#x53D1;&#x9001;&#x66F4;&#x65B0;<code>Deployment</code>&#x7684;&#x8BF7;&#x6C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
+    // &#x8BA1;&#x7B97;Deployment&#x6700;&#x65B0;&#x72B6;&#x6001;
+    newStatus := calculateStatus(allRSs, newRS, d)
+    // &#x5982;&#x679C;&#x6CA1;&#x6709;&#x914D;&#x7F6E;&#x622A;&#x6B62;&#x65F6;&#x95F4; &#x5C31;&#x5220;&#x9664;CondType&#x4E3A;DeploymentProgressing&#x4E3A;&#x72B6;&#x6001;&#x4FE1;&#x606F;
+    if !util.HasProgressDeadline(d) {
+        util.RemoveDeploymentCondition(&amp;newStatus, apps.DeploymentProgressing)
+    }
+    // &#x83B7;&#x53D6;CondType&#x4E3A;DeploymentProgressing&#x4E3A;&#x72B6;&#x6001;&#x4FE1;&#x606F;
+    currentCond := util.GetDeploymentCondition(d.Status, apps.DeploymentProgressing)
+    // Deployment&#x72B6;&#x6001;&#x5224;&#x65AD;
+    isCompleteDeployment := newStatus.Replicas == newStatus.UpdatedReplicas &amp;&amp; currentCond != nil &amp;&amp; currentCond.Reason == util.NewRSAvailableReason
+    // &#x672A;&#x90E8;&#x7F72;&#x5B8C;&#x6210; &#x8FDB;&#x884C;&#x72B6;&#x6001;&#x5224;&#x65AD;&#x5E76;&#x66F4;&#x65B0;
+    if util.HasProgressDeadline(d) &amp;&amp; !isCompleteDeployment {
+        switch {
+        // &#x5DF2;&#x5B8C;&#x6210;
+        case util.DeploymentComplete(d, &amp;newStatus):
+            msg := fmt.Sprintf(&quot;Deployment %q has successfully progressed.&quot;, d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf(&quot;ReplicaSet %q has successfully progressed.&quot;, newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, util.NewRSAvailableReason, msg)
+            util.SetDeploymentCondition(&amp;newStatus, *condition)
+        // &#x5904;&#x7406;&#x4E2D;
+        case util.DeploymentProgressing(d, &amp;newStatus):
+            msg := fmt.Sprintf(&quot;Deployment %q is progressing.&quot;, d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf(&quot;ReplicaSet %q is progressing.&quot;, newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionTrue, util.ReplicaSetUpdatedReason, msg)
+            if currentCond != nil {
+                if currentCond.Status == v1.ConditionTrue {
+                    condition.LastTransitionTime = currentCond.LastTransitionTime
+                }
+                util.RemoveDeploymentCondition(&amp;newStatus, apps.DeploymentProgressing)
+            }
+            util.SetDeploymentCondition(&amp;newStatus, *condition)
+        // &#x5DF2;&#x8D85;&#x65F6;
+        case util.DeploymentTimedOut(ctx, d, &amp;newStatus):
+            msg := fmt.Sprintf(&quot;Deployment %q has timed out progressing.&quot;, d.Name)
+            if newRS != nil {
+                msg = fmt.Sprintf(&quot;ReplicaSet %q has timed out progressing.&quot;, newRS.Name)
+            }
+            condition := util.NewDeploymentCondition(apps.DeploymentProgressing, v1.ConditionFalse, util.TimedOutReason, msg)
+            util.SetDeploymentCondition(&amp;newStatus, *condition)
+        }
+    }
+
+    // &#x5904;&#x7406;&#x5931;&#x8D25;&#x72B6;&#x6001;Condition
+    if replicaFailureCond := dc.getReplicaFailures(allRSs, newRS); len(replicaFailureCond) &gt; 0 {
+        // &#x53EA;&#x4F1A;&#x8FD4;&#x56DE;&#x4E00;&#x6761;&#x4FE1;&#x606F;
+        util.SetDeploymentCondition(&amp;newStatus, replicaFailureCond[0])
+    } else {
+        // &#x6CA1;&#x6709;&#x5931;&#x8D25;&#x4FE1;&#x606F;&#x5C31;&#x4ECE;Map&#x4E2D;&#x5220;&#x9664;&#x8BE5;key
+        util.RemoveDeploymentCondition(&amp;newStatus, apps.DeploymentReplicaFailure)
+    }
+
+    // &#x65B0;&#x65E7;&#x72B6;&#x6001;&#x662F;&#x5426;&#x4E00;&#x81F4;
+    if reflect.DeepEqual(d.Status, newStatus) {
+        // &#x5982;&#x679C;&#x72B6;&#x6001;&#x4E00;&#x81F4; &#x628A;Deployment&#x5BF9;&#x8C61;&#x91CD;&#x65B0;&#x5165;&#x961F;&#x5E76;&#x8FD4;&#x56DE;
+        dc.requeueStuckDeployment(ctx, d, newStatus)
+        return nil
+    }
+
+    newDeployment := d
+    newDeployment.Status = newStatus
+    // &#x66F4;&#x65B0;&#x5BF9;&#x8C61;
+    _, err := dc.client.AppsV1().Deployments(newDeployment.Namespace).UpdateStatus(ctx, newDeployment, metav1.UpdateOptions{})
+    return err
+}
+</code></pre>
+<h4 id="rollingupdate&#x7B56;&#x7565;"><a name="rollingupdate&#x7B56;&#x7565;" class="plugin-anchor" href="#rollingupdate&#x7B56;&#x7565;"><i class="fa fa-link" aria-hidden="true"></i></a>RollingUpdate&#x7B56;&#x7565;</h4>
+<p>&#x5982;&#x679C;&#x7ECF;&#x8FC7;&#x5224;&#x65AD;&#xFF0C;&#x66F4;&#x65B0;&#x7B56;&#x7565;&#x4E3A;<code>RollingUpdate</code>&#xFF0C;&#x5219;&#x91C7;&#x7528;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x65B9;&#x5F0F;&#xFF0C;&#x903B;&#x8F91;&#x5165;&#x53E3;&#x4E3A;<code>rolloutRolling()</code>&#x65B9;&#x6CD5;&#x3002;&#x4ECE;&#x5916;&#x5C42;&#x7684;&#x903B;&#x8F91;&#x6765;&#x770B;&#x5F88;&#x6E05;&#x6670;&#xFF0C;&#x9996;&#x5148;&#x83B7;&#x53D6;&#x5BF9;&#x8C61;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x6709;&#x9650;&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5982;&#x679C;&#x6269;&#x5BB9;&#x5219;&#x672C;&#x6B21;&#x8C03;&#x8C10;&#x8FD4;&#x56DE;&#x5E76;&#x66F4;&#x65B0;&#x72B6;&#x6001;&#xFF0C;&#x5982;&#x679C;&#x65E0;&#x6CD5;&#x8FDB;&#x884C;&#x6269;&#x5BB9;&#x52A8;&#x4F5C;&#xFF0C;&#x5219;&#x5BF9;&#x65E7;<code>ReplicaSet</code>&#x8FDB;&#x884C;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;&#xFF0C;&#x5982;&#x679C;&#x7F29;&#x5BB9;&#x4E5F;&#x8FD4;&#x56DE;&#x5E76;&#x66F4;&#x65B0;<code>Deployment</code>&#x72B6;&#x6001;&#xFF0C;&#x5982;&#x679C;&#x4E24;&#x8005;&#x90FD;&#x6CA1;&#x6709;&#x5C31;&#x6839;&#x636E;<code>Spec</code>&#x548C;<code>Status</code>&#x7684;&#x4E00;&#x81F4;&#x6027;&#x68C0;&#x67E5;<code>Deployment</code>&#x5BF9;&#x8C61;&#x662F;&#x5426;&#x4E3A;&#x90E8;&#x7F72;&#x6210;&#x529F;&#x7684;&#x72B6;&#x6001;&#xFF0C;&#x5982;&#x679C;&#x662F;&#x5C31;&#x6E05;&#x7406;&#x65E7;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x6700;&#x540E;&#x66F4;&#x65B0;&#x72B6;&#x6001;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
+    newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
+    if err != nil {
+        return err
+    }
+    allRSs := append(oldRSs, newRS)
+    // &#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;&#x7248;&#x672C;
+    scaledUp, err := dc.reconcileNewReplicaSet(ctx, allRSs, newRS, d)
+    if err != nil {
+        return err
+    }
+    if scaledUp {
+        // &#x7ED3;&#x675F;&#x672C;&#x6B21;&#x8C03;&#x8C10;
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+
+    // &#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;&#x7248;&#x672C;
+    scaledDown, err := dc.reconcileOldReplicaSets(ctx, allRSs, controller.FilterActiveReplicaSets(oldRSs), newRS, d)
+    if err != nil {
+        return err
+    }
+    if scaledDown {
+        // &#x7ED3;&#x675F;&#x672C;&#x6B21;&#x8C03;&#x8C10;
+        return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+    }
+    // &#x68C0;&#x67E5;&#x662F;&#x5426;&#x5B8C;&#x6210;&#x90E8;&#x7F72;
+    if deploymentutil.DeploymentComplete(d, &amp;d.Status) {
+        if err := dc.cleanupDeployment(ctx, oldRSs, d); err != nil {
+            return err
+        }
+    }
+
+    // &#x540C;&#x6B65;&#x72B6;&#x6001;
+    return dc.syncRolloutStatus(ctx, allRSs, newRS, d)
+}
+</code></pre>
+<h5 id="&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;replicaset"><a name="&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;replicaset" class="plugin-anchor" href="#&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;replicaset"><i class="fa fa-link" aria-hidden="true"></i></a>&#x5C1D;&#x8BD5;&#x6269;&#x5BB9;&#x65B0;ReplicaSet</h5>
+<p>&#x5BF9;&#x8FD9;&#x6BB5;&#x903B;&#x8F91;&#x8FDB;&#x884C;&#x7B80;&#x5355;&#x7684;&#x89E3;&#x91CA;&#xFF0C;&#x9996;&#x5148;&#x5BF9;<code>ReplicaSet</code>&#x548C;<code>Deployment</code>&#x5176;&#x4E2D;&#x7684;<code>Spec.Replicas</code>&#x5B57;&#x6BB5;&#x505A;&#x6BD4;&#x8F83;&#x3002;&#x5982;&#x679C;&#x65B0;<code>ReplicaSet</code>&#x5DF2;&#x7ECF;&#x548C;<code>Deployment</code>&#x7684;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x4E00;&#x81F4;&#x4E86;&#x5219;&#x4E0D;&#x505A;&#x5904;&#x7406;;&#x5982;&#x679C;&#x662F;&#x975E;&#x9884;&#x671F;&#x7684;&#x65B0;<code>Replicas</code>&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;<code>Deployment</code>&#xFF0C;&#x5219;&#x8C03;&#x6574;<code>ReplicaSet</code>&#x7684;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x4E3A;<code>Deployment</code>&#x7684;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;;&#x5176;&#x4ED6;&#x60C5;&#x51B5;&#x5C31;&#x53EA;&#x5269;&#x4E0B;&#x65B0;<code>Replicas</code>&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x5C0F;&#x4E8E;<code>Deployment</code>&#x4E86;&#xFF0C;&#x8BA1;&#x7B97;&#x4E00;&#x4E0B;&#x672C;&#x6B21;&#x8C03;&#x6574;&#x540E;&#x7684;&#x65B0;<code>ReplicaSet</code>&#x526F;&#x672C;&#x6570;&#x5E76;&#x6267;&#x884C;&#x66F4;&#x65B0;&#x64CD;&#x4F5C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
+    if *(newRS.Spec.Replicas) == *(deployment.Spec.Replicas) {
+        // Scaling not required.
+        return false, nil
+    }
+    if *(newRS.Spec.Replicas) &gt; *(deployment.Spec.Replicas) {
+        // Scale down.
+        scaled, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, newRS, *(deployment.Spec.Replicas), deployment)
+        return scaled, err
+    }
+    newReplicasCount, err := deploymentutil.NewRSNewReplicas(deployment, allRSs, newRS)
+    if err != nil {
+        return false, err
+    }
+    scaled, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, newRS, newReplicasCount, deployment)
+    return scaled, err
+}
+</code></pre>
+<h6 id="&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;"><a name="&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;" class="plugin-anchor" href="#&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6269;&#x5BB9;&#x65B0;&#x526F;&#x672C;&#x6570;&#x7684;&#x8BA1;&#x7B97;</h6>
+<p>&#x901A;&#x8FC7;<code>NewRSNewReplicas()</code>&#x51FD;&#x6570;&#x8BA1;&#x7B97;&#x51FA;&#x65B0;<code>ReplicaSet</code>&#x8C03;&#x6574;&#x540E;&#x7684;&#x526F;&#x672C;&#x6570;&#x91CF;&#xFF0C;&#x89C4;&#x5219;&#x4E5F;&#x5F88;&#x7B80;&#x5355;&#x3002;&#x5982;&#x679C;&#x662F;<code>Recreate</code>&#x7B56;&#x7565;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;<code>Deployment</code>&#x7684;&#x671F;&#x671B;&#x503C;;&#x5982;&#x679C;&#x662F;<code>RollingUpdate</code>&#x7B56;&#x7565;&#xFF0C;&#x6839;&#x636E;<code>MaxSurge</code>&#x8BA1;&#x7B97;<code>Deployment</code>&#x7684;&#x526F;&#x672C;&#x6570;&#x91CF;&#x4E0A;&#x9650;&#xFF0C;&#x7136;&#x540E;&#x6839;&#x636E;<strong>Deployment&#x526F;&#x672C;&#x6570;&#x4E0A;&#x9650;&#x4E0E;&#x5F53;&#x524D;&#x603B;&#x526F;&#x672C;&#x6570;&#x7684;&#x5DEE;&#x503C;</strong>&#x548C;<strong>Deployment&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x4E0E;&#x65B0;ReplicaSet&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x7684;&#x5DEE;&#x503C;</strong>&#xFF0C;&#x9009;&#x62E9;&#x5176;&#x4E2D;&#x8F83;&#x5C0F;&#x7684;&#x52A0;&#x4E0A;&#x5F53;&#x524D;&#x65B0;<code>ReplicaSet</code>&#x7684;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x4F5C;&#x4E3A;&#x8C03;&#x6574;&#x540E;&#x7684;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x503C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet) (int32, error) {
+    switch deployment.Spec.Strategy.Type {
+    case apps.RollingUpdateDeploymentStrategyType:
+        // Check if we can scale up.
+        maxSurge, err := intstrutil.GetScaledValueFromIntOrPercent(deployment.Spec.Strategy.RollingUpdate.MaxSurge, int(*(deployment.Spec.Replicas)), true)
+        if err != nil {
+            return 0, err
+        }
+        // Find the total number of pods
+        currentPodCount := GetReplicaCountForReplicaSets(allRSs)
+        maxTotalPods := *(deployment.Spec.Replicas) + int32(maxSurge)
+        if currentPodCount &gt;= maxTotalPods {
+            // Cannot scale up.
+            return *(newRS.Spec.Replicas), nil
+        }
+        // Scale up.
+        scaleUpCount := maxTotalPods - currentPodCount
+        // Do not exceed the number of desired replicas.
+        scaleUpCount = min(scaleUpCount, *(deployment.Spec.Replicas)-*(newRS.Spec.Replicas))
+        return *(newRS.Spec.Replicas) + scaleUpCount, nil
+    case apps.RecreateDeploymentStrategyType:
+        return *(deployment.Spec.Replicas), nil
+    default:
+        return 0, fmt.Errorf(&quot;deployment type %v isn&apos;t supported&quot;, deployment.Spec.Strategy.Type)
+    }
+}
+</code></pre>
+<h5 id="&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;replicaset"><a name="&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;replicaset" class="plugin-anchor" href="#&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;replicaset"><i class="fa fa-link" aria-hidden="true"></i></a>&#x5C1D;&#x8BD5;&#x7F29;&#x5BB9;&#x65E7;ReplicaSet</h5>
+<p>&#x7F29;&#x5BB9;&#x65E7;<code>ReplicaSet</code>&#x7684;&#x8FC7;&#x7A0B;&#x4E2D;&#x9996;&#x5148;&#x8BA1;&#x7B97;&#x6700;&#x5927;&#x53EF;&#x7F29;&#x5BB9;&#x6570;&#x91CF;&#xFF0C;&#x5176;&#x8BA1;&#x7B97;&#x516C;&#x5F0F;&#x4E3A;<strong>&#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;-&#x6700;&#x5C0F;&#x53EF;&#x7528;&#x526F;&#x672C;&#x6570;-&#x65B0;ReplicaSet&#x4E0D;&#x53EF;&#x7528;&#x526F;&#x672C;&#x6570;</strong>&#xFF0C;&#x7136;&#x540E;&#x6839;&#x636E;&#x6700;&#x5927;&#x7F29;&#x5BB9;&#x6570;&#x91CF;&#x53BB;&#x7F29;&#x5BB9;&#x5904;&#x7406;&#x65E7;&#x7248;&#x672C;&#x7684;<code>ReplicaSet</code>&#xFF0C;&#x603B;&#x5171;&#x4F1A;&#x7ECF;&#x5386;&#x4E24;&#x8F6E;&#x7F29;&#x5BB9;&#xFF0C;&#x7B2C;&#x4E00;&#x6B21;&#x5148;&#x6E05;&#x7406;&#x65E7;<code>ReplicaSet</code>&#x4E2D;&#x7684;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;&#xFF0C;&#x8FD4;&#x56DE;&#x4E00;&#x4E2A;&#x6570;&#x91CF;<code>cleanupCount</code>&#xFF0C;&#x7136;&#x540E;&#x518D;&#x6B63;&#x5E38;&#x8FDB;&#x884C;&#x7F29;&#x5BB9;&#xFF0C;&#x8FD4;&#x56DE;&#x4E00;&#x4E2A;&#x6570;&#x91CF;<code>scaledDownCount</code>&#xFF0C;&#x5982;&#x679C;&#x4E24;&#x8005;&#x7684;&#x548C;&#x5927;&#x4E8E;0&#x8868;&#x793A;&#x8FDB;&#x884C;&#x4E86;&#x7F29;&#x5BB9;&#x64CD;&#x4F5C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) reconcileOldReplicaSets(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
+    logger := klog.FromContext(ctx)
+    oldPodsCount := deploymentutil.GetReplicaCountForReplicaSets(oldRSs)
+    // &#x6CA1;&#x6709;&#x526F;&#x672C;&#x53EF;&#x4EE5;&#x7F29;&#x5BB9;
+    if oldPodsCount == 0 {
+        return false, nil
+    }
+    allPodsCount := deploymentutil.GetReplicaCountForReplicaSets(allRSs)
+    logger.V(4).Info(&quot;New replica set&quot;, &quot;replicaSet&quot;, klog.KObj(newRS), &quot;availableReplicas&quot;, newRS.Status.AvailableReplicas)
+    maxUnavailable := deploymentutil.MaxUnavailable(*deployment)
+    minAvailable := *(deployment.Spec.Replicas) - maxUnavailable
+    newRSUnavailablePodCount := *(newRS.Spec.Replicas) - newRS.Status.AvailableReplicas
+    // &#x8BA1;&#x7B97;&#x6700;&#x5927;&#x7F29;&#x5BB9;&#x6570;&#x91CF;
+    maxScaledDown := allPodsCount - minAvailable - newRSUnavailablePodCount
+    if maxScaledDown &lt;= 0 {
+        return false, nil
+    }
+    // &#x7B2C;&#x4E00;&#x8F6E;&#x7F29;&#x5BB9; &#x6E05;&#x7406;&#x65E7;ReplicaSet&#x7684;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C; &#x8FD4;&#x56DE;&#x7F29;&#x5BB9;&#x7684;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;&#x6570;
+    oldRSs, cleanupCount, err := dc.cleanupUnhealthyReplicas(ctx, oldRSs, deployment, maxScaledDown)
+    if err != nil {
+        return false, nil
+    }
+    logger.V(4).Info(&quot;Cleaned up unhealthy replicas from old RSes&quot;, &quot;count&quot;, cleanupCount)
+
+    allRSs = append(oldRSs, newRS)
+    // &#x7B2C;&#x4E8C;&#x8F6E;&#x7F29;&#x5BB9; &#x6B63;&#x5E38;&#x7F29;&#x5BB9;&#x65E7;ReplicaSet &#x8FD4;&#x56DE;&#x6B63;&#x5E38;&#x7F29;&#x5BB9;&#x7684;&#x526F;&#x672C;&#x6570;
+    scaledDownCount, err := dc.scaleDownOldReplicaSetsForRollingUpdate(ctx, allRSs, oldRSs, deployment)
+    if err != nil {
+        return false, nil
+    }
+    logger.V(4).Info(&quot;Scaled down old RSes&quot;, &quot;deployment&quot;, klog.KObj(deployment), &quot;count&quot;, scaledDownCount)
+    // &#x8FD4;&#x56DE;&#x7ED3;&#x679C;&#x8868;&#x793A;&#x662F;&#x5426;&#x8FDB;&#x884C;&#x4E86;&#x7F29;&#x5BB9;
+    totalScaledDown := cleanupCount + scaledDownCount
+    return totalScaledDown &gt; 0, nil
+}
+</code></pre>
+<h6 id="&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;"><a name="&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;" class="plugin-anchor" href="#&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x7F29;&#x5BB9;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;</h6>
+<p>&#x9996;&#x5148;&#x5BF9;&#x6240;&#x6709;&#x65E7;&#x7248;&#x672C;&#x7684;&#x526F;&#x672C;&#x6309;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#xFF0C;&#x4F18;&#x5148;&#x5904;&#x7406;&#x521B;&#x5EFA;&#x66F4;&#x65E9;&#x7684;&#x526F;&#x672C;&#x3002;&#x904D;&#x5386;&#x6240;&#x6709;&#x65E7;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x603B;&#x5171;&#x7F29;&#x5BB9;&#x6570;&#x91CF;&#x4E0D;&#x80FD;&#x8D85;&#x8FC7;&#x65B9;&#x6CD5;&#x4E2D;&#x4F20;&#x5165;&#x7684;<code>maxCleanupCount</code>&#xFF0C;&#x6BCF;&#x4E2A;<code>ReplicaSet</code>&#x7684;&#x7F29;&#x5BB9;&#x9009;&#x62E9;&#x7F29;&#x5BB9;&#x4F59;&#x989D;&#x548C;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;&#x6570;&#x4E24;&#x8005;&#x4E2D;&#x8F83;&#x5C0F;&#x7684;&#xFF0C;&#x66F4;&#x65B0;<code>ReplicaSet</code>&#x7684;&#x526F;&#x672C;&#x6570;&#x4E3A;<code>Spec.Replicas-scaledDownCount</code>&#xFF0C;&#x5E76;&#x66F4;&#x65B0;&#x672C;&#x5730;&#x7F13;&#x5B58;&#x4E2D;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x6BCF;&#x6B21;&#x7F29;&#x5BB9;&#x7684;&#x503C;&#x8FDB;&#x884C;&#x7D2F;&#x52A0;&#x6700;&#x7EC8;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) cleanupUnhealthyReplicas(ctx context.Context, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment, maxCleanupCount int32) ([]*apps.ReplicaSet, int32, error) {
+    logger := klog.FromContext(ctx)
+    // &#x6839;&#x636E;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x4ECE;&#x65E9;&#x5230;&#x665A;&#x6392;&#x5E8F;
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(oldRSs))
+    // &#x521D;&#x59CB;&#x5316;&#x8BA1;&#x6570;
+    totalScaledDown := int32(0)
+    // &#x904D;&#x5386;ReplicaSet
+    for i, targetRS := range oldRSs {
+        // &#x53D7;maxCleanupCount&#x9650;&#x5236;&#x6E05;&#x7406;&#x7684;&#x6700;&#x5927;&#x6570;&#x91CF;
+        if totalScaledDown &gt;= maxCleanupCount {
+            break
+        }
+        if *(targetRS.Spec.Replicas) == 0 {
+            // &#x8DF3;&#x8FC7;&#x6CA1;&#x6709;&#x526F;&#x672C;&#x7684;ReplicaSet
+            continue
+        }
+        logger.V(4).Info(&quot;Found available pods in old RS&quot;, &quot;replicaSet&quot;, klog.KObj(targetRS), &quot;availableReplicas&quot;, targetRS.Status.AvailableReplicas)
+        if *(targetRS.Spec.Replicas) == targetRS.Status.AvailableReplicas {
+            // no unhealthy replicas found, no scaling required.
+            continue
+        }
+        // &#x8BA1;&#x7B97;&#x7F29;&#x5BB9;&#x6570;&#x91CF; &#x53D6;&#x7F29;&#x5BB9;&#x4F59;&#x989D;&#x548C;&#x4E0D;&#x53EF;&#x7528;&#x526F;&#x672C;&#x6570;&#x4E2D;&#x8F83;&#x5C0F;&#x7684;
+        scaledDownCount := min(maxCleanupCount-totalScaledDown, *(targetRS.Spec.Replicas)-targetRS.Status.AvailableReplicas)
+        newReplicasCount := *(targetRS.Spec.Replicas) - scaledDownCount
+        if newReplicasCount &gt; *(targetRS.Spec.Replicas) {
+            return nil, 0, fmt.Errorf(&quot;when cleaning up unhealthy replicas, got invalid request to scale down %s/%s %d -&gt; %d&quot;, targetRS.Namespace, targetRS.Name, *(targetRS.Spec.Replicas), newReplicasCount)
+        }
+        // &#x66F4;&#x65B0;ReplicaSet&#x526F;&#x672C;&#x6570;
+        _, updatedOldRS, err := dc.scaleReplicaSetAndRecordEvent(ctx, targetRS, newReplicasCount, deployment)
+        if err != nil {
+            return nil, totalScaledDown, err
+        }
+        // &#x7D2F;&#x52A0;&#x8BA1;&#x6570;
+        totalScaledDown += scaledDownCount
+        // &#x66F4;&#x65B0;&#x65E7;ReplicaSet&#x7F13;&#x5B58;
+        oldRSs[i] = updatedOldRS
+    }
+    return oldRSs, totalScaledDown, nil
+}
+</code></pre>
+<h6 id="&#x6B63;&#x5E38;&#x7F29;&#x5BB9;"><a name="&#x6B63;&#x5E38;&#x7F29;&#x5BB9;" class="plugin-anchor" href="#&#x6B63;&#x5E38;&#x7F29;&#x5BB9;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6B63;&#x5E38;&#x7F29;&#x5BB9;</h6>
+<p>&#x6B63;&#x5E38;&#x7F29;&#x5BB9;&#x7684;&#x903B;&#x8F91;&#x548C;&#x5904;&#x7406;&#x4E0D;&#x5065;&#x5EB7;&#x526F;&#x672C;&#x7C7B;&#x4F3C;&#xFF0C;&#x5148;&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#xFF0C;&#x7136;&#x540E;&#x76F8;&#x5F53;&#x4E8E;&#x662F;&#x91CD;&#x65B0;&#x8BA1;&#x7B97;&#x4E86;&#x6700;&#x5927;&#x53EF;&#x7F29;&#x5BB9;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x904D;&#x5386;<code>ReplicaSet</code>&#x5E76;&#x9009;&#x62E9;&#x7F29;&#x5BB9;&#x4F59;&#x989D;&#x548C;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x4E2D;&#x8F83;&#x5C0F;&#x7684;&#x4F5C;&#x4E3A;&#x7F29;&#x5BB9;&#x6570;&#x91CF;&#xFF0C;&#x66F4;&#x65B0;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x5E76;&#x8BA1;&#x6570;&#x7F29;&#x5BB9;&#x7684;&#x526F;&#x672C;&#x3002;</p>
+<pre class="language-"><code class="lang-Go">func (dc *DeploymentController) scaleDownOldReplicaSetsForRollingUpdate(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment) (int32, error) {
+    logger := klog.FromContext(ctx)
+
+    maxUnavailable := deploymentutil.MaxUnavailable(*deployment)
+    minAvailable := *(deployment.Spec.Replicas) - maxUnavailable
+    availablePodCount := deploymentutil.GetAvailableReplicaCountForReplicaSets(allRSs)
+    if availablePodCount &lt;= minAvailable {
+        return 0, nil
+    }
+    logger.V(4).Info(&quot;Found available pods in deployment, scaling down old RSes&quot;, &quot;deployment&quot;, klog.KObj(deployment), &quot;availableReplicas&quot;, availablePodCount)
+    // &#x6309;&#x521B;&#x5EFA;&#x65F6;&#x95F4;&#x6392;&#x5E8F;
+    sort.Sort(controller.ReplicaSetsByCreationTimestamp(oldRSs))
+    // &#x521D;&#x59CB;&#x5316;&#x8BA1;&#x6570;
+    totalScaledDown := int32(0)
+    // &#x8BA1;&#x7B97;&#x6700;&#x5927;&#x53EF;&#x7F29;&#x5BB9;&#x6570;&#x91CF;
+    totalScaleDownCount := availablePodCount - minAvailable
+    // &#x904D;&#x5386;ReplicaSet
+    for _, targetRS := range oldRSs {
+        // &#x6700;&#x5927;&#x7F29;&#x5BB9;&#x6570;&#x91CF;&#x7EA6;&#x675F;
+        if totalScaledDown &gt;= totalScaleDownCount {
+            break
+        }
+        if *(targetRS.Spec.Replicas) == 0 {
+            // &#x8DF3;&#x8FC7;&#x6CA1;&#x6709;&#x526F;&#x672C;&#x7684;ReplicaSet
+            continue
+        }
+        // &#x8BA1;&#x7B97;&#x7F29;&#x5BB9;&#x6570;&#x91CF;
+        scaleDownCount := min(*(targetRS.Spec.Replicas), totalScaleDownCount-totalScaledDown)
+        newReplicasCount := *(targetRS.Spec.Replicas) - scaleDownCount
+        if newReplicasCount &gt; *(targetRS.Spec.Replicas) {
+            return 0, fmt.Errorf(&quot;when scaling down old RS, got invalid request to scale down %s/%s %d -&gt; %d&quot;, targetRS.Namespace, targetRS.Name, *(targetRS.Spec.Replicas), newReplicasCount)
+        }
+        // &#x66F4;&#x65B0;ReplicaSet&#x526F;&#x672C;&#x6570;
+        _, _, err := dc.scaleReplicaSetAndRecordEvent(ctx, targetRS, newReplicasCount, deployment)
+        if err != nil {
+            return totalScaledDown, err
+        }
+        // &#x7D2F;&#x52A0;&#x8BA1;&#x6570;
+        totalScaledDown += scaleDownCount
+    }
+
+    return totalScaledDown, nil
+}
+</code></pre>
+<footer class="page-footer"><span class="copyright">&#xA9; 2025 lts0609. All rights reserved. all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x6700;&#x540E;&#x66F4;&#x65B0;&#x65F6;&#x95F4;&#xFF1A;
+2025-07-16 15:16:33
+</span></footer>
+<script>console.log("plugin-popup....");document.onclick = function(e){ e.target.tagName === "IMG" && window.open(e.target.src,e.target.src)}</script><style>img{cursor:pointer}</style> <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css"> <script>     window.klipse_settings = {         selector: ".language-klipse, .lang-eval-clojure",         selector_eval_js: ".lang-eval-js",         selector_eval_python_client: ".lang-eval-python",         selector_eval_php: ".lang-eval-php",         selector_eval_scheme: ".lang-eval-scheme",         selector_eval_ruby: ".lang-eval-ruby",         selector_reagent: ".lang-reagent",        selector_google_charts: ".lang-google-chart",        selector_es2017: ".lang-eval-es2017",        selector_jsx: ".lang-eval-jsx",        selector_transpile_jsx: ".lang-transpile-jsx",        selector_render_jsx: ".lang-render-jsx",        selector_react: ".lang-react",        selector_eval_markdown: ".lang-render-markdown",        selector_eval_lambdaway: ".lang-render-lambdaway",        selector_eval_cpp: ".lang-eval-cpp",        selector_eval_html: ".lang-render-html",        selector_sql: ".lang-eval-sql",        selector_brainfuck: "lang-eval-brainfuck",        selector_js: ".lang-transpile-cljs"    }; </script> <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="01-ControllerManager创建流程.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: ControllerManager创建流程">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"previous":{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"path":"kube-controller-manager/01-ControllerManager创建流程.md","ref":"kube-controller-manager/01-ControllerManager创建流程.md","articles":[]},"dir":"ltr"},"config":{"plugins":["-highlight","-lunr","-search","-sharing","-sharing-plus","pageview-count","page-toc-button","page-treeview","back-to-top-button","splitter","code","search-pro","popup","scroll-to-top","auto-scroll-table","anchors","klipse","prism","tbfed-pagefooter","livereload"],"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"© 2025 lts0609. All rights reserved.","modify_label":"最后更新时间：","modify_format":"YYYY-MM-DD HH:mm:ss"},"page-treeview":{"collapsed":false,"copyright":"","minHeaderCount":"1","minHeaderDeep":"1","sidebarHeader":"目录","collapse":true},"prism":{"css":["prismjs/themes/prism-tomorrow.css"],"lang":{"go":"go","yaml":"yaml"}},"scroll-to-top":{},"livereload":{},"splitter":{},"search-pro":{"multilingual":false,"indexing":{"delay":500,"minLength":2}},"auto-scroll-table":{},"popup":{},"code":{"copyButtons":true},"fontsettings":{"theme":"white","family":"sans","size":2},"page-toc-button":{"maxDepth":3,"minDepth":1,"position":"left"},"back-to-top-button":{},"pageview-count":{},"klipse":{"myConfigKey":"it's the default value","languages":["go","yaml"]},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false},"anchors":{}},"theme":"default","author":"lts0609","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"Kubernetes Learning","language":"zh-hans","gitbook":"*","description":"Kubernetes源码学习"},"file":{"path":"kube-controller-manager/02-DeploymentController原理详解.md","mtime":"2025-07-16T07:16:33.501Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-16T08:21:27.573Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-pageview-count/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-page-toc-button/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-back-to-top-button/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-splitter/splitter.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/jquery.mark.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-scroll-to-top/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-auto-scroll-table/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-livereload/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
