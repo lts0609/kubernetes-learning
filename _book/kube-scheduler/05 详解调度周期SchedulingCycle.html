@@ -1,0 +1,1556 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>详解调度周期SchedulingCycle(下) · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="06 详解绑定周期BindingCycle.html" />
+    
+    
+    <link rel="prev" href="04 详解调度周期SchedulingCycle.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Kubernetes源码学习
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Scheduler
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="01 Scheduler创建流程与调度队列.html">
+            
+                <a href="01 Scheduler创建流程与调度队列.html">
+            
+                    
+                    Scheduler创建流程与调度队列
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="02 调度器缓存Cache的实现.html">
+            
+                <a href="02 调度器缓存Cache的实现.html">
+            
+                    
+                    调度器缓存Cache的实现
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="03 Framework框架和调度流程.html">
+            
+                <a href="03 Framework框架和调度流程.html">
+            
+                    
+                    Framework框架和调度流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.4" data-path="04 详解调度周期SchedulingCycle.html">
+            
+                <a href="04 详解调度周期SchedulingCycle.html">
+            
+                    
+                    详解调度周期SchedulingCycle(上)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.2.5" data-path="05 详解调度周期SchedulingCycle.html">
+            
+                <a href="05 详解调度周期SchedulingCycle.html">
+            
+                    
+                    详解调度周期SchedulingCycle(下)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.6" data-path="06 详解绑定周期BindingCycle.html">
+            
+                <a href="06 详解绑定周期BindingCycle.html">
+            
+                    
+                    详解绑定周期BindingCycle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.7" data-path="07 失败处理与抢占调度Preemption.html">
+            
+                <a href="07 失败处理与抢占调度Preemption.html">
+            
+                    
+                    失败处理与抢占调度Preemption
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.8" data-path="08 调度器扩展与实践.html">
+            
+                <a href="08 调度器扩展与实践.html">
+            
+                    
+                    调度器扩展与实践
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../kube-controller-manager/">
+            
+                <a href="../kube-controller-manager/">
+            
+                    
+                    Controller Manager
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../kube-controller-manager/01 ControllerManager创建流程.html">
+            
+                <a href="../kube-controller-manager/01 ControllerManager创建流程.html">
+            
+                    
+                    ControllerManager创建流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../kube-controller-manager/02 DeploymentController原理详解.html">
+            
+                <a href="../kube-controller-manager/02 DeploymentController原理详解.html">
+            
+                    
+                    DeploymentController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >详解调度周期SchedulingCycle(下)</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;schedulingcycle&#x4E0B;">&#x8BE6;&#x89E3;&#x8C03;&#x5EA6;&#x5468;&#x671F;SchedulingCycle(&#x4E0B;)</h1>
+<p>&#x5728;&#x4E0A;&#x7BC7;&#x4E2D;&#x8BE6;&#x7EC6;&#x4ECB;&#x7ECD;&#x4E86;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x7684;&#x4E0A;&#x534A;&#x6BB5;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;<code>Predicates</code>&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#xFF0C;&#x5728;&#x5176;&#x8FC7;&#x7A0B;&#x4E2D;&#x8FD4;&#x56DE;&#x4E86;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x5BF9;&#x8C61;<code>feasibleNodes</code>&#xFF0C;&#x5B83;&#x662F;&#x4E00;&#x4E2A;<code>NodeInfo</code>&#x7C7B;&#x578B;&#x7684;&#x5207;&#x7247;&#xFF0C;&#x4FDD;&#x5B58;&#x4E86;&#x5728;&#x6761;&#x4EF6;&#x8FC7;&#x6EE4;&#x540E;&#x7B26;&#x5408;Pod&#x8C03;&#x5EA6;&#x8981;&#x6C42;&#x7684;&#x8282;&#x70B9;&#x4FE1;&#x606F;&#x3002;</p>
+<p>&#x56DE;&#x5230;<code>Predicates</code>&#x7ED3;&#x675F;&#x7684;&#x4F4D;&#x7F6E;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;<code>schedulePod()</code>&#x65B9;&#x6CD5;&#x4E2D;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) (result ScheduleResult, err error) {
+    ......
+    <span class="hljs-comment">// Predicates&#x9636;&#x6BB5; &#x8FD4;&#x56DE;&#x9884;&#x9009;Node&#x548C;&#x8BCA;&#x65AD;&#x7ED3;&#x679C;</span>
+    feasibleNodes, diagnosis, err := sched.findNodesThatFitPod(ctx, fwk, state, pod)
+    ......
+    <span class="hljs-comment">// Case1:&#x8282;&#x70B9;&#x5217;&#x8868;&#x4E3A;&#x7A7A; &#x8FD4;&#x56DE;&#x5931;&#x8D25;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(feasibleNodes) == <span class="hljs-number">0</span> {
+        <span class="hljs-comment">// &#x4E0A;&#x5C42;&#x51FD;&#x6570;&#x53EA;&#x4F1A;&#x5173;&#x6CE8;err&#x662F;&#x5426;&#x4E3A;&#x7A7A; result&#x672A;&#x88AB;&#x8D4B;&#x503C;</span>
+        <span class="hljs-keyword">return</span> result, &amp;framework.FitError{
+            Pod:         pod,
+            NumAllNodes: sched.nodeInfoSnapshot.NumNodes(),
+            Diagnosis:   diagnosis,
+        }
+    }
+
+    <span class="hljs-comment">// Case2:&#x5217;&#x8868;&#x957F;&#x5EA6;&#x4E3A;1 &#x4E0D;&#x9700;&#x8981;Priorities&#x9636;&#x6BB5; &#x76F4;&#x63A5;&#x8D70;&#x540E;&#x7EED;&#x6D41;&#x7A0B;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(feasibleNodes) == <span class="hljs-number">1</span> {
+        <span class="hljs-comment">// &#x5728;Predicates&#x9636;&#x6BB5;&#x6210;&#x529F;&#x65F6;&#x4F1A;&#x6839;&#x636E;feasibleNodes&#x586B;&#x5145;result&#x5BF9;&#x8C61;</span>
+        <span class="hljs-keyword">return</span> ScheduleResult{
+            SuggestedHost:  feasibleNodes[<span class="hljs-number">0</span>].Node().Name,
+            EvaluatedNodes: <span class="hljs-number">1</span> + diagnosis.NodeToStatus.Len(),
+            FeasibleNodes:  <span class="hljs-number">1</span>,
+        }, <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// Case3:&#x5217;&#x8868;&#x957F;&#x5EA6;&gt;1 &#x9700;&#x8981;Priorities&#x9636;&#x6BB5;&#x9009;&#x51FA;&#x6700;&#x5408;&#x9002;&#x7684;&#x8282;&#x70B9;&#x518D;&#x8FD4;&#x56DE;</span>
+    priorityList, err := prioritizeNodes(ctx, sched.Extenders, fwk, state, pod, feasibleNodes)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> result, err
+    }
+
+    host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+    trace.Step(<span class="hljs-string">&quot;Prioritizing done&quot;</span>)
+
+    <span class="hljs-keyword">return</span> ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: <span class="hljs-built_in">len</span>(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  <span class="hljs-built_in">len</span>(feasibleNodes),
+    }, err
+}
+</code></pre>
+<h3 id="priorities&#x9636;&#x6BB5;">Priorities&#x9636;&#x6BB5;</h3>
+<p><code>Priorities</code>&#x9636;&#x6BB5;&#x7684;&#x5165;&#x53E3;&#x51FD;&#x6570;&#x662F;<code>prioritizeNodes()</code>&#xFF0C;&#x5BF9;&#x8C03;&#x5EA6;&#x6D41;&#x7A0B;&#x6709;&#x8FC7;&#x57FA;&#x672C;&#x4E86;&#x89E3;&#x7684;&#x4E00;&#x5B9A;&#x90FD;&#x77E5;&#x9053;Pod&#x7684;&#x8C03;&#x5EA6;&#x6709;<code>&#x9884;&#x9009;</code>&#x548C;<code>&#x4F18;&#x9009;</code>&#x4E24;&#x4E2A;&#x9636;&#x6BB5;&#xFF0C;&#x5F88;&#x660E;&#x663E;&#x5728;&#x8FD9;&#x4E2A;&#x9636;&#x6BB5;&#x8981;&#x505A;&#x7684;&#x4E8B;&#x60C5;&#x5C31;&#x662F;&#x5BF9;&#x4E0A;&#x4E00;&#x6B65;&#x4E2D;&#x8FC7;&#x6EE4;&#x51FA;&#x6765;&#x7684;&#x8282;&#x70B9;&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#xFF0C;&#x7136;&#x540E;&#x9009;&#x62E9;&#x6700;&#x5408;&#x9002;&#x7684;&#x4E00;&#x4E2A;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error) {
+    logger := klog.FromContext(ctx)
+
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(extenders) == <span class="hljs-number">0</span> &amp;&amp; !fwk.HasScorePlugins() {
+        result := <span class="hljs-built_in">make</span>([]framework.NodePluginScores, <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(nodes))
+        <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> nodes {
+            result = <span class="hljs-built_in">append</span>(result, framework.NodePluginScores{
+                Name:       nodes[i].Node().Name,
+                TotalScore: <span class="hljs-number">1</span>,
+            })
+        }
+        <span class="hljs-keyword">return</span> result, <span class="hljs-literal">nil</span>
+    }
+
+    <span class="hljs-comment">// Run PreScore plugins.</span>
+    preScoreStatus := fwk.RunPreScorePlugins(ctx, state, pod, nodes)
+    <span class="hljs-keyword">if</span> !preScoreStatus.IsSuccess() {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, preScoreStatus.AsError()
+    }
+
+    <span class="hljs-comment">// Run the Score plugins.</span>
+    nodesScores, scoreStatus := fwk.RunScorePlugins(ctx, state, pod, nodes)
+    <span class="hljs-keyword">if</span> !scoreStatus.IsSuccess() {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, scoreStatus.AsError()
+    }
+
+    <span class="hljs-comment">// Additional details logged at level 10 if enabled.</span>
+    loggerVTen := logger.V(<span class="hljs-number">10</span>)
+    <span class="hljs-keyword">if</span> loggerVTen.Enabled() {
+        <span class="hljs-keyword">for</span> _, nodeScore := <span class="hljs-keyword">range</span> nodesScores {
+            <span class="hljs-keyword">for</span> _, pluginScore := <span class="hljs-keyword">range</span> nodeScore.Scores {
+                loggerVTen.Info(<span class="hljs-string">&quot;Plugin scored node for pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;plugin&quot;</span>, pluginScore.Name, <span class="hljs-string">&quot;node&quot;</span>, nodeScore.Name, <span class="hljs-string">&quot;score&quot;</span>, pluginScore.Score)
+            }
+        }
+    }
+
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(extenders) != <span class="hljs-number">0</span> &amp;&amp; nodes != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// allNodeExtendersScores has all extenders scores for all nodes.</span>
+        <span class="hljs-comment">// It is keyed with node name.</span>
+        allNodeExtendersScores := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*framework.NodePluginScores, <span class="hljs-built_in">len</span>(nodes))
+        <span class="hljs-keyword">var</span> mu sync.Mutex
+        <span class="hljs-keyword">var</span> wg sync.WaitGroup
+        <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> extenders {
+            <span class="hljs-keyword">if</span> !extenders[i].IsInterested(pod) {
+                <span class="hljs-keyword">continue</span>
+            }
+            wg.Add(<span class="hljs-number">1</span>)
+            <span class="hljs-keyword">go</span> <span class="hljs-keyword">func</span>(extIndex <span class="hljs-keyword">int</span>) {
+                metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Inc()
+                <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+                    metrics.Goroutines.WithLabelValues(metrics.PrioritizingExtender).Dec()
+                    wg.Done()
+                }()
+                prioritizedList, weight, err := extenders[extIndex].Prioritize(pod, nodes)
+                <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                    <span class="hljs-comment">// Prioritization errors from extender can be ignored, let k8s/other extenders determine the priorities</span>
+                    logger.V(<span class="hljs-number">5</span>).Info(<span class="hljs-string">&quot;Failed to run extender&apos;s priority function. No score given by this extender.&quot;</span>, <span class="hljs-string">&quot;error&quot;</span>, err, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;extender&quot;</span>, extenders[extIndex].Name())
+                    <span class="hljs-keyword">return</span>
+                }
+                mu.Lock()
+                <span class="hljs-keyword">defer</span> mu.Unlock()
+                <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> *prioritizedList {
+                    nodename := (*prioritizedList)[i].Host
+                    score := (*prioritizedList)[i].Score
+                    <span class="hljs-keyword">if</span> loggerVTen.Enabled() {
+                        loggerVTen.Info(<span class="hljs-string">&quot;Extender scored node for pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;extender&quot;</span>, extenders[extIndex].Name(), <span class="hljs-string">&quot;node&quot;</span>, nodename, <span class="hljs-string">&quot;score&quot;</span>, score)
+                    }
+
+                    <span class="hljs-comment">// MaxExtenderPriority may diverge from the max priority used in the scheduler and defined by MaxNodeScore,</span>
+                    <span class="hljs-comment">// therefore we need to scale the score returned by extenders to the score range used by the scheduler.</span>
+                    finalscore := score * weight * (framework.MaxNodeScore / extenderv1.MaxExtenderPriority)
+
+                    <span class="hljs-keyword">if</span> allNodeExtendersScores[nodename] == <span class="hljs-literal">nil</span> {
+                        allNodeExtendersScores[nodename] = &amp;framework.NodePluginScores{
+                            Name:   nodename,
+                            Scores: <span class="hljs-built_in">make</span>([]framework.PluginScore, <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(extenders)),
+                        }
+                    }
+                    allNodeExtendersScores[nodename].Scores = <span class="hljs-built_in">append</span>(allNodeExtendersScores[nodename].Scores, framework.PluginScore{
+                        Name:  extenders[extIndex].Name(),
+                        Score: finalscore,
+                    })
+                    allNodeExtendersScores[nodename].TotalScore += finalscore
+                }
+            }(i)
+        }
+        <span class="hljs-comment">// wait for all go routines to finish</span>
+        wg.Wait()
+        <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> nodesScores {
+            <span class="hljs-keyword">if</span> score, ok := allNodeExtendersScores[nodes[i].Node().Name]; ok {
+                nodesScores[i].Scores = <span class="hljs-built_in">append</span>(nodesScores[i].Scores, score.Scores...)
+                nodesScores[i].TotalScore += score.TotalScore
+            }
+        }
+    }
+
+    <span class="hljs-keyword">if</span> loggerVTen.Enabled() {
+        <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> nodesScores {
+            loggerVTen.Info(<span class="hljs-string">&quot;Calculated node&apos;s final score for pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;node&quot;</span>, nodesScores[i].Name, <span class="hljs-string">&quot;score&quot;</span>, nodesScores[i].TotalScore)
+        }
+    }
+    <span class="hljs-keyword">return</span> nodesScores, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x901A;&#x8FC7;&#x5BF9;<code>Kubernetes&#x6E90;&#x7801;</code>&#x7684;&#x5B66;&#x4E60;&#xFF0C;&#x53EF;&#x4EE5;&#x611F;&#x89C9;&#x5230;&#x5B83;&#x7684;&#x4EE3;&#x7801;&#x662F;&#x5F88;&#x7ED3;&#x6784;&#x5316;&#x7684;&#xFF0C;<code>prioritizeNodes()</code>&#x51FD;&#x6570;&#x6574;&#x4F53;&#x8F83;&#x957F;&#xFF0C;&#x6211;&#x4EEC;&#x5206;&#x5757;&#x6765;&#x7406;&#x6E05;&#x5B83;&#x7684;&#x903B;&#x8F91;&#x3002;&#x9996;&#x5148;&#x6839;&#x636E;&#x51FD;&#x6570;&#x7B7E;&#x540D;&#xFF0C;&#x5B83;&#x7684;&#x5165;&#x53C2;&#x5305;&#x62EC;&#xFF1A;&#x7528;&#x4E8E;&#x63A7;&#x5236;&#x751F;&#x547D;&#x5468;&#x671F;&#x7684;&#x4E0A;&#x4E0B;&#x6587;&#x53C2;&#x6570;<code>ctx</code>&#xFF0C;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;<code>extenders</code>&#xFF0C;&#x8C03;&#x5EA6;&#x6846;&#x67B6;&#x5B9E;&#x4F8B;<code>fwk</code>&#xFF0C;&#x5B58;&#x50A8;&#x8C03;&#x5EA6;&#x72B6;&#x6001;&#x7684;<code>state</code>&#xFF0C;Pod&#x4FE1;&#x606F;&#x5BF9;&#x8C61;<code>pod</code>&#xFF0C;&#x4EE5;&#x53CA;&#x4E0A;&#x4E00;&#x6B65;&#x8FD4;&#x56DE;&#x7684;&#x8282;&#x70B9;&#x5217;&#x8868;<code>nodes</code>&#x3002;&#x8FD4;&#x56DE;&#x503C;&#x662F;&#x4E00;&#x4E2A;<code>NodePluginScores</code>&#x5207;&#x7247;&#x7C7B;&#x578B;&#x7684;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x679C;&#xFF0C;&#x540E;&#x7EED;&#x4F1A;&#x7ECF;&#x8FC7;<code>selectHost()</code>&#x51FD;&#x6570;&#xFF0C;&#x6700;&#x7EC8;&#x6572;&#x5B9A;&#x7684;&#x76EE;&#x6807;&#x8282;&#x70B9;&#x5E76;&#x8FD4;&#x56DE;&#x8282;&#x70B9;&#x540D;&#x79F0;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error)
+</code></pre>
+<p>&#x5148;&#x6765;&#x770B;&#x4E0D;&#x5305;&#x62EC;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;&#x7684;&#x903B;&#x8F91;&#x90E8;&#x5206;&#xFF0C;&#x5982;&#x679C;&#x6CA1;&#x6709;&#x8C03;&#x5EA6;&#x6269;&#x5C55;&#x5668;&#x548C;<code>Score</code>&#x63D2;&#x4EF6;&#xFF0C;&#x5C31;&#x628A;&#x6240;&#x6709;&#x7684;&#x8282;&#x70B9;&#x90FD;&#x6253;<code>1&#x5206;</code>&#x7136;&#x540E;&#x8FD4;&#x56DE;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> prioritizeNodes(
+    ctx context.Context,
+    extenders []framework.Extender,
+    fwk framework.Framework,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) ([]framework.NodePluginScores, error) {
+    logger := klog.FromContext(ctx)
+    <span class="hljs-comment">// &#x6CA1;&#x6709;&#x6269;&#x5C55;&#x5668;&#x4E5F;&#x6CA1;&#x6709;&#x8BC4;&#x5206;&#x63D2;&#x4EF6; &#x7EDF;&#x4E00;&#x7ED9;&#x4E00;&#x5206;&#x5E76;&#x8FD4;&#x56DE;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(extenders) == <span class="hljs-number">0</span> &amp;&amp; !fwk.HasScorePlugins() {
+        result := <span class="hljs-built_in">make</span>([]framework.NodePluginScores, <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(nodes))
+        <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> nodes {
+            result = <span class="hljs-built_in">append</span>(result, framework.NodePluginScores{
+                Name:       nodes[i].Node().Name,
+                TotalScore: <span class="hljs-number">1</span>,
+            })
+        }
+        <span class="hljs-keyword">return</span> result, <span class="hljs-literal">nil</span>
+    }
+
+    <span class="hljs-comment">// PreScore&#x6269;&#x5C55;&#x70B9;</span>
+    preScoreStatus := fwk.RunPreScorePlugins(ctx, state, pod, nodes)
+    <span class="hljs-keyword">if</span> !preScoreStatus.IsSuccess() {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, preScoreStatus.AsError()
+    }
+
+    <span class="hljs-comment">// Score&#x6269;&#x5C55;&#x70B9;</span>
+    nodesScores, scoreStatus := fwk.RunScorePlugins(ctx, state, pod, nodes)
+    <span class="hljs-keyword">if</span> !scoreStatus.IsSuccess() {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, scoreStatus.AsError()
+    }
+
+    <span class="hljs-comment">// &#x8BE6;&#x7EC6;&#x65E5;&#x5FD7;&#x8F93;&#x51FA;</span>
+    loggerVTen := logger.V(<span class="hljs-number">10</span>)
+    <span class="hljs-keyword">if</span> loggerVTen.Enabled() {
+        <span class="hljs-keyword">for</span> _, nodeScore := <span class="hljs-keyword">range</span> nodesScores {
+            <span class="hljs-keyword">for</span> _, pluginScore := <span class="hljs-keyword">range</span> nodeScore.Scores {
+                loggerVTen.Info(<span class="hljs-string">&quot;Plugin scored node for pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;plugin&quot;</span>, pluginScore.Name, <span class="hljs-string">&quot;node&quot;</span>, nodeScore.Name, <span class="hljs-string">&quot;score&quot;</span>, pluginScore.Score)
+            }
+        }
+    }
+    ......
+}
+</code></pre>
+<p><code>RunPreScorePlugins()</code>&#x7684;&#x5B9E;&#x73B0;&#x548C;<code>RunPreFilterPlugins()</code>&#x975E;&#x5E38;&#x7C7B;&#x4F3C;&#xFF0C;&#x540C;&#x6837;&#x662F;&#x505A;&#x4E86;&#x4E24;&#x5927;&#x7C7B;&#x4E8B;&#x60C5;&#xFF1A;&#x5728;&#x904D;&#x5386;&#x6267;&#x884C;<code>PreScore</code>&#x63D2;&#x4EF6;&#x7684;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x8C03;&#x7528;<code>cycleState.Write()</code>&#x8BB0;&#x5F55;&#x4FE1;&#x606F;&#x5230;<code>cycleState</code>&#x4E2D;&#xFF0C;&#x5982;&#x6C61;&#x70B9;&#x5BB9;&#x5FCD;&#x548C;&#x4EB2;&#x548C;&#x6027;&#x7B49;&#xFF0C;&#x5E76;&#x5728;&#x904D;&#x5386;&#x7ED3;&#x675F;&#x540E;&#x628A;&#x6CA1;&#x6709;&#x76F8;&#x5173;&#x6761;&#x4EF6;&#x540E;&#x7EED;&#x4E0D;&#x9700;&#x8981;&#x6267;&#x884C;&#x7684;<code>Score</code>&#x63D2;&#x4EF6;&#x4E5F;&#x8BB0;&#x5F55;&#x5230;<code>cycleState</code>&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) RunPreScorePlugins(
+    ctx context.Context,
+    state *framework.CycleState,
+    pod *v1.Pod,
+    nodes []*framework.NodeInfo,
+) (status *framework.Status) {
+    startTime := time.Now()
+    skipPlugins := sets.New[<span class="hljs-keyword">string</span>]()
+    <span class="hljs-comment">// &#x6700;&#x540E;&#x628A;Score&#x9636;&#x6BB5;&#x4E0D;&#x9700;&#x8981;&#x6267;&#x884C;&#x7684;&#x63D2;&#x4EF6;&#x8BB0;&#x5F55;&#x5230;cycleState</span>
+    <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+        state.SkipScorePlugins = skipPlugins
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.PreScore, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(<span class="hljs-number">4</span>).Enabled()
+    <span class="hljs-keyword">if</span> verboseLogs {
+        logger = klog.LoggerWithName(logger, <span class="hljs-string">&quot;PreScore&quot;</span>)
+    }
+    <span class="hljs-comment">// &#x904D;&#x5386;&#x6267;&#x884C;PreScore&#x63D2;&#x4EF6;&#x903B;&#x8F91;</span>
+    <span class="hljs-keyword">for</span> _, pl := <span class="hljs-keyword">range</span> f.preScorePlugins {
+        ctx := ctx
+        <span class="hljs-keyword">if</span> verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runPreScorePlugin(ctx, pl, state, pod, nodes)
+        <span class="hljs-keyword">if</span> status.IsSkip() {
+            skipPlugins.Insert(pl.Name())
+            <span class="hljs-keyword">continue</span>
+        }
+        <span class="hljs-keyword">if</span> !status.IsSuccess() {
+            <span class="hljs-keyword">return</span> framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;running PreScore plugin %q: %w&quot;</span>, pl.Name(), status.AsError()))
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x4EE5;Kubernetes&#x7684;&#x9ED8;&#x8BA4;&#x63D2;&#x4EF6;&#x914D;&#x7F6E;&#x4E3A;&#x4F8B;&#xFF0C;&#x5206;&#x6790;<code>PreScore</code>&#x548C;<code>Score</code>&#x63D2;&#x4EF6;&#x7684;&#x884C;&#x4E3A;&#xFF0C;&#x7531;&#x4E8E;<code>Weight</code>&#x6743;&#x91CD;&#x5B57;&#x6BB5;&#x4E00;&#x5B9A;&#x662F;&#x4F5C;&#x7528;&#x4E8E;<code>Score</code>&#x76F8;&#x5173;&#x7684;&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x6240;&#x4EE5;&#x9009;&#x62E9;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x4F5C;&#x4E3A;&#x5206;&#x6790;&#x5BF9;&#x8C61;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> getDefaultPlugins() *v1.Plugins {
+    plugins := &amp;v1.Plugins{
+        MultiPoint: v1.PluginSet{
+            Enabled: []v1.Plugin{
+                {Name: names.SchedulingGates},
+                {Name: names.PrioritySort},
+                {Name: names.NodeUnschedulable},
+                {Name: names.NodeName},
+                {Name: names.TaintToleration, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">3</span>)},
+                {Name: names.NodeAffinity, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">2</span>)},
+                {Name: names.NodePorts},
+                {Name: names.NodeResourcesFit, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">1</span>)},
+                {Name: names.VolumeRestrictions},
+                {Name: names.NodeVolumeLimits},
+                {Name: names.VolumeBinding},
+                {Name: names.VolumeZone},
+                {Name: names.PodTopologySpread, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">2</span>)},
+                {Name: names.InterPodAffinity, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">2</span>)},
+                {Name: names.DefaultPreemption},
+                {Name: names.NodeResourcesBalancedAllocation, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">1</span>)},
+                {Name: names.ImageLocality, Weight: ptr.To[<span class="hljs-keyword">int32</span>](<span class="hljs-number">1</span>)},
+                {Name: names.DefaultBinder},
+            },
+        },
+    }
+    applyFeatureGates(plugins)
+
+    <span class="hljs-keyword">return</span> plugins
+}
+</code></pre>
+<p>&#x5728;&#x7ECF;&#x8FC7;&#x4ECE;<code>&#x7B97;&#x6CD5;&#x786C;&#x7F16;&#x7801;</code>&#x5230;<code>Scheduler Framework</code>&#x7684;&#x91CD;&#x6784;&#x540E;&#xFF0C;&#x63D2;&#x4EF6;&#x90FD;&#x5728;&#x8DEF;&#x5F84;<code>pkg/scheduler/framework/plugins</code>&#x4E0B;&#x5B9A;&#x4E49;&#x3002;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x53EF;&#x4EE5;&#x5728;&#x8BE5;&#x8DEF;&#x5F84;&#x4E0B;&#x627E;&#x5230;&#xFF0C;&#x4E00;&#x822C;&#x6BCF;&#x4E2A;&#x63D2;&#x4EF6;&#x76EE;&#x5F55;&#x4E0B;&#x90FD;&#x662F;&#x7531;&#x7B97;&#x6CD5;&#x5B9E;&#x73B0;&#x548C;&#x5355;&#x5143;&#x6D4B;&#x8BD5;&#x4E24;&#x4E2A;&#x6587;&#x4EF6;&#x7EC4;&#x6210;&#x3002;</p>
+<p>&#x5728;<code>taint_toleration.go</code>&#x6587;&#x4EF6;&#x4E2D;&#xFF0C;&#x53EF;&#x4EE5;&#x770B;&#x5230;&#x8BE5;&#x63D2;&#x4EF6;&#x5B9E;&#x73B0;&#x4E86;<code>Filter&#x3001;PreScore&#x3001;Score&#x3001;NormalizeScore</code>&#x63A5;&#x53E3;&#xFF0C;&#x5176;&#x4E2D;&#x7684;&#x903B;&#x8F91;&#x6BD4;&#x8F83;&#x7B80;&#x5355;&#xFF0C;<code>PreScore</code>&#x6269;&#x5C55;&#x70B9;&#x65F6;&#x4F7F;&#x7528;<code>cycleState.Write()</code>&#x8BB0;&#x5F55;&#x6C61;&#x70B9;&#x5BB9;&#x5FCD;&#x4FE1;&#x606F;&#x5230;<code>cycleState</code>&#xFF0C;&#x5230;<code>Score</code>&#x6269;&#x5C55;&#x70B9;&#x65F6;<code>TaintToleration</code>&#x6839;&#x636E;&#x5199;&#x5165;&#x65F6;&#x7684;key&#x4F7F;&#x7528;<code>cycleState.Read()</code>&#x8BFB;&#x51FA;<code>PreScore</code>&#x9636;&#x6BB5;&#x8BB0;&#x5F55;&#x7684;&#x6570;&#x636E;&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x8F6F;&#x6027;&#x6C61;&#x70B9;&#x5C31;&#x8BA1;&#x6570;&#x52A0;&#x4E00;&#xFF0C;&#x6700;&#x540E;&#x8FD4;&#x56DE;&#x7ED3;&#x679C;&#x3002;<code>NormalizeScore</code>&#x6269;&#x5C55;&#x70B9;&#x8C03;&#x7528;&#x4E86;&#x9ED8;&#x8BA4;&#x7684;&#x5F52;&#x4E00;&#x5316;&#x903B;&#x8F91;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (pl *TaintToleration) PreScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) *framework.Status {
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(nodes) == <span class="hljs-number">0</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+    }
+    tolerationsPreferNoSchedule := getAllTolerationPreferNoSchedule(pod.Spec.Tolerations)
+    state := &amp;preScoreState{
+        tolerationsPreferNoSchedule: tolerationsPreferNoSchedule,
+    }
+    cycleState.Write(preScoreStateKey, state)
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-keyword">func</span> (pl *TaintToleration) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) (<span class="hljs-keyword">int64</span>, *framework.Status) {
+    nodeInfo, err := pl.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>, framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;getting node %q from Snapshot: %w&quot;</span>, nodeName, err))
+    }
+    node := nodeInfo.Node()
+
+    s, err := getPreScoreState(state)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>, framework.AsStatus(err)
+    }
+
+    score := <span class="hljs-keyword">int64</span>(countIntolerableTaintsPreferNoSchedule(node.Spec.Taints, s.tolerationsPreferNoSchedule))
+    <span class="hljs-keyword">return</span> score, <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-keyword">func</span> (pl *TaintToleration) NormalizeScore(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+    <span class="hljs-keyword">return</span> helper.DefaultNormalizeScore(framework.MaxNodeScore, <span class="hljs-literal">true</span>, scores)
+}
+
+<span class="hljs-keyword">func</span> countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.Toleration) (intolerableTaints <span class="hljs-keyword">int</span>) {
+    <span class="hljs-keyword">for</span> _, taint := <span class="hljs-keyword">range</span> taints {
+        <span class="hljs-comment">// &#x4EC5;&#x5904;&#x7406;&#x8F6F;&#x6027;&#x6C61;&#x70B9;</span>
+        <span class="hljs-keyword">if</span> taint.Effect != v1.TaintEffectPreferNoSchedule {
+            <span class="hljs-keyword">continue</span>
+        }
+        <span class="hljs-comment">// &#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x8BE5;&#x6C61;&#x70B9;&#x65F6;&#x8BA1;&#x6570;+1</span>
+        <span class="hljs-keyword">if</span> !v1helper.TolerationsTolerateTaint(tolerations, &amp;taint) {
+            intolerableTaints++
+        }
+    }
+    <span class="hljs-comment">// &#x8FD4;&#x56DE;&#x4E0D;&#x80FD;&#x5BB9;&#x5FCD;&#x6C61;&#x70B9;&#x8BA1;&#x6570;&#x7ED3;&#x679C;</span>
+    <span class="hljs-keyword">return</span>
+}
+</code></pre>
+<h4 id="score&#x6269;&#x5C55;&#x70B9;&#x4E0E;normalizescore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;">Score&#x6269;&#x5C55;&#x70B9;&#x4E0E;NormalizeScore&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;</h4>
+<p><code>RunScorePlugins()</code>&#x7684;&#x5B9E;&#x73B0;&#x548C;<code>RunFilterPlugins()</code>&#x7C7B;&#x4F3C;&#x3002;&#x9996;&#x5148;&#xFF0C;<code>Filter</code>&#x63D2;&#x4EF6;&#x6267;&#x884C;&#x7684;&#x8FC7;&#x7A0B;&#x4E2D;&#xFF0C;&#x72B6;&#x6001;&#x88AB;&#x5B58;&#x50A8;&#x5728;<code>CycleState</code>&#x5BF9;&#x8C61;&#x5E76;&#x8BFB;&#x5199;&#xFF0C;&#x8FC7;&#x6EE4;&#x7684;&#x884C;&#x4E3A;&#x5C5E;&#x4E8E;&#x8D23;&#x4EFB;&#x94FE;&#x6A21;&#x5F0F;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x5904;&#x4E0D;&#x901A;&#x8FC7;&#x5C31;&#x76F4;&#x63A5;&#x5931;&#x8D25;&#x9000;&#x51FA;&#xFF0C;&#x6240;&#x4EE5;&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#x8282;&#x70B9;&#x5C42;&#x9762;&#x5E76;&#x884C;&#x4F46;&#x63D2;&#x4EF6;&#x5C42;&#x9762;&#x662F;&#x4E32;&#x884C;&#x7684;&#x3002;&#x8BC4;&#x5206;&#x9636;&#x6BB5;&#x4E5F;&#x662F;&#x8282;&#x70B9;&#x5C42;&#x9762;&#x4E32;&#x884C;&#x548C;&#x63D2;&#x4EF6;&#x5C42;&#x9762;&#x5E76;&#x884C;&#xFF0C;&#x5982;&#x6709;&#x7591;&#x95EE;&#x53EF;&#x4EE5;&#x5BF9;&#x6BD4;<code>Predicates</code>&#x9636;&#x6BB5;&#x7684;<code>findNodesThatPassFilters()</code>&#x4E0E;<code>Priorities</code>&#x9636;&#x6BB5;&#x7684;<code>RunScorePlugins()</code>&#x65B9;&#x6CD5;&#x5E76;&#x52A0;&#x4EE5;&#x8BE6;&#x7EC6;&#x5BF9;&#x6BD4;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) RunScorePlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) (ns []framework.NodePluginScores, status *framework.Status) {
+    startTime := time.Now()
+    <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Score, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    allNodePluginScores := <span class="hljs-built_in">make</span>([]framework.NodePluginScores, <span class="hljs-built_in">len</span>(nodes))
+    numPlugins := <span class="hljs-built_in">len</span>(f.scorePlugins)
+    plugins := <span class="hljs-built_in">make</span>([]framework.ScorePlugin, <span class="hljs-number">0</span>, numPlugins)
+    pluginToNodeScores := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]framework.NodeScoreList, numPlugins)
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;Score&#x6269;&#x5C55;&#x70B9;&#x4F7F;&#x7528;&#x7684;&#x63D2;&#x4EF6;&#x5217;&#x8868;</span>
+    <span class="hljs-keyword">for</span> _, pl := <span class="hljs-keyword">range</span> f.scorePlugins {
+        <span class="hljs-keyword">if</span> state.SkipScorePlugins.Has(pl.Name()) {
+            <span class="hljs-keyword">continue</span>
+        }
+        plugins = <span class="hljs-built_in">append</span>(plugins, pl)
+        pluginToNodeScores[pl.Name()] = <span class="hljs-built_in">make</span>(framework.NodeScoreList, <span class="hljs-built_in">len</span>(nodes))
+    }
+    <span class="hljs-comment">// &#x521B;&#x5EFA;&#x4E0A;&#x4E0B;&#x6587;&#x5BF9;&#x8C61;</span>
+    ctx, cancel := context.WithCancel(ctx)
+    <span class="hljs-keyword">defer</span> cancel()
+    errCh := parallelize.NewErrorChannel()
+    <span class="hljs-comment">// Score&#x63D2;&#x4EF6;&#x5217;&#x8868;&#x4E0D;&#x4E3A;&#x7A7A;&#x65F6;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(plugins) &gt; <span class="hljs-number">0</span> {
+        logger := klog.FromContext(ctx)
+        verboseLogs := logger.V(<span class="hljs-number">4</span>).Enabled()
+        <span class="hljs-keyword">if</span> verboseLogs {
+            logger = klog.LoggerWithName(logger, <span class="hljs-string">&quot;Score&quot;</span>)
+        }
+        <span class="hljs-comment">// &#x4E3A;&#x6BCF;&#x4E2A;&#x8282;&#x70B9;&#x5E76;&#x53D1;&#x6267;&#x884C;&#x8BC4;&#x5206;&#x64CD;&#x4F5C;</span>
+        f.Parallelizer().Until(ctx, <span class="hljs-built_in">len</span>(nodes), <span class="hljs-keyword">func</span>(index <span class="hljs-keyword">int</span>) {
+            nodeName := nodes[index].Node().Name
+            logger := logger
+            <span class="hljs-keyword">if</span> verboseLogs {
+                logger = klog.LoggerWithValues(logger, <span class="hljs-string">&quot;node&quot;</span>, klog.ObjectRef{Name: nodeName})
+            }
+            <span class="hljs-comment">// Score&#x63D2;&#x4EF6;&#x7EA7;&#x522B;&#x4E32;&#x884C;</span>
+            <span class="hljs-keyword">for</span> _, pl := <span class="hljs-keyword">range</span> plugins {
+                ctx := ctx
+                <span class="hljs-keyword">if</span> verboseLogs {
+                    logger := klog.LoggerWithName(logger, pl.Name())
+                    ctx = klog.NewContext(ctx, logger)
+                }
+                s, status := f.runScorePlugin(ctx, pl, state, pod, nodeName)
+                <span class="hljs-keyword">if</span> !status.IsSuccess() {
+                    err := fmt.Errorf(<span class="hljs-string">&quot;plugin %q failed with: %w&quot;</span>, pl.Name(), status.AsError())
+                    errCh.SendErrorWithCancel(err, cancel)
+                    <span class="hljs-keyword">return</span>
+                }
+                <span class="hljs-comment">// &#x8BB0;&#x5F55;&#x8BC4;&#x5206;&#x4FE1;&#x606F;&#x5230;pluginToNodeScores</span>
+                pluginToNodeScores[pl.Name()][index] = framework.NodeScore{
+                    Name:  nodeName,
+                    Score: s,
+                }
+            }
+        }, metrics.Score)
+        <span class="hljs-keyword">if</span> err := errCh.ReceiveError(); err != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;running Score plugins: %w&quot;</span>, err))
+        }
+    }
+
+    <span class="hljs-comment">// NormalizeScore&#x6269;&#x5C55;&#x70B9;</span>
+    <span class="hljs-comment">// &#x4E3A;&#x6BCF;&#x4E2A;&#x63D2;&#x4EF6;&#x5E76;&#x53D1;&#x6267;&#x884C;&#x8BC4;&#x5206;&#x5F52;&#x4E00;&#x5316;</span>
+    f.Parallelizer().Until(ctx, <span class="hljs-built_in">len</span>(plugins), <span class="hljs-keyword">func</span>(index <span class="hljs-keyword">int</span>) {
+        pl := plugins[index]
+        <span class="hljs-comment">// Score&#x63D2;&#x4EF6;&#x5FC5;&#x987B;&#x5B9E;&#x73B0;ScoreExtensions()&#x65B9;&#x6CD5; &#x5982;&#x679C;&#x4E0D;&#x9700;&#x8981;&#x5F52;&#x4E00;&#x5316;&#x5C31;&#x5728;&#x8BE5;&#x65B9;&#x6CD5;&#x4E2D;&#x8FD4;&#x56DE;nil</span>
+        <span class="hljs-keyword">if</span> pl.ScoreExtensions() == <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span>
+        }
+        nodeScoreList := pluginToNodeScores[pl.Name()]
+        <span class="hljs-comment">// &#x6709;&#x5F52;&#x4E00;&#x5316;&#x9700;&#x8981;&#x7684;&#x6267;&#x884C;&#x63D2;&#x4EF6;&#x7684;NormalizeScore()&#x65B9;&#x6CD5;&#x5E76;&#x8FD4;&#x56DE;&#x7ED3;&#x679C;</span>
+        status := f.runScoreExtension(ctx, pl, state, pod, nodeScoreList)
+        <span class="hljs-keyword">if</span> !status.IsSuccess() {
+            err := fmt.Errorf(<span class="hljs-string">&quot;plugin %q failed with: %w&quot;</span>, pl.Name(), status.AsError())
+            errCh.SendErrorWithCancel(err, cancel)
+            <span class="hljs-keyword">return</span>
+        }
+    }, metrics.Score)
+    <span class="hljs-keyword">if</span> err := errCh.ReceiveError(); err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;running Normalize on Score plugins: %w&quot;</span>, err))
+    }
+
+    <span class="hljs-comment">// &#x6309;&#x8282;&#x70B9;&#x7C92;&#x5EA6;&#x5E76;&#x53D1;&#x6267;&#x884C; &#x6839;&#x636E;&#x6743;&#x91CD;&#x8C03;&#x6574;&#x6700;&#x7EC8;&#x8BC4;&#x5206;</span>
+    f.Parallelizer().Until(ctx, <span class="hljs-built_in">len</span>(nodes), <span class="hljs-keyword">func</span>(index <span class="hljs-keyword">int</span>) {
+        nodePluginScores := framework.NodePluginScores{
+            Name:   nodes[index].Node().Name,
+            Scores: <span class="hljs-built_in">make</span>([]framework.PluginScore, <span class="hljs-built_in">len</span>(plugins)),
+        }
+
+        <span class="hljs-keyword">for</span> i, pl := <span class="hljs-keyword">range</span> plugins {
+            weight := f.scorePluginWeight[pl.Name()]
+            nodeScoreList := pluginToNodeScores[pl.Name()]
+            score := nodeScoreList[index].Score
+            <span class="hljs-comment">// &#x8BC4;&#x5206;&#x7684;&#x8303;&#x56F4;&#x5982;&#x679C;&#x4E0D;&#x5728;1-100&#x4E4B;&#x95F4;&#x8FD4;&#x56DE;&#x9519;&#x8BEF;</span>
+            <span class="hljs-keyword">if</span> score &gt; framework.MaxNodeScore || score &lt; framework.MinNodeScore {
+                err := fmt.Errorf(<span class="hljs-string">&quot;plugin %q returns an invalid score %v, it should in the range of [%v, %v] after normalizing&quot;</span>, pl.Name(), score, framework.MinNodeScore, framework.MaxNodeScore)
+                errCh.SendErrorWithCancel(err, cancel)
+                <span class="hljs-keyword">return</span>
+            }
+            weightedScore := score * <span class="hljs-keyword">int64</span>(weight)
+            <span class="hljs-comment">// &#x8BB0;&#x5F55;&#x5355;&#x4E2A;&#x63D2;&#x4EF6;&#x6700;&#x7EC8;&#x8BC4;&#x5206;&#x5230;nodePluginScores</span>
+            nodePluginScores.Scores[i] = framework.PluginScore{
+                Name:  pl.Name(),
+                Score: weightedScore,
+            }
+            <span class="hljs-comment">// &#x7D2F;&#x52A0;&#x8BB0;&#x5F55;&#x8282;&#x70B9;&#x603B;&#x5206;</span>
+            nodePluginScores.TotalScore += weightedScore
+        }
+        allNodePluginScores[index] = nodePluginScores
+    }, metrics.Score)
+    <span class="hljs-keyword">if</span> err := errCh.ReceiveError(); err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;applying score defaultWeights on Score plugins: %w&quot;</span>, err))
+    }
+    <span class="hljs-comment">// &#x8FD4;&#x56DE;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x679C;&#x5217;&#x8868;</span>
+    <span class="hljs-keyword">return</span> allNodePluginScores, <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-comment">// &#x8282;&#x70B9;&#x8BC4;&#x5206;&#x7ED3;&#x6784;</span>
+<span class="hljs-keyword">type</span> NodePluginScores <span class="hljs-keyword">struct</span> {
+    <span class="hljs-comment">// &#x8282;&#x70B9;&#x540D;&#x79F0;</span>
+    Name <span class="hljs-keyword">string</span>
+    <span class="hljs-comment">// &#x63D2;&#x4EF6;-&#x8BC4;&#x5206; &#x5217;&#x8868;</span>
+    Scores []PluginScore
+    <span class="hljs-comment">// &#x603B;&#x5206;</span>
+    TotalScore <span class="hljs-keyword">int64</span>
+}
+</code></pre>
+<h5 id="normalizescore&#x63D2;&#x4EF6;">NormalizeScore&#x63D2;&#x4EF6;</h5>
+<p>&#x4E00;&#x4E9B;&#x63D2;&#x4EF6;&#x7684;<code>NormalizeScore()</code>&#x5B9E;&#x73B0;&#x662F;&#x76F4;&#x63A5;&#x8C03;&#x7528;&#x4E86;&#x9ED8;&#x8BA4;&#x7684;&#x5F52;&#x4E00;&#x5316;&#x8BC4;&#x5206;&#x65B9;&#x6CD5;<code>DefaultNormalizeScore()</code>&#xFF0C;&#x5728;&#x6587;&#x4EF6;<code>pkg/scheduler/framework/plugins/helper/normalize_score.go</code>&#x4E2D;&#x5B9A;&#x4E49;&#xFF0C;&#x4EC5;&#x6CE8;&#x91CA;&#x4E0D;&#x505A;&#x8FC7;&#x591A;&#x8BF4;&#x660E;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> DefaultNormalizeScore(maxPriority <span class="hljs-keyword">int64</span>, reverse <span class="hljs-keyword">bool</span>, scores framework.NodeScoreList) *framework.Status {
+    <span class="hljs-keyword">var</span> maxCount <span class="hljs-keyword">int64</span>
+    <span class="hljs-comment">// &#x83B7;&#x53D6;&#x6240;&#x6709;&#x8282;&#x70B9;&#x4E2D;&#x7684;&#x6700;&#x9AD8;&#x5206;</span>
+    <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> scores {
+        <span class="hljs-keyword">if</span> scores[i].Score &gt; maxCount {
+            maxCount = scores[i].Score
+        }
+    }
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x6240;&#x6709;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x90FD;&#x662F;0&#x7684;&#x60C5;&#x51B5;</span>
+    <span class="hljs-keyword">if</span> maxCount == <span class="hljs-number">0</span> {
+        <span class="hljs-keyword">if</span> reverse {
+            <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> scores {
+                scores[i].Score = maxPriority
+            }
+        }
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// &#x6B63;&#x5E38;&#x60C5;&#x51B5;</span>
+    <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> scores {
+        score := scores[i].Score
+        <span class="hljs-comment">// 100*&#x8BC4;&#x5206;/&#x6700;&#x9AD8;&#x5206;</span>
+        score = maxPriority * score / maxCount
+        <span class="hljs-comment">// reverse&#x7528;&#x4E8E;Score&#x8BC4;&#x5206;&#x4F4E;&#x8868;&#x793A;&#x66F4;&#x9AD8;&#x4F18;&#x5148;&#x7EA7;&#x7684;&#x60C5;&#x51B5; &#x5982;TaintToleration&#x63D2;&#x4EF6;</span>
+        <span class="hljs-keyword">if</span> reverse {
+            <span class="hljs-comment">// &#x4F4E;&#x5206;&#x53CD;&#x8F6C;&#x53D8;&#x6210;&#x9AD8;&#x5206;</span>
+            score = maxPriority - score
+        }
+        <span class="hljs-comment">// &#x8BB0;&#x5F55;&#x5F52;&#x4E00;&#x5316;&#x540E;&#x7684;&#x8BC4;&#x5206;</span>
+        scores[i].Score = score
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x5BF9;&#x4E0A;&#x9762;&#x4F8B;&#x5982;<code>TaintToleration</code>&#x63D2;&#x4EF6;&#x7684;&#x4E86;&#x89E3;&#xFF0C;&#x4E0D;&#x96BE;&#x53D1;&#x73B0;&#x5176;&#x5B9E;&#x8C03;&#x5EA6;&#x5668;&#x7684;&#x7B97;&#x6CD5;&#x5B9E;&#x73B0;&#x5E76;&#x4E0D;&#x590D;&#x6742;&#xFF0C;&#x91CD;&#x70B9;&#x5728;&#x4E8E;&#x6574;&#x4F53;&#x6D41;&#x7A0B;&#x7684;&#x8BBE;&#x8BA1;&#xFF0C;&#x5B9E;&#x9645;&#x4E0A;&#x5728;&#x4E86;&#x89E3;&#x4E86;<code>Scheduler Framework</code>&#x540E;&#xFF0C;Pod&#x7684;&#x6574;&#x4E2A;&#x8C03;&#x5EA6;&#x6D41;&#x7A0B;&#x5C31;&#x5DF2;&#x7ECF;&#x975E;&#x5E38;&#x6E05;&#x6670;&#x4E86;&#x3002;&#x5230;&#x76EE;&#x524D;&#x4E3A;&#x6B62;&#x603B;&#x5171;&#x63A5;&#x89E6;&#x5230;&#x4E86;<code>PreFilter</code>&#x3001;<code>Filter</code>&#x3001;<code>PreScore</code>&#x3001;<code>Score</code>&#x8FD9;&#x56DB;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#x7684;&#x63D2;&#x4EF6;(&#x5176;&#x4E2D;<code>NormalizeScore</code>&#x5728;<code>Score</code>&#x6269;&#x5C55;&#x70B9;&#x5185;&#x90E8;&#xFF0C;&#x4E0D;&#x5C5E;&#x4E8E;12&#x4E2A;&#x6807;&#x51C6;&#x6269;&#x5C55;&#x70B9;&#x4E4B;&#x4E00;)&#x3002;&#x5728;&#x7ED3;&#x5408;&#x6D41;&#x7A0B;&#x56FE;&#x4E2D;&#xFF0C;&#x524D;&#x9762;&#x6709;&#x4E09;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#x6CA1;&#x6709;&#x770B;&#x5230;&#xFF0C;&#x5206;&#x522B;&#x662F;<code>PreEnqueue</code>&#x3001;<code>QueueSort</code>&#x548C;<code>PostFilter</code>&#xFF0C;&#x5176;&#x4E2D;<code>PreEnqueue</code>&#x548C;<code>QueueSort</code>&#x662F;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x76F8;&#x5173;&#x7684;&#x4E24;&#x4E2A;&#x63D2;&#x4EF6;&#xFF0C;&#x6240;&#x4EE5;&#x6CA1;&#x6709;&#x51FA;&#x73B0;&#x5728;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x5185;&#xFF0C;&#x5982;&#x679C;&#x611F;&#x5174;&#x8DA3;&#x53EF;&#x4EE5;&#x56DE;&#x5230;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x7684;<code>runPreEnqueuePlugins()</code>&#x65B9;&#x6CD5;&#x4E2D;&#xFF0C;&#x5728;Pod&#x6DFB;&#x52A0;&#x5230;<code>ActiveQ</code>&#x65F6;&#x8C03;&#x7528;&#x3002;<code>QueueSort</code>&#x8C03;&#x7528;&#x70B9;&#x8F83;&#x4E3A;&#x9690;&#x853D;&#xFF0C;&#x53EF;&#x4EE5;&#x4EE5;<code>func (aq *activeQueue) update()</code>&#x4E3A;&#x5165;&#x53E3;&#xFF0C;&#x8C03;&#x7528;&#x5173;&#x7CFB;&#x5982;&#x4E0B;&#x65B9;&#x6240;&#x793A;&#xFF0C;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;&#x4E4B;&#x521D;&#xFF0C;&#x5C31;&#x5411;&#x5176;&#x4E2D;&#x6CE8;&#x518C;&#x4E86;<code>Less()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x5B83;&#x7684;&#x8C03;&#x7528;&#x70B9;&#x4E0D;&#x50CF;&#x5176;&#x4ED6;&#x7684;&#x63D2;&#x4EF6;&#x662F;<code>runXXXPlugin()</code>&#x800C;&#x662F;<code>Less()</code>&#xFF0C;Pod&#x7684;&#x5165;&#x961F;&#x548C;&#x51FA;&#x961F;&#x90FD;&#x4F1A;&#x8C03;&#x7528;<code>Less()</code>&#x65B9;&#x6CD5;&#x3002;<code>PostFilter</code>&#x63D2;&#x4EF6;&#x53EA;&#x4E0E;&#x62A2;&#x5360;&#x6D41;&#x7A0B;&#x6709;&#x5173;&#xFF0C;&#x5728;&#x540E;&#x9762;&#x4F1A;&#x5355;&#x72EC;&#x4ECB;&#x7ECD;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-comment">// &#x5165;&#x961F;&#x7684;&#x8C03;&#x7528;&#x94FE; activeQueue.update-&gt;queue.AddOrUpdate-&gt;heap.Push-&gt;up</span>
+<span class="hljs-keyword">func</span> (aq *activeQueue) update(newPod *v1.Pod, oldPodInfo *framework.QueuedPodInfo) *framework.QueuedPodInfo {
+    aq.lock.Lock()
+    <span class="hljs-keyword">defer</span> aq.lock.Unlock()
+
+    <span class="hljs-keyword">if</span> pInfo, exists := aq.queue.Get(oldPodInfo); exists {
+        _ = pInfo.Update(newPod)
+        aq.queue.AddOrUpdate(pInfo)
+        <span class="hljs-keyword">return</span> pInfo
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-keyword">func</span> (h *Heap[T]) AddOrUpdate(obj T) {
+    key := h.data.keyFunc(obj)
+    <span class="hljs-keyword">if</span> _, exists := h.data.items[key]; exists {
+        h.data.items[key].obj = obj
+        heap.Fix(h.data, h.data.items[key].index)
+    } <span class="hljs-keyword">else</span> {
+        heap.Push(h.data, &amp;itemKeyValue[T]{key, obj})
+        <span class="hljs-keyword">if</span> h.metricRecorder != <span class="hljs-literal">nil</span> {
+            h.metricRecorder.Inc()
+        }
+    }
+}
+
+<span class="hljs-comment">// golang&#x7684;container/heap&#x5305;</span>
+<span class="hljs-keyword">func</span> Push(h Interface, x any) {
+    h.Push(x)
+    up(h, h.Len()<span class="hljs-number">-1</span>)
+}
+
+<span class="hljs-keyword">func</span> up(h Interface, j <span class="hljs-keyword">int</span>) {
+    <span class="hljs-keyword">for</span> {
+        i := (j - <span class="hljs-number">1</span>) / <span class="hljs-number">2</span> <span class="hljs-comment">// parent</span>
+        <span class="hljs-comment">// &#x76F4;&#x63A5;&#x8C03;&#x7528;&#x70B9;</span>
+        <span class="hljs-keyword">if</span> i == j || !h.Less(j, i) {
+            <span class="hljs-keyword">break</span>
+        }
+        h.Swap(i, j)
+        j = i
+    }
+}
+
+<span class="hljs-comment">// &#x51FA;&#x961F;&#x7684;&#x8C03;&#x7528;&#x94FE; activeQueue.pop-&gt;activeQueue.unlockedPop-&gt;queue.Pop-&gt;heap.Pop-&gt;down</span>
+<span class="hljs-keyword">func</span> (aq *activeQueue) pop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    aq.lock.Lock()
+    <span class="hljs-keyword">defer</span> aq.lock.Unlock()
+
+    <span class="hljs-keyword">return</span> aq.unlockedPop(logger)
+}
+
+<span class="hljs-keyword">func</span> (aq *activeQueue) unlockedPop(logger klog.Logger) (*framework.QueuedPodInfo, error) {
+    <span class="hljs-keyword">for</span> aq.queue.Len() == <span class="hljs-number">0</span> {
+        <span class="hljs-keyword">if</span> aq.closed {
+            logger.V(<span class="hljs-number">2</span>).Info(<span class="hljs-string">&quot;Scheduling queue is closed&quot;</span>)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, <span class="hljs-literal">nil</span>
+        }
+        aq.cond.Wait()
+    }
+
+    pInfo, err := aq.queue.Pop()
+    ......
+}
+
+<span class="hljs-keyword">func</span> (h *Heap[T]) Pop() (T, error) {
+    obj := heap.Pop(h.data)
+    <span class="hljs-keyword">if</span> obj != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">if</span> h.metricRecorder != <span class="hljs-literal">nil</span> {
+            h.metricRecorder.Dec()
+        }
+        <span class="hljs-keyword">return</span> obj.(T), <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-keyword">var</span> zero T
+    <span class="hljs-keyword">return</span> zero, fmt.Errorf(<span class="hljs-string">&quot;heap is empty&quot;</span>)
+}
+
+<span class="hljs-comment">// golang&#x7684;container/heap&#x5305;</span>
+<span class="hljs-keyword">func</span> Pop(h Interface) any {
+    n := h.Len() - <span class="hljs-number">1</span>
+    h.Swap(<span class="hljs-number">0</span>, n)
+    down(h, <span class="hljs-number">0</span>, n)
+    <span class="hljs-keyword">return</span> h.Pop()
+}
+
+<span class="hljs-keyword">func</span> down(h Interface, i0, n <span class="hljs-keyword">int</span>) <span class="hljs-keyword">bool</span> {
+    i := i0
+    <span class="hljs-keyword">for</span> {
+        j1 := <span class="hljs-number">2</span>*i + <span class="hljs-number">1</span>
+        <span class="hljs-keyword">if</span> j1 &gt;= n || j1 &lt; <span class="hljs-number">0</span> { <span class="hljs-comment">// j1 &lt; 0 after int overflow</span>
+            <span class="hljs-keyword">break</span>
+        }
+        j := j1 <span class="hljs-comment">// left child</span>
+        <span class="hljs-comment">// &#x76F4;&#x63A5;&#x8C03;&#x7528;&#x70B9;</span>
+        <span class="hljs-keyword">if</span> j2 := j1 + <span class="hljs-number">1</span>; j2 &lt; n &amp;&amp; h.Less(j2, j1) {
+            j = j2 <span class="hljs-comment">// = 2*i + 2  // right child</span>
+        }
+        <span class="hljs-keyword">if</span> !h.Less(j, i) {
+            <span class="hljs-keyword">break</span>
+        }
+        h.Swap(i, j)
+        i = j
+    }
+    <span class="hljs-keyword">return</span> i &gt; i0
+}
+</code></pre>
+<h4 id="selecthost">SelectHost</h4>
+<p>&#x6B64;&#x65F6;&#x5DF2;&#x7ECF;&#x5F97;&#x5230;&#x4E86;&#x6BCF;&#x4E2A;&#x8282;&#x70B9;&#x548C;&#x5176;&#x8BC4;&#x5206;&#x7684;&#x5BF9;&#x5E94;&#x5173;&#x7CFB;&#xFF0C;&#x8FD8;&#x9700;&#x8981;&#x8FDB;&#x884C;<code>Priorities</code>&#x9636;&#x6BB5;&#x7684;&#x6700;&#x540E;&#x4E00;&#x6B65;&#xFF0C;&#x90A3;&#x5C31;&#x662F;&#x4ECE;&#x4E0A;&#x4E00;&#x6B65;&#x7684;&#x7ED3;&#x679C;&#x4E2D;&#x9009;&#x51FA;&#x6700;&#x4F18;&#x5148;&#x7684;&#x90A3;&#x4E2A;&#xFF0C;&#x7136;&#x540E;&#x4EE5;<code>ScheduleResult</code>&#x7ED3;&#x6784;&#x7684;&#x5F62;&#x5F0F;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<pre><code class="lang-Go">host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
+<span class="hljs-keyword">return</span> ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: <span class="hljs-built_in">len</span>(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  <span class="hljs-built_in">len</span>(feasibleNodes),
+    }, err
+</code></pre>
+<p>&#x5176;&#x4E2D;&#x7684;&#x4E00;&#x4E2A;&#x8F93;&#x5165;&#x53C2;&#x6570;&#x662F;<code>numberOfHighestScoredNodesToReport</code>&#xFF0C;&#x5B83;&#x7684;&#x503C;&#x4E3A;3&#xFF0C;&#x53EF;&#x4EE5;&#x8986;&#x76D6;<code>&#x4E00;&#x4E3B;&#x4E24;&#x5907;</code>&#x7684;&#x573A;&#x666F;&#x5E76;&#x907F;&#x514D;&#x8BB0;&#x5F55;&#x8FC7;&#x591A;&#x4FE1;&#x606F;&#x7684;&#x5185;&#x5B58;&#x5360;&#x7528;&#xFF0C;&#x540C;&#x65F6;&#x7528;&#x4E8E;&#x62A2;&#x5360;&#x6D41;&#x7A0B;&#x548C;&#x9519;&#x8BEF;&#x8BB0;&#x5F55;&#xFF0C;&#x8BE5;&#x6570;&#x503C;&#x662F;&#x4FE1;&#x606F;&#x5B8C;&#x6574;&#x6027;&#x548C;&#x6027;&#x80FD;&#x4E4B;&#x95F4;&#x7684;&#x5E73;&#x8861;&#x70B9;&#x3002;</p>
+<pre><code class="lang-Go">    <span class="hljs-comment">// numberOfHighestScoredNodesToReport is the number of node scores</span>
+    <span class="hljs-comment">// to be included in ScheduleResult.</span>
+    numberOfHighestScoredNodesToReport = <span class="hljs-number">3</span>
+</code></pre>
+<p>&#x4E0B;&#x9762;&#x5206;&#x6790;<code>selectHost()</code>&#x51FD;&#x6570;&#xFF0C;&#x9996;&#x5148;&#x662F;&#x5BF9;&#x957F;&#x5EA6;&#x505A;&#x4F8B;&#x884C;&#x7684;&#x5224;&#x65AD;&#xFF0C;&#x7136;&#x540E;&#x5F00;&#x59CB;&#x63D0;&#x53D6;&#x524D;&#x4E09;&#x8BC4;&#x5206;&#x7684;&#x8282;&#x70B9;&#xFF0C;&#x8FD9;&#x91CC;&#x7684;&#x8BBE;&#x8BA1;&#x91C7;&#x7528;&#x4E86;&#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;&#x3002;&#x9996;&#x5148;&#x521D;&#x59CB;&#x5316;&#x4E86;&#x4E00;&#x4E2A;&#x5217;&#x8868;&#xFF0C;&#x5E76;&#x628A;<code>nodeScoreHeap</code>&#x5806;&#x4E2D;&#x7684;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;<code>Pop</code>&#x51FA;&#x6765;&#x52A0;&#x5165;&#x5230;&#x5217;&#x8868;&#x4E2D;&#xFF0C;&#x56E0;&#x4E3A;<code>nodeScoreHeap</code>&#x662F;&#x6309;<code>TotalScore</code>&#x4ECE;&#x9AD8;&#x5230;&#x4F4E;&#x6765;&#x6392;&#x5E8F;&#x7684;&#x3002;&#x7136;&#x540E;&#x5F00;&#x59CB;&#x5FAA;&#x73AF;&#x6DFB;&#x52A0;&#x5143;&#x7D20;&#xFF0C;&#x5728;&#x5207;&#x7247;&#x5B9E;&#x9645;&#x957F;&#x5EA6;&#x5C0F;&#x4E8E;&#x5BB9;&#x91CF;&#x65F6;&#xFF0C;&#x5148;&#x62FF;&#x5F53;&#x524D;&#x8282;&#x70B9;&#x7684;<code>TotalScore</code>&#x548C;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x7684;<code>TotalScore</code>&#x505A;&#x6BD4;&#x8F83;&#xFF0C;&#x5982;&#x679C;&#x503C;&#x76F8;&#x7B49;&#x5C31;&#x6839;&#x636E;&#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;&#xFF0C;&#x4EE5;<code>1/&#x76F8;&#x540C;&#x5206;&#x6570;&#x8282;&#x70B9;&#x6570;&#x91CF;</code>&#x7684;&#x6982;&#x7387;&#x66FF;&#x6362;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#xFF0C;&#x4EE5;<code>selectedIndex</code>&#x52A8;&#x6001;&#x8BB0;&#x5F55;&#x5176;&#x4F4D;&#x7F6E;&#xFF0C;&#x7136;&#x540E;&#x5728;&#x5143;&#x7D20;&#x52A0;&#x6EE1;&#x4E4B;&#x540E;&#x4EA4;&#x6362;&#x5217;&#x8868;&#x4E2D;&#x4E24;&#x4E2A;&#x7D22;&#x5F15;&#x4F4D;&#x7F6E;&#x7684;&#x503C;&#xFF0C;&#x6700;&#x7EC8;&#x8FD4;&#x56DE;&#x7B2C;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x7684;&#x8282;&#x70B9;&#x540D;&#x79F0;&#x548C;&#x5206;&#x6570;&#x524D;&#x4E09;&#x7684;&#x8282;&#x70B9;&#x5217;&#x8868;&#xFF0C;&#x81F3;&#x6B64;<code>Priorities</code>&#x9636;&#x6BB5;&#x5B8C;&#x5168;&#x7ED3;&#x675F;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (h nodeScoreHeap) Less(i, j <span class="hljs-keyword">int</span>) <span class="hljs-keyword">bool</span> { <span class="hljs-keyword">return</span> h[i].TotalScore &gt; h[j].TotalScore }
+
+<span class="hljs-keyword">func</span> selectHost(nodeScoreList []framework.NodePluginScores, count <span class="hljs-keyword">int</span>) (<span class="hljs-keyword">string</span>, []framework.NodePluginScores, error) {
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(nodeScoreList) == <span class="hljs-number">0</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;&quot;</span>, <span class="hljs-literal">nil</span>, errEmptyPriorityList
+    }
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x5806;&#x7ED3;&#x6784;&#x7684;&#x8282;&#x70B9;&#x8BC4;&#x5206;&#x5217;&#x8868;</span>
+    <span class="hljs-keyword">var</span> h nodeScoreHeap = nodeScoreList
+    heap.Init(&amp;h)
+    cntOfMaxScore := <span class="hljs-number">1</span>
+    selectedIndex := <span class="hljs-number">0</span>
+    <span class="hljs-comment">// &#x5148;&#x63D0;&#x53D6;&#x7B2C;&#x4E00;&#x4E2A;&#x8282;&#x70B9; &#x5FC5;&#x7136;&#x662F;&#x6700;&#x9AD8;&#x5206;</span>
+    sortedNodeScoreList := <span class="hljs-built_in">make</span>([]framework.NodePluginScores, <span class="hljs-number">0</span>, count)
+    sortedNodeScoreList = <span class="hljs-built_in">append</span>(sortedNodeScoreList, heap.Pop(&amp;h).(framework.NodePluginScores))
+
+    <span class="hljs-comment">// &#x5FAA;&#x73AF;&#x6DFB;&#x52A0;&#x8282;&#x70B9;</span>
+    <span class="hljs-keyword">for</span> ns := heap.Pop(&amp;h).(framework.NodePluginScores); ; ns = heap.Pop(&amp;h).(framework.NodePluginScores) {
+        <span class="hljs-comment">// &#x5F53;&#x524D;&#x8282;&#x70B9;&#x5206;&#x6570;&#x548C;&#x6700;&#x9AD8;&#x5206;&#x4E0D;&#x540C; &#x4E14;&#x8282;&#x70B9;&#x5217;&#x8868;&#x5DF2;&#x6EE1;&#x65F6;&#x9000;&#x51FA;&#x5FAA;&#x73AF;</span>
+        <span class="hljs-keyword">if</span> ns.TotalScore != sortedNodeScoreList[<span class="hljs-number">0</span>].TotalScore &amp;&amp; <span class="hljs-built_in">len</span>(sortedNodeScoreList) == count {
+            <span class="hljs-keyword">break</span>
+        }
+        <span class="hljs-comment">// &#x6700;&#x9AD8;&#x540C;&#x5206;&#x8282;&#x70B9;&#x7684;&#x9009;&#x62E9; &#x84C4;&#x6C34;&#x6C60;&#x62BD;&#x6837;&#x6CD5;</span>
+        <span class="hljs-keyword">if</span> ns.TotalScore == sortedNodeScoreList[<span class="hljs-number">0</span>].TotalScore {
+            <span class="hljs-comment">// &#x6700;&#x9AD8;&#x5206;&#x540C;&#x5206;&#x8282;&#x70B9;&#x6570;&#x91CF;&#x8BA1;&#x6570;+1</span>
+            cntOfMaxScore++
+            <span class="hljs-keyword">if</span> rand.Intn(cntOfMaxScore) == <span class="hljs-number">0</span> {
+                <span class="hljs-comment">// &#x540C;&#x5206;&#x8282;&#x70B9;&#x6709;1/cntOfMaxScore&#x7684;&#x6982;&#x7387;&#x66FF;&#x4EE3;&#x6700;&#x4F18;&#x8282;&#x70B9;</span>
+                selectedIndex = cntOfMaxScore - <span class="hljs-number">1</span>
+            }
+        }
+
+        sortedNodeScoreList = <span class="hljs-built_in">append</span>(sortedNodeScoreList, ns)
+        <span class="hljs-comment">// &#x5806;&#x4E3A;&#x7A7A;&#x65F6;&#x9000;&#x51FA;&#x5FAA;&#x73AF;</span>
+        <span class="hljs-keyword">if</span> h.Len() == <span class="hljs-number">0</span> {
+            <span class="hljs-keyword">break</span>
+        }
+    }
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x6700;&#x9AD8;&#x5206;&#x540C;&#x5206;&#x8282;&#x70B9;&#x66FF;&#x6362;&#x4E86;0&#x53F7;&#x5143;&#x7D20;</span>
+    <span class="hljs-keyword">if</span> selectedIndex != <span class="hljs-number">0</span> {
+        <span class="hljs-comment">// &#x5728;sortedNodeScoreList&#x4E2D;&#x4EA4;&#x6362;&#x5143;&#x7D20;&#x4F4D;&#x7F6E;</span>
+        previous := sortedNodeScoreList[<span class="hljs-number">0</span>]
+        sortedNodeScoreList[<span class="hljs-number">0</span>] = sortedNodeScoreList[selectedIndex]
+        sortedNodeScoreList[selectedIndex] = previous
+    }
+    <span class="hljs-comment">// &#x4FDD;&#x8BC1;&#x53EA;&#x6709;count&#x4E2A;&#x5143;&#x7D20;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(sortedNodeScoreList) &gt; count {
+        sortedNodeScoreList = sortedNodeScoreList[:count]
+    }
+    <span class="hljs-comment">// &#x8FD4;&#x56DE;&#x7B2C;&#x4E00;&#x4E2A;&#x8282;&#x70B9;&#x7684;&#x540D;&#x79F0;&#x548C;&#x6574;&#x4E2A;&#x5217;&#x8868;</span>
+    <span class="hljs-keyword">return</span> sortedNodeScoreList[<span class="hljs-number">0</span>].Name, sortedNodeScoreList, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p><code>schedulePod()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x7684;<code>ScheduleResult</code>&#x4E2D;&#x5305;&#x62EC;&#x6700;&#x540E;&#x8981;&#x5C1D;&#x8BD5;&#x7ED1;&#x5B9A;&#x7684;&#x8282;&#x70B9;<code>SuggestedHost</code>&#xFF0C;&#x672C;&#x6B21;&#x603B;&#x5171;&#x8BC4;&#x4F30;&#x8FC7;&#x7684;&#x8282;&#x70B9;&#x603B;&#x6570;<code>EvaluatedNodes</code>&#xFF0C;&#x5176;&#x503C;&#x662F;&#x8FC7;&#x6EE4;&#x9636;&#x6BB5;&#x8FD4;&#x56DE;&#x7684;<code>feasibleNodes</code>&#x957F;&#x5EA6;&#x4E0E;&#x5DF2;&#x77E5;&#x4E0D;&#x53EF;&#x8C03;&#x5EA6;&#x8282;&#x70B9;&#x5217;&#x8868;<code>NodeToStatus</code>&#x7684;&#x957F;&#x5EA6;&#x603B;&#x548C;&#xFF0C;&#x8FD8;&#x6709;&#x53EF;&#x7528;&#x8282;&#x70B9;&#x6570;&#x91CF;<code>FeasibleNodes</code>&#x3002;</p>
+<pre><code class="lang-Go">    <span class="hljs-keyword">return</span> ScheduleResult{
+        SuggestedHost:  host,
+        EvaluatedNodes: <span class="hljs-built_in">len</span>(feasibleNodes) + diagnosis.NodeToStatus.Len(),
+        FeasibleNodes:  <span class="hljs-built_in">len</span>(feasibleNodes),
+    }, err
+</code></pre>
+<h3 id="assume&#x9636;&#x6BB5;">Assume&#x9636;&#x6BB5;</h3>
+<p><code>ScheduleResult</code>&#x5BF9;&#x8C61;&#x8FD4;&#x56DE;&#x4EE5;&#x540E;&#xFF0C;<code>schedulingCycle()</code>&#x65B9;&#x6CD5;&#x4E2D;&#x7684;&#x7B2C;&#x4E00;&#x4E2A;&#x903B;&#x8F91;&#x7EC8;&#x4E8E;&#x7ED3;&#x675F;&#x4E86;&#xFF0C;&#x5148;&#x4E0D;&#x7EA0;&#x7ED3;&#x4E8E;&#x5931;&#x8D25;&#x5904;&#x7406;&#xFF0C;&#x7EE7;&#x7EED;&#x5206;&#x6790;&#x6807;&#x51C6;&#x7684;&#x6210;&#x529F;&#x6D41;&#x7A0B;&#x3002;</p>
+<p>&#x5728;<code>SchedulePod()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x4E86;&#x6210;&#x529F;&#x4EE5;&#x540E;&#xFF0C;<code>Kubernetes</code>&#x8C03;&#x5EA6;&#x5668;&#x5BF9;&#x6B64;&#x6709;&#x4E50;&#x89C2;&#x7684;&#x9884;&#x671F;&#xFF0C;&#x8BA4;&#x4E3A;&#x7ECF;&#x8FC7;&#x7CBE;&#x5BC6;&#x800C;&#x53C8;&#x4FDD;&#x5B88;&#x7684;&#x8BA1;&#x7B97;&#x903B;&#x8F91;&#x4EE5;&#x540E;&#xFF0C;&#x8FD9;&#x4E2A;Pod&#x6700;&#x7EC8;&#x4F1A;&#x88AB;&#x6210;&#x529F;&#x7ED1;&#x5B9A;&#xFF0C;&#x800C;&#x7ED1;&#x5B9A;&#x5468;&#x671F;&#x53C8;&#x662F;&#x5F02;&#x6B65;&#x8FDB;&#x884C;&#x7684;&#xFF0C;&#x6240;&#x4EE5;&#x6B64;&#x65F6;Pod&#x4F1A;&#x8FDB;&#x5165;&#x4E00;&#x4E2A;<code>Assumed</code>&#x7684;&#x4E2D;&#x95F4;&#x72B6;&#x6001;&#xFF0C;&#x5B83;&#x4F1A;&#x5B58;&#x5728;&#x4E8E;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;<code>Cache</code>&#x4E2D;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    logger := klog.FromContext(ctx)
+    pod := podInfo.Pod
+    scheduleResult, err := sched.SchedulePod(ctx, fwk, state, pod)
+    <span class="hljs-comment">// err&#x4E0D;&#x4E3A;&#x7A7A;&#x7684;&#x5904;&#x7406; &#x6682;&#x4E14;&#x5FFD;&#x7565;</span>
+    <span class="hljs-comment">// ......</span>
+    <span class="hljs-comment">// &#x6DF1;&#x62F7;&#x8D1D;PodInfo</span>
+    assumedPodInfo := podInfo.DeepCopy()
+    assumedPod := assumedPodInfo.Pod
+    <span class="hljs-comment">// &#x5728;&#x7F13;&#x5B58;&#x4E2D;&#x5BF9;Pod&#x7684;&#x9884;&#x671F;&#x72B6;&#x6001;&#x505A;&#x66F4;&#x65B0;</span>
+    err = sched.assume(logger, assumedPod, scheduleResult.SuggestedHost)
+    ......
+}
+</code></pre>
+<p>&#x8C03;&#x7528;<code>assume()</code>&#x65B9;&#x6CD5;&#x66F4;&#x65B0;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x5185;&#x5BB9;&#xFF0C;&#x5176;&#x4E2D;&#x7684;<code>Cache.AssumePod()</code>&#x5728;&#x7B2C;&#x4E00;&#x7BC7;&#x8C03;&#x5EA6;&#x961F;&#x5217;&#x90E8;&#x5206;&#x6709;&#x8FC7;&#x7B80;&#x5355;&#x8BF4;&#x660E;&#xFF0C;&#x8FD9;&#x4E00;&#x6B65;&#x5B9E;&#x9645;&#x5C31;&#x662F;&#x66F4;&#x65B0;&#x7F13;&#x5B58;&#x4E00;&#x904D;&#x4E0B;&#x4E00;&#x4E2A;Pod&#x7684;&#x8BA1;&#x7B97;&#x80FD;&#x591F;&#x8003;&#x8651;&#x5230;&#x5904;&#x4E8E;<code>Assume</code>&#x72B6;&#x6001;&#x7684;Pod&#xFF0C;&#x4E0D;&#x81F3;&#x4E8E;&#x56E0;&#x4E3A;&#x8D44;&#x6E90;&#x51B2;&#x7A81;&#x5BFC;&#x81F4;&#x7ED1;&#x5B9A;&#x5931;&#x8D25;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host <span class="hljs-keyword">string</span>) error {
+    <span class="hljs-comment">// &#x4FEE;&#x6539;NodeName&#x5B57;&#x6BB5;</span>
+    assumed.Spec.NodeName = host
+    <span class="hljs-comment">// &#x6DFB;&#x52A0;&#x5230;&#x8C03;&#x5EA6;&#x7F13;&#x5B58;&#x4E2D;</span>
+    <span class="hljs-keyword">if</span> err := sched.Cache.AssumePod(logger, assumed); err != <span class="hljs-literal">nil</span> {
+        logger.Error(err, <span class="hljs-string">&quot;Scheduler cache AssumePod failed&quot;</span>)
+        <span class="hljs-keyword">return</span> err
+    }
+    <span class="hljs-comment">// if &quot;assumed&quot; is a nominated pod, we should remove it from internal cache</span>
+    <span class="hljs-keyword">if</span> sched.SchedulingQueue != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// &#x66F4;&#x65B0;&#x6E05;&#x9664;&#x63D0;&#x540D;&#x5668;&#x4E2D;&#x7684;&#x4FE1;&#x606F;</span>
+        sched.SchedulingQueue.DeleteNominatedPodIfExists(assumed)
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<h3 id="reserve&#x6269;&#x5C55;&#x70B9;">Reserve&#x6269;&#x5C55;&#x70B9;</h3>
+<p>&#x5728;<code>Assume</code>&#x9636;&#x6BB5;&#x540E;&#xFF0C;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x8FD8;&#x5269;&#x4E0B;&#x4E24;&#x4E2A;&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x6B64;&#x65F6;&#x5173;&#x4E8E;&#x8C03;&#x5EA6;&#x7684;&#x9009;&#x62E9;&#x5DF2;&#x7ECF;&#x7ED3;&#x675F;&#x4E86;&#xFF0C;&#x6240;&#x505A;&#x7684;&#x5185;&#x5BB9;&#x662F;&#x8981;&#x4E3A;&#x7ED1;&#x5B9A;&#x548C;&#x4E0B;&#x6B21;&#x8C03;&#x5EA6;&#x505A;&#x51C6;&#x5907;&#xFF0C;&#x63A5;&#x4E0B;&#x6765;&#x7684;&#x6269;&#x5C55;&#x70B9;&#x662F;&#x8D44;&#x6E90;&#x9884;&#x7559;<code>Reserve</code>&#x6269;&#x5C55;&#x70B9;&#x548C;&#x51C6;&#x5165;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (sched *Scheduler) schedulingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    podInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate,
+) (ScheduleResult, *framework.QueuedPodInfo, *framework.Status) {
+    ......
+    <span class="hljs-comment">// Run the Reserve method of reserve plugins.</span>
+    <span class="hljs-keyword">if</span> sts := fwk.RunReservePluginsReserve(ctx, state, assumedPod, scheduleResult.SuggestedHost); !sts.IsSuccess() {
+        <span class="hljs-comment">// trigger un-reserve to clean up state associated with the reserved Pod</span>
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        <span class="hljs-keyword">if</span> forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != <span class="hljs-literal">nil</span> {
+            logger.Error(forgetErr, <span class="hljs-string">&quot;Scheduler cache ForgetPod failed&quot;</span>)
+        }
+
+        <span class="hljs-keyword">if</span> sts.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: <span class="hljs-number">1</span>,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, sts)
+            fitErr.Diagnosis.AddPluginStatus(sts)
+            <span class="hljs-keyword">return</span> ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(sts.Code()).WithError(fitErr)
+        }
+        <span class="hljs-keyword">return</span> ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, sts
+    }
+    <span class="hljs-comment">// Run &quot;permit&quot; plugins.</span>
+    runPermitStatus := fwk.RunPermitPlugins(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+    <span class="hljs-keyword">if</span> !runPermitStatus.IsWait() &amp;&amp; !runPermitStatus.IsSuccess() {
+        <span class="hljs-comment">// trigger un-reserve to clean up state associated with the reserved Pod</span>
+        fwk.RunReservePluginsUnreserve(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+        <span class="hljs-keyword">if</span> forgetErr := sched.Cache.ForgetPod(logger, assumedPod); forgetErr != <span class="hljs-literal">nil</span> {
+            logger.Error(forgetErr, <span class="hljs-string">&quot;Scheduler cache ForgetPod failed&quot;</span>)
+        }
+
+        <span class="hljs-keyword">if</span> runPermitStatus.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: <span class="hljs-number">1</span>,
+                Pod:         pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus: framework.NewDefaultNodeToStatus(),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, runPermitStatus)
+            fitErr.Diagnosis.AddPluginStatus(runPermitStatus)
+            <span class="hljs-keyword">return</span> ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, framework.NewStatus(runPermitStatus.Code()).WithError(fitErr)
+        }
+
+        <span class="hljs-keyword">return</span> ScheduleResult{nominatingInfo: clearNominatedNode}, assumedPodInfo, runPermitStatus
+    }
+
+    <span class="hljs-comment">// At the end of a successful scheduling cycle, pop and move up Pods if needed.</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(podsToActivate.Map) != <span class="hljs-number">0</span> {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        <span class="hljs-comment">// Clear the entries after activation.</span>
+        podsToActivate.Map = <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*v1.Pod)
+    }
+
+    <span class="hljs-keyword">return</span> scheduleResult, assumedPodInfo, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x4E0B;&#x9762;&#x770B;&#x8D44;&#x6E90;&#x9884;&#x7559;&#x7684;&#x903B;&#x8F91;<code>RunReservePluginsReserve()</code>&#x548C;<code>runReservePluginReserve()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x5916;&#x5C42;&#x548C;&#x4E4B;&#x524D;&#x7684;&#x51E0;&#x4E2A;<code>RunXXXPlugin()</code>&#x6CA1;&#x6709;&#x4EC0;&#x4E48;&#x533A;&#x522B;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) RunReservePluginsReserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) (status *framework.Status) {
+    startTime := time.Now()
+    <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Reserve, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(<span class="hljs-number">4</span>).Enabled()
+    <span class="hljs-keyword">if</span> verboseLogs {
+        logger = klog.LoggerWithName(logger, <span class="hljs-string">&quot;Reserve&quot;</span>)
+        logger = klog.LoggerWithValues(logger, <span class="hljs-string">&quot;node&quot;</span>, klog.ObjectRef{Name: nodeName})
+    }
+    <span class="hljs-keyword">for</span> _, pl := <span class="hljs-keyword">range</span> f.reservePlugins {
+        ctx := ctx
+        <span class="hljs-keyword">if</span> verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status = f.runReservePluginReserve(ctx, pl, state, pod, nodeName)
+        <span class="hljs-keyword">if</span> !status.IsSuccess() {
+            <span class="hljs-keyword">if</span> status.IsRejected() {
+                logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;Pod rejected by plugin&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;plugin&quot;</span>, pl.Name(), <span class="hljs-string">&quot;status&quot;</span>, status.Message())
+                status.SetPlugin(pl.Name())
+                <span class="hljs-keyword">return</span> status
+            }
+            err := status.AsError()
+            logger.Error(err, <span class="hljs-string">&quot;Plugin failed&quot;</span>, <span class="hljs-string">&quot;plugin&quot;</span>, pl.Name(), <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod))
+            <span class="hljs-keyword">return</span> framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;running Reserve plugin %q: %w&quot;</span>, pl.Name(), err))
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-keyword">func</span> (f *frameworkImpl) runReservePluginReserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) *framework.Status {
+    <span class="hljs-keyword">if</span> !state.ShouldRecordPluginMetrics() {
+        <span class="hljs-keyword">return</span> pl.Reserve(ctx, state, pod, nodeName)
+    }
+    startTime := time.Now()
+    status := pl.Reserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Reserve, pl.Name(), status.Code().String(), metrics.SinceInSeconds(startTime))
+    <span class="hljs-keyword">return</span> status
+}
+</code></pre>
+<p>&#x90A3;&#x4E48;&#x770B;&#x4E00;&#x4E2A;&#x5177;&#x4F53;&#x7684;&#x8D44;&#x6E90;&#x9884;&#x7559;&#x63D2;&#x4EF6;<code>VolumeBinding</code>&#x5B9E;&#x73B0;&#xFF0C;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (pl *VolumeBinding) Reserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) *framework.Status {
+    <span class="hljs-comment">// &#x4ECE;CycleState&#x4E2D;&#x83B7;&#x53D6;&#x4FE1;&#x606F;</span>
+    state, err := getStateData(cs)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> framework.AsStatus(err)
+    }
+    <span class="hljs-comment">// we don&apos;t need to hold the lock as only one node will be reserved for the given pod</span>
+    podVolumes, ok := state.podVolumesByNode[nodeName]
+    <span class="hljs-keyword">if</span> ok {
+        allBound, err := pl.Binder.AssumePodVolumes(klog.FromContext(ctx), pod, nodeName, podVolumes)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span> framework.AsStatus(err)
+        }
+        <span class="hljs-comment">// &#x6709;&#x5377;&#x9700;&#x8981;&#x7ED1;&#x5B9A;&#x65F6; &#x503C;&#x8BBE;&#x7F6E;&#x4E3A;allBound&#x8FD4;&#x56DE;&#x7684;bool&#x503C;</span>
+        state.allBound = allBound
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-comment">// &#x6CA1;&#x6709;&#x5377;&#x9700;&#x8981;&#x7ED1;&#x5B9A;&#x65F6; &#x503C;&#x76F4;&#x63A5;&#x8BBE;&#x7F6E;&#x4E3A;true</span>
+        state.allBound = <span class="hljs-literal">true</span>
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x5176;&#x4E2D;&#x8C03;&#x7528;&#x4E86;<code>AssumePodVolumes()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x66F4;&#x65B0;&#x4E86;<code>AssumeCache</code>&#x7F13;&#x5B58;&#x548C;&#x539F;<code>PodVolumes</code>&#x5BF9;&#x8C61;&#x4E2D;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x5176;&#x4E2D;&#x7684;<code>pvcCache</code>&#x3001;<code>pvcCache</code>&#x548C;Pod&#x7684;<code>Assume</code>&#x539F;&#x7406;&#x7C7B;&#x4F3C;&#xFF0C;&#x90FD;&#x662F;&#x5BF9;&#x9884;&#x671F;&#x5C06;&#x4F1A;&#x5B58;&#x5728;&#x7684;&#x5BF9;&#x8C61;&#x505A;&#x4E00;&#x4EFD;&#x5728;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x8BB0;&#x5F55;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-comment">// AssumePodVolumes will take the matching PVs and PVCs to provision in pod&apos;s</span>
+<span class="hljs-comment">// volume information for the chosen node, and:</span>
+<span class="hljs-comment">// 1. Update the pvCache with the new prebound PV.</span>
+<span class="hljs-comment">// 2. Update the pvcCache with the new PVCs with annotations set</span>
+<span class="hljs-comment">// 3. Update PodVolumes again with cached API updates for PVs and PVCs.</span>
+<span class="hljs-keyword">func</span> (b *volumeBinder) AssumePodVolumes(logger klog.Logger, assumedPod *v1.Pod, nodeName <span class="hljs-keyword">string</span>, podVolumes *PodVolumes) (allFullyBound <span class="hljs-keyword">bool</span>, err error) {
+    logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;AssumePodVolumes&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(assumedPod), <span class="hljs-string">&quot;node&quot;</span>, klog.KRef(<span class="hljs-string">&quot;&quot;</span>, nodeName))
+    <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            metrics.VolumeSchedulingStageFailed.WithLabelValues(<span class="hljs-string">&quot;assume&quot;</span>).Inc()
+        }
+    }()
+    <span class="hljs-comment">// &#x68C0;&#x67E5;Pod&#x9700;&#x8981;&#x7684;&#x6240;&#x6709;&#x5377;&#x662F;&#x5426;&#x90FD;&#x5DF2;&#x7ECF;&#x88AB;&#x7ED1;&#x5B9A;</span>
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x5DF2;&#x7ECF;&#x7ED1;&#x5B9A;&#x4E86;&#x5C31;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;</span>
+    <span class="hljs-keyword">if</span> allBound := b.arePodVolumesBound(logger, assumedPod); allBound {
+        logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;AssumePodVolumes: all PVCs bound and nothing to do&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(assumedPod), <span class="hljs-string">&quot;node&quot;</span>, klog.KRef(<span class="hljs-string">&quot;&quot;</span>, nodeName))
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>, <span class="hljs-literal">nil</span>
+    }
+
+    <span class="hljs-comment">// &#x9759;&#x6001;&#x5377;&#x9884;&#x5360; PV</span>
+    newBindings := []*BindingInfo{}
+    <span class="hljs-keyword">for</span> _, binding := <span class="hljs-keyword">range</span> podVolumes.StaticBindings {
+        newPV, dirty, err := volume.GetBindVolumeToClaim(binding.pv, binding.pvc)
+        logger.V(<span class="hljs-number">5</span>).Info(<span class="hljs-string">&quot;AssumePodVolumes: GetBindVolumeToClaim&quot;</span>,
+            <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(assumedPod),
+            <span class="hljs-string">&quot;PV&quot;</span>, klog.KObj(binding.pv),
+            <span class="hljs-string">&quot;PVC&quot;</span>, klog.KObj(binding.pvc),
+            <span class="hljs-string">&quot;newPV&quot;</span>, klog.KObj(newPV),
+            <span class="hljs-string">&quot;dirty&quot;</span>, dirty,
+        )
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            logger.Error(err, <span class="hljs-string">&quot;AssumePodVolumes: fail to GetBindVolumeToClaim&quot;</span>)
+            b.revertAssumedPVs(newBindings)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>, err
+        }
+        <span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> can we assume every time?</span>
+        <span class="hljs-keyword">if</span> dirty {
+            <span class="hljs-comment">// &#x7F13;&#x5B58;&#x66F4;&#x65B0;</span>
+            err = b.pvCache.Assume(newPV)
+            <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                b.revertAssumedPVs(newBindings)
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>, err
+            }
+        }
+        newBindings = <span class="hljs-built_in">append</span>(newBindings, &amp;BindingInfo{pv: newPV, pvc: binding.pvc})
+    }
+
+    <span class="hljs-comment">// &#x52A8;&#x6001;&#x5377;&#x9884;&#x5360; PVC</span>
+    newProvisionedPVCs := []*v1.PersistentVolumeClaim{}
+    <span class="hljs-keyword">for</span> _, claim := <span class="hljs-keyword">range</span> podVolumes.DynamicProvisions {
+        <span class="hljs-comment">// The claims from method args can be pointing to watcher cache. We must not</span>
+        <span class="hljs-comment">// modify these, therefore create a copy.</span>
+        claimClone := claim.DeepCopy()
+        metav1.SetMetaDataAnnotation(&amp;claimClone.ObjectMeta, volume.AnnSelectedNode, nodeName)
+        <span class="hljs-comment">// &#x7F13;&#x5B58;&#x66F4;&#x65B0;</span>
+        err = b.pvcCache.Assume(claimClone)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            b.revertAssumedPVs(newBindings)
+            b.revertAssumedPVCs(newProvisionedPVCs)
+            <span class="hljs-keyword">return</span>
+        }
+
+        newProvisionedPVCs = <span class="hljs-built_in">append</span>(newProvisionedPVCs, claimClone)
+    }
+    <span class="hljs-comment">// PodVolumes&#x5BF9;&#x8C61;&#x66F4;&#x65B0;</span>
+    podVolumes.StaticBindings = newBindings
+    podVolumes.DynamicProvisions = newProvisionedPVCs
+    <span class="hljs-keyword">return</span>
+}
+</code></pre>
+<h4 id="&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;">&#x5931;&#x8D25;&#x540E;&#x7684;&#x72B6;&#x6001;&#x56DE;&#x6EDA;</h4>
+<p>&#x4ECD;&#x4EE5;<code>VolumeBinding</code>&#x4E3A;&#x4F8B;&#xFF0C;&#x5931;&#x8D25;&#x540E;&#x7684;<code>Unreserve</code>&#x63D2;&#x4EF6;&#x83B7;&#x53D6;&#x8C03;&#x5EA6;&#x5F00;&#x59CB;&#x65F6;&#x4ECE;<code>ApiServer</code>&#x4E2D;&#x83B7;&#x53D6;&#x5230;&#x7684;&#x5BF9;&#x8C61;&#x4FE1;&#x606F;&#xFF0C;&#x5E76;&#x501F;&#x52A9;<code>Restore()</code>&#x65B9;&#x6CD5;&#x5411;<code>FIFO</code>&#x4E2D;&#x53D1;&#x9001;&#x66F4;&#x65B0;&#x4E8B;&#x4EF6;&#xFF0C;&#x4F7F;&#x672C;&#x5730;&#x7F13;&#x5B58;&#x4E2D;&#x7684;&#x6570;&#x636E;&#x56DE;&#x6EDA;&#x5230;&#x6700;&#x521D;&#x72B6;&#x6001;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) runReservePluginUnreserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) {
+    <span class="hljs-keyword">if</span> !state.ShouldRecordPluginMetrics() {
+        pl.Unreserve(ctx, state, pod, nodeName)
+        <span class="hljs-keyword">return</span>
+    }
+    startTime := time.Now()
+    pl.Unreserve(ctx, state, pod, nodeName)
+    f.metricsRecorder.ObservePluginDurationAsync(metrics.Unreserve, pl.Name(), framework.Success.String(), metrics.SinceInSeconds(startTime))
+}
+
+<span class="hljs-keyword">func</span> (pl *VolumeBinding) Unreserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) {
+    s, err := getStateData(cs)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span>
+    }
+    <span class="hljs-comment">// we don&apos;t need to hold the lock as only one node may be unreserved</span>
+    podVolumes, ok := s.podVolumesByNode[nodeName]
+    <span class="hljs-keyword">if</span> !ok {
+        <span class="hljs-keyword">return</span>
+    }
+    pl.Binder.RevertAssumedPodVolumes(podVolumes)
+}
+
+<span class="hljs-keyword">func</span> (b *volumeBinder) RevertAssumedPodVolumes(podVolumes *PodVolumes) {
+    b.revertAssumedPVs(podVolumes.StaticBindings)
+    b.revertAssumedPVCs(podVolumes.DynamicProvisions)
+}
+
+<span class="hljs-keyword">func</span> (b *volumeBinder) revertAssumedPVs(bindings []*BindingInfo) {
+    <span class="hljs-keyword">for</span> _, BindingInfo := <span class="hljs-keyword">range</span> bindings {
+        b.pvCache.Restore(BindingInfo.pv.Name)
+    }
+}
+
+<span class="hljs-keyword">func</span> (c *AssumeCache) Restore(objName <span class="hljs-keyword">string</span>) {
+    <span class="hljs-keyword">defer</span> c.emitEvents()
+    c.rwMutex.Lock()
+    <span class="hljs-keyword">defer</span> c.rwMutex.Unlock()
+
+    objInfo, err := c.getObjInfo(objName)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// This could be expected if object got deleted</span>
+        c.logger.V(<span class="hljs-number">5</span>).Info(<span class="hljs-string">&quot;Restore object&quot;</span>, <span class="hljs-string">&quot;description&quot;</span>, c.description, <span class="hljs-string">&quot;cacheKey&quot;</span>, objName, <span class="hljs-string">&quot;err&quot;</span>, err)
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">if</span> objInfo.latestObj != objInfo.apiObj {
+            c.pushEvent(objInfo.latestObj, objInfo.apiObj)
+            objInfo.latestObj = objInfo.apiObj
+        }
+        c.logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;Restored object&quot;</span>, <span class="hljs-string">&quot;description&quot;</span>, c.description, <span class="hljs-string">&quot;cacheKey&quot;</span>, objName)
+    }
+}
+</code></pre>
+<p>&#x7136;&#x540E;&#x8C03;&#x7528;<code>Cache.ForgetPod()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x628A;Pod&#x7684;&#x4FE1;&#x606F;&#x4ECE;&#x672C;&#x5730;&#x7F13;&#x5B58;&#x7684;<code>cache.podStates</code>&#x4EE5;&#x53CA;<code>cache.assumedPods</code>&#x96C6;&#x5408;&#x4E2D;&#x5220;&#x9664;&#x3002;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5931;&#x8D25;&#x5904;&#x7406;&#x4E0E;&#x4E4B;&#x5B8C;&#x5168;&#x76F8;&#x540C;&#x3002;</p>
+<h3 id="permit&#x6269;&#x5C55;&#x70B9;">Permit&#x6269;&#x5C55;&#x70B9;</h3>
+<p><code>Reserve</code>&#x6269;&#x5C55;&#x70B9;&#x4E4B;&#x540E;&#x7D27;&#x63A5;&#x7740;&#x5C31;&#x662F;<code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#xFF0C;&#x901A;&#x8FC7;&#x4EE3;&#x7801;&#x903B;&#x8F91;&#x53EF;&#x4EE5;&#x770B;&#x51FA;&#xFF0C;&#x5728;&#x6267;&#x884C;&#x5B8C;&#x5177;&#x4F53;&#x63D2;&#x4EF6;&#x4E4B;&#x540E;&#x4F1A;&#x5BF9;&#x8FD4;&#x56DE;&#x7684;&#x72B6;&#x6001;<code>status</code>&#x505A;&#x51FA;&#x5224;&#x65AD;&#xFF0C;&#x8FD9;&#x91CC;&#x548C;&#x5176;&#x4ED6;&#x63D2;&#x4EF6;&#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x76F8;&#x6BD4;&#xFF0C;&#x591A;&#x4E86;&#x4E00;&#x4E2A;<code>Wait</code>&#x72B6;&#x6001;&#xFF0C;&#x5982;&#x679C;&#x6CA1;&#x6709;&#x8FD4;&#x56DE;<code>Success</code>&#x800C;&#x662F;<code>Wait</code>&#x65F6;&#xFF0C;&#x6839;&#x636E;&#x8FD4;&#x56DE;&#x503C;&#x8BBE;&#x7F6E;&#x63D2;&#x4EF6;&#x7B49;&#x5F85;&#x7684;&#x8D85;&#x65F6;&#x65F6;&#x957F;(&#x6700;&#x5927;&#x4E0D;&#x8D85;&#x8FC7;<code>15&#x5206;&#x949F;</code>)&#xFF0C;&#x5E76;&#x4FEE;&#x6539;<code>statusCode</code>&#x6807;&#x8BC6;&#x4F4D;&#xFF0C;&#x5728;&#x904D;&#x5386;&#x6267;&#x884C;&#x5B8C;&#x6240;&#x6709;&#x7684;&#x63D2;&#x4EF6;&#x4E4B;&#x540E;&#xFF0C;&#x5982;&#x679C;&#x662F;&#x9700;&#x8981;&#x7B49;&#x5F85;&#x7684;&#xFF0C;&#x5C31;&#x5C06;&#x5176;&#x52A0;&#x5165;&#x5230;&#x7B49;&#x5F85;&#x961F;&#x5217;&#x4E2D;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) RunPermitPlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName <span class="hljs-keyword">string</span>) (status *framework.Status) {
+    startTime := time.Now()
+    <span class="hljs-keyword">defer</span> <span class="hljs-keyword">func</span>() {
+        metrics.FrameworkExtensionPointDuration.WithLabelValues(metrics.Permit, status.Code().String(), f.profileName).Observe(metrics.SinceInSeconds(startTime))
+    }()
+    pluginsWaitTime := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]time.Duration)
+    statusCode := framework.Success
+    logger := klog.FromContext(ctx)
+    verboseLogs := logger.V(<span class="hljs-number">4</span>).Enabled()
+    <span class="hljs-keyword">if</span> verboseLogs {
+        logger = klog.LoggerWithName(logger, <span class="hljs-string">&quot;Permit&quot;</span>)
+        logger = klog.LoggerWithValues(logger, <span class="hljs-string">&quot;node&quot;</span>, klog.ObjectRef{Name: nodeName})
+    }
+    <span class="hljs-keyword">for</span> _, pl := <span class="hljs-keyword">range</span> f.permitPlugins {
+        ctx := ctx
+        <span class="hljs-keyword">if</span> verboseLogs {
+            logger := klog.LoggerWithName(logger, pl.Name())
+            ctx = klog.NewContext(ctx, logger)
+        }
+        status, timeout := f.runPermitPlugin(ctx, pl, state, pod, nodeName)
+        <span class="hljs-comment">// &#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x5224;&#x65AD;</span>
+        <span class="hljs-keyword">if</span> !status.IsSuccess() {
+            <span class="hljs-keyword">if</span> status.IsRejected() {
+                logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;Pod rejected by plugin&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;plugin&quot;</span>, pl.Name(), <span class="hljs-string">&quot;status&quot;</span>, status.Message())
+                <span class="hljs-keyword">return</span> status.WithPlugin(pl.Name())
+            }
+            <span class="hljs-keyword">if</span> status.IsWait() {
+                <span class="hljs-comment">// &#x8FD4;&#x56DE;&#x72B6;&#x6001;&#x662F;Wait &#x8BBE;&#x7F6E;&#x8D85;&#x65F6;&#x65F6;&#x95F4;</span>
+                <span class="hljs-comment">// &#x6700;&#x5927;&#x662F;15&#x5206;&#x949F;</span>
+                <span class="hljs-keyword">if</span> timeout &gt; maxTimeout {
+                    timeout = maxTimeout
+                }
+                <span class="hljs-comment">// &#x8BBE;&#x7F6E;&#x63D2;&#x4EF6;&#x7B49;&#x5F85;&#x8D85;&#x65F6;&#x65F6;&#x957F;&#x5E76;&#x4FEE;&#x6539;&#x6807;statusCode&#x8BC6;&#x4F4D;</span>
+                pluginsWaitTime[pl.Name()] = timeout
+                statusCode = framework.Wait
+            } <span class="hljs-keyword">else</span> {
+                err := status.AsError()
+                logger.Error(err, <span class="hljs-string">&quot;Plugin failed&quot;</span>, <span class="hljs-string">&quot;plugin&quot;</span>, pl.Name(), <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod))
+                <span class="hljs-keyword">return</span> framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;running Permit plugin %q: %w&quot;</span>, pl.Name(), err)).WithPlugin(pl.Name())
+            }
+        }
+    }
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x904D;&#x5386;&#x7ED3;&#x675F;&#x540E;&#x6700;&#x7EC8;&#x72B6;&#x6001;&#x662F;Wait</span>
+    <span class="hljs-keyword">if</span> statusCode == framework.Wait {
+        waitingPod := newWaitingPod(pod, pluginsWaitTime)
+        f.waitingPods.add(waitingPod)
+        msg := fmt.Sprintf(<span class="hljs-string">&quot;one or more plugins asked to wait and no plugin rejected pod %q&quot;</span>, pod.Name)
+        logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;One or more plugins asked to wait and no plugin rejected pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod))
+        <span class="hljs-keyword">return</span> framework.NewStatus(framework.Wait, msg)
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x5728;<code>frameworkImpl</code>&#x4E2D;&#x5305;&#x542B;&#x4E00;&#x4E2A;&#x7B49;&#x5F85;&#x961F;&#x5217;<code>waitingPods</code>&#x7684;&#x7ED3;&#x6784;&#xFF0C;&#x5176;&#x7C7B;&#x578B;&#x662F;<code>waitingPodsMap</code>&#xFF0C;&#x7531;<code>waitingPod</code>&#x7684;&#x96C6;&#x5408;&#x548C;&#x4E00;&#x4E2A;&#x8BFB;&#x5199;&#x9501;&#x7EC4;&#x6210;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">type</span> waitingPodsMap <span class="hljs-keyword">struct</span> {
+    pods <span class="hljs-keyword">map</span>[types.UID]*waitingPod
+    mu   sync.RWMutex
+}
+
+<span class="hljs-keyword">type</span> waitingPod <span class="hljs-keyword">struct</span> {
+    pod            *v1.Pod
+    <span class="hljs-comment">// &#x5B9A;&#x65F6;&#x5668;</span>
+    pendingPlugins <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*time.Timer
+    <span class="hljs-comment">// &#x63A5;&#x6536;&#x7ED3;&#x679C;</span>
+    s              <span class="hljs-keyword">chan</span> *framework.Status
+    mu             sync.RWMutex
+}
+</code></pre>
+<p>&#x8FD9;&#x91CC;&#x5F88;&#x597D;&#x7406;&#x89E3;&#x4E86;&#xFF0C;&#x5C31;&#x662F;&#x7EC4;&#x88C5;&#x4E00;&#x4E2A;<code>waitingPod</code>&#x7ED3;&#x6784;&#xFF0C;&#x4E3A;&#x6BCF;&#x4E2A;&#x5176;&#x4E2D;&#x8981;&#x7B49;&#x5F85;&#x7684;&#x63D2;&#x4EF6;&#x8BBE;&#x7F6E;&#x4E00;&#x4E0B;&#x5B9A;&#x65F6;&#x5668;&#xFF0C;&#x7136;&#x540E;&#x628A;&#x8FD9;&#x4E2A;<code>waitingPod</code>&#x5BF9;&#x8C61;&#x52A0;&#x5165;&#x96C6;&#x5408;&#x4E2D;&#xFF0C;&#x5982;&#x679C;&#x65F6;&#x95F4;&#x5230;&#x4E86;&#x5C31;&#x4F1A;&#x81EA;&#x52A8;&#x6267;&#x884C;<code>Reject()</code>&#x65B9;&#x6CD5;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> newWaitingPod(pod *v1.Pod, pluginsMaxWaitTime <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]time.Duration) *waitingPod {
+    <span class="hljs-comment">// &#x7EC4;&#x88C5;waitingPod&#x7ED3;&#x6784;</span>
+    wp := &amp;waitingPod{
+        pod: pod,
+        s: <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> *framework.Status, <span class="hljs-number">1</span>),
+    }
+
+    wp.pendingPlugins = <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*time.Timer, <span class="hljs-built_in">len</span>(pluginsMaxWaitTime))
+    wp.mu.Lock()
+    <span class="hljs-keyword">defer</span> wp.mu.Unlock()
+    <span class="hljs-comment">// &#x904D;&#x5386;&#x7B49;&#x5F85;&#x7ED3;&#x679C;&#x7684;&#x63D2;&#x4EF6; &#x5206;&#x522B;&#x8BBE;&#x7F6E;&#x5B9A;&#x65F6;&#x5668;</span>
+    <span class="hljs-keyword">for</span> k, v := <span class="hljs-keyword">range</span> pluginsMaxWaitTime {
+        plugin, waitTime := k, v
+        wp.pendingPlugins[plugin] = time.AfterFunc(waitTime, <span class="hljs-keyword">func</span>() {
+            msg := fmt.Sprintf(<span class="hljs-string">&quot;rejected due to timeout after waiting %v at plugin %v&quot;</span>,
+                waitTime, plugin)
+            <span class="hljs-comment">// &#x5982;&#x679C;&#x8D85;&#x65F6;&#x4F1A;&#x6267;&#x884C;Reject&#x65B9;&#x6CD5;</span>
+            wp.Reject(plugin, msg)
+        })
+    }
+
+    <span class="hljs-keyword">return</span> wp
+}
+</code></pre>
+<p>&#x5982;&#x679C;&#x63D2;&#x4EF6;&#x8FD4;&#x56DE;&#x6210;&#x529F;&#x4F1A;&#x8C03;&#x7528;<code>Allow()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x4ECE;<code>pendingPlugins</code>&#x7684;&#x96C6;&#x5408;&#x4E2D;&#x83B7;&#x53D6;&#x63D2;&#x4EF6;&#x7684;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x505C;&#x6B62;&#x5B9A;&#x65F6;&#x5668;&#x5E76;&#x5220;&#x9664;&#x5F53;&#x524D;&#x5143;&#x7D20;&#x3002;&#x901A;&#x8FC7;&#x5BF9;&#x96C6;&#x5408;&#x957F;&#x5EA6;&#x7684;&#x5224;&#x65AD;&#xFF0C;&#x5728;&#x957F;&#x5EA6;&#x4E3A;0&#x65F6;&#x8868;&#x793A;&#x6240;&#x6709;&#x7684;<code>Permit</code>&#x63D2;&#x4EF6;&#x90FD;&#x5DF2;&#x7ECF;&#x5141;&#x8BB8;&#x8FD9;&#x4E2A;Pod&#x7684;&#x8C03;&#x5EA6;&#x4E86;&#xFF0C;&#x5C31;&#x5411;<code>waitingPod</code>&#x7684;<code>s</code>&#x901A;&#x9053;&#x4E2D;&#x53D1;&#x9001;&#x4E00;&#x4E2A;<code>framework.Success</code>&#x7684;&#x4FE1;&#x53F7;&#xFF0C;&#x8BE5;&#x4FE1;&#x53F7;&#x4F1A;&#x5728;&#x7ED1;&#x5B9A;&#x5468;&#x671F;&#x88AB;&#x63A5;&#x6536;&#x5E76;&#x5224;&#x65AD;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (w *waitingPod) Allow(pluginName <span class="hljs-keyword">string</span>) {
+    w.mu.Lock()
+    <span class="hljs-keyword">defer</span> w.mu.Unlock()
+    <span class="hljs-keyword">if</span> timer, exist := w.pendingPlugins[pluginName]; exist {
+        <span class="hljs-comment">// &#x505C;&#x6B62;&#x5F53;&#x524D;&#x5B9A;&#x65F6;&#x5668;</span>
+        timer.Stop()
+        <span class="hljs-comment">// &#x4ECE;&#x63D2;&#x4EF6;&#x5217;&#x8868;&#x4E2D;&#x5220;&#x9664;&#x5F53;&#x524D;&#x63D2;&#x4EF6;</span>
+        <span class="hljs-built_in">delete</span>(w.pendingPlugins, pluginName)
+    }
+
+    <span class="hljs-comment">// &#x8FD8;&#x9700;&#x8981;&#x7B49;&#x5F85;&#x5176;&#x4ED6;&#x63D2;&#x4EF6;&#x7684;&#x7ED3;&#x679C;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(w.pendingPlugins) != <span class="hljs-number">0</span> {
+        <span class="hljs-keyword">return</span>
+    }
+
+    <span class="hljs-comment">// pendingPlugins&#x4E2D;&#x5DF2;&#x7ECF;&#x6CA1;&#x6709;&#x5143;&#x7D20;&#x4E86; &#x5411;channel&#x4E2D;&#x53D1;&#x9001;&#x6210;&#x529F;&#x4FE1;&#x53F7;</span>
+    <span class="hljs-keyword">select</span> {
+    <span class="hljs-keyword">case</span> w.s &lt;- framework.NewStatus(framework.Success, <span class="hljs-string">&quot;&quot;</span>):
+    <span class="hljs-keyword">default</span>:
+    }
+}
+</code></pre>
+<p><code>Permit</code>&#x6269;&#x5C55;&#x70B9;&#x8FD0;&#x884C;&#x4E4B;&#x540E;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x5728;&#x6574;&#x4E2A;<code>SchedulingCycle</code>&#x7ED3;&#x675F;&#x4E4B;&#x524D;&#xFF0C;&#x4F1A;&#x6FC0;&#x6D3B;<code>podsToActivate</code>&#x96C6;&#x5408;&#x4E2D;&#x7684;Pod&#xFF0C;&#x628A;&#x5B83;&#x4EEC;&#x91CD;&#x65B0;&#x52A0;&#x5165;&#x5230;<code>ActiveQ</code>&#x91CC;&#xFF0C;&#x4E3A;&#x4E0B;&#x4E00;&#x6B21;&#x8C03;&#x5EA6;&#x7684;<code>SchedulingCycle</code>&#x505A;&#x597D;&#x51C6;&#x5907;&#x3002;</p>
+<pre><code class="lang-Go">    <span class="hljs-comment">// At the end of a successful scheduling cycle, pop and move up Pods if needed.</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(podsToActivate.Map) != <span class="hljs-number">0</span> {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+        <span class="hljs-comment">// Clear the entries after activation.</span>
+        podsToActivate.Map = <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*v1.Pod)
+    }
+    <span class="hljs-keyword">return</span> scheduleResult, assumedPodInfo, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<h4 id="permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;">Permit&#x6269;&#x5C55;&#x70B9;&#x7684;&#x5EF6;&#x4F38;</h4>
+<p>&#x5728;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x4E2D;&#xFF0C;<code>Permit</code>&#x9636;&#x6BB5;&#x5982;&#x679C;&#x8FD4;&#x56DE;&#x7684;&#x662F;<code>Wait</code>&#x72B6;&#x6001;&#xFF0C;&#x8C03;&#x5EA6;&#x5668;&#x4E0D;&#x4F1A;&#x56E0;&#x4E3A;&#x7B49;&#x5F85;&#x5B83;&#x8FD4;&#x56DE;&#x7684;&#x7ED3;&#x679C;&#x800C;&#x53BB;&#x5F71;&#x54CD;&#x5176;&#x4ED6;Pod&#x8C03;&#x5EA6;&#x7684;&#x6548;&#x7387;&#xFF0C;&#x800C;&#x662F;&#x5728;&#x5F02;&#x6B65;&#x6267;&#x884C;&#x7ED1;&#x5B9A;&#x5468;&#x671F;<code>BindingCycle</code>&#x7684;&#x5F00;&#x59CB;&#x5904;&#x786E;&#x8BA4;<code>waitingPod</code>&#x7684;&#x6700;&#x7EC8;&#x7ED3;&#x679C;&#x662F;<code>Success</code>&#x8FD8;&#x662F;<code>Rejected</code>&#x3002;</p>
+<pre><code class="lang-Go">    <span class="hljs-comment">// Run &quot;permit&quot; plugins.</span>
+    <span class="hljs-keyword">if</span> status := fwk.WaitOnPermit(ctx, assumedPod); !status.IsSuccess() {
+        <span class="hljs-keyword">if</span> status.IsRejected() {
+            fitErr := &amp;framework.FitError{
+                NumAllNodes: <span class="hljs-number">1</span>,
+                Pod:         assumedPodInfo.Pod,
+                Diagnosis: framework.Diagnosis{
+                    NodeToStatus:         framework.NewDefaultNodeToStatus(),
+                    UnschedulablePlugins: sets.New(status.Plugin()),
+                },
+            }
+            fitErr.Diagnosis.NodeToStatus.Set(scheduleResult.SuggestedHost, status)
+            <span class="hljs-keyword">return</span> framework.NewStatus(status.Code()).WithError(fitErr)
+        }
+        <span class="hljs-keyword">return</span> status
+    }
+</code></pre>
+<p>&#x5148;&#x5224;&#x65AD;&#x8981;&#x7ED1;&#x5B9A;&#x7684;Pod&#x662F;&#x5426;&#x662F;<code>waitingPod</code>&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x5B58;&#x5728;&#x5C31;&#x76F4;&#x63A5;&#x8FDB;&#x5165;&#x540E;&#x9762;&#x7684;&#x6D41;&#x7A0B;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> (f *frameworkImpl) WaitOnPermit(ctx context.Context, pod *v1.Pod) *framework.Status {
+    <span class="hljs-comment">// &#x4ECE;waitingPods&#x96C6;&#x5408;&#x4E2D;&#x83B7;&#x53D6;&#x5F53;&#x524D;Pod</span>
+    waitingPod := f.waitingPods.get(pod.UID)
+    <span class="hljs-comment">// &#x96C6;&#x5408;&#x4E2D;&#x4E0D;&#x5B58;&#x5728;&#x8FD9;&#x4E2A;&#x5BF9;&#x8C61;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;</span>
+    <span class="hljs-keyword">if</span> waitingPod == <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// WaitOnPermit&#x6D41;&#x7A0B;&#x7684;&#x6700;&#x540E;&#x4ECE;waitingPods&#x96C6;&#x5408;&#x4E2D;&#x79FB;&#x9664;&#x5F53;&#x524D;&#x5BF9;&#x8C61;</span>
+    <span class="hljs-keyword">defer</span> f.waitingPods.remove(pod.UID)
+
+    logger := klog.FromContext(ctx)
+    logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;Pod waiting on permit&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod))
+
+    startTime := time.Now()
+    <span class="hljs-comment">// waitingPod&#x7684;s&#x662F;&#x4E00;&#x4E2A;channel &#x7528;&#x4E8E;&#x63A5;&#x6536;&#x6700;&#x7EC8;&#x7684;Permit&#x7ED3;&#x679C;</span>
+    s := &lt;-waitingPod.s
+    metrics.PermitWaitDuration.WithLabelValues(s.Code().String()).Observe(metrics.SinceInSeconds(startTime))
+    <span class="hljs-comment">// &#x9519;&#x8BEF;&#x5904;&#x7406;</span>
+    <span class="hljs-keyword">if</span> !s.IsSuccess() {
+        <span class="hljs-keyword">if</span> s.IsRejected() {
+            logger.V(<span class="hljs-number">4</span>).Info(<span class="hljs-string">&quot;Pod rejected while waiting on permit&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod), <span class="hljs-string">&quot;status&quot;</span>, s.Message())
+            <span class="hljs-keyword">return</span> s
+        }
+        err := s.AsError()
+        logger.Error(err, <span class="hljs-string">&quot;Failed waiting on permit for pod&quot;</span>, <span class="hljs-string">&quot;pod&quot;</span>, klog.KObj(pod))
+        <span class="hljs-keyword">return</span> framework.AsStatus(fmt.Errorf(<span class="hljs-string">&quot;waiting on permit for pod: %w&quot;</span>, err)).WithPlugin(s.Plugin())
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x81F3;&#x6B64;&#xFF0C;&#x8C03;&#x5EA6;&#x5468;&#x671F;&#x7684;&#x6807;&#x51C6;&#x903B;&#x8F91;&#x5B8C;&#x5168;&#x7ED3;&#x675F;&#xFF0C;&#x5173;&#x4E8E;&#x5931;&#x8D25;&#x5904;&#x7406;&#x903B;&#x8F91;<code>FailureHandler</code>&#x4F1A;&#x653E;&#x5230;&#x5173;&#x4E8E;<code>Preemption</code>&#x7684;&#x7AE0;&#x8282;&#x91CC;&#x4E00;&#x8D77;&#x8BF4;&#x660E;&#x3002;</p>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="04 详解调度周期SchedulingCycle.html" class="navigation navigation-prev " aria-label="Previous page: 详解调度周期SchedulingCycle(上)">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="06 详解绑定周期BindingCycle.html" class="navigation navigation-next " aria-label="Next page: 详解绑定周期BindingCycle">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"详解调度周期SchedulingCycle(下)","level":"1.2.5","depth":2,"next":{"title":"详解绑定周期BindingCycle","level":"1.2.6","depth":2,"path":"kube-scheduler/06 详解绑定周期BindingCycle.md","ref":"kube-scheduler/06 详解绑定周期BindingCycle.md","articles":[]},"previous":{"title":"详解调度周期SchedulingCycle(上)","level":"1.2.4","depth":2,"path":"kube-scheduler/04 详解调度周期SchedulingCycle.md","ref":"kube-scheduler/04 详解调度周期SchedulingCycle.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"}},"file":{"path":"kube-scheduler/05 详解调度周期SchedulingCycle.md","mtime":"2025-05-22T08:34:21.016Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-16T05:08:39.558Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-livereload/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

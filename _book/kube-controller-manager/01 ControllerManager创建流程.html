@@ -1,0 +1,898 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>ControllerManager创建流程 · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="02 DeploymentController原理详解.html" />
+    
+    
+    <link rel="prev" href="./" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Kubernetes源码学习
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../kube-scheduler/">
+            
+                <a href="../kube-scheduler/">
+            
+                    
+                    Scheduler
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../kube-scheduler/01 Scheduler创建流程与调度队列.html">
+            
+                <a href="../kube-scheduler/01 Scheduler创建流程与调度队列.html">
+            
+                    
+                    Scheduler创建流程与调度队列
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../kube-scheduler/02 调度器缓存Cache的实现.html">
+            
+                <a href="../kube-scheduler/02 调度器缓存Cache的实现.html">
+            
+                    
+                    调度器缓存Cache的实现
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../kube-scheduler/03 Framework框架和调度流程.html">
+            
+                <a href="../kube-scheduler/03 Framework框架和调度流程.html">
+            
+                    
+                    Framework框架和调度流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.4" data-path="../kube-scheduler/04 详解调度周期SchedulingCycle.html">
+            
+                <a href="../kube-scheduler/04 详解调度周期SchedulingCycle.html">
+            
+                    
+                    详解调度周期SchedulingCycle(上)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.5" data-path="../kube-scheduler/05 详解调度周期SchedulingCycle.html">
+            
+                <a href="../kube-scheduler/05 详解调度周期SchedulingCycle.html">
+            
+                    
+                    详解调度周期SchedulingCycle(下)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.6" data-path="../kube-scheduler/06 详解绑定周期BindingCycle.html">
+            
+                <a href="../kube-scheduler/06 详解绑定周期BindingCycle.html">
+            
+                    
+                    详解绑定周期BindingCycle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.7" data-path="../kube-scheduler/07 失败处理与抢占调度Preemption.html">
+            
+                <a href="../kube-scheduler/07 失败处理与抢占调度Preemption.html">
+            
+                    
+                    失败处理与抢占调度Preemption
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.8" data-path="../kube-scheduler/08 调度器扩展与实践.html">
+            
+                <a href="../kube-scheduler/08 调度器扩展与实践.html">
+            
+                    
+                    调度器扩展与实践
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Controller Manager
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter active" data-level="1.3.1" data-path="01 ControllerManager创建流程.html">
+            
+                <a href="01 ControllerManager创建流程.html">
+            
+                    
+                    ControllerManager创建流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="02 DeploymentController原理详解.html">
+            
+                <a href="02 DeploymentController原理详解.html">
+            
+                    
+                    DeploymentController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >ControllerManager创建流程</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="controllermanager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;">ControllerManager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;</h1>
+<h3 id="&#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;">&#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;</h3>
+<p>&#x6839;&#x636E;&#x5728;&#x4E4B;&#x524D;&#x8C03;&#x5EA6;&#x5668;&#x5B66;&#x4E60;&#x8FC7;&#x7A0B;&#x4E2D;&#x5BF9;<code>Cobra</code>&#x6846;&#x67B6;&#x6784;&#x5EFA;&#x7EC4;&#x4EF6;&#x7684;&#x4E86;&#x89E3;&#xFF0C;&#x9996;&#x5148;&#x5C31;&#x4F1A;&#x60F3;&#x5230;<code>kube-controller- manager</code>&#x7684;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x4E5F;&#x5728;<code>cmd/kube-controller-manager/controller-manager.go</code>&#x4E2D;&#xFF0C;&#x5176;&#x4E2D;&#x540C;&#x6837;&#x4E5F;&#x53EA;&#x5305;&#x542B;&#x7B80;&#x5355;&#x7684;&#x4E09;&#x884C;&#x4EE3;&#x7801;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> main() {
+    command := app.NewControllerManagerCommand()
+    code := cli.Run(command)
+    os.Exit(code)
+}
+</code></pre>
+<p>&#x8FD9;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x4E2D;&#x662F;&#x5B8C;&#x5168;&#x76F8;&#x540C;&#x7684;&#xFF0C;&#x4E0B;&#x9762;&#x8FDB;&#x5165;<code>cmd/kube-controller-manager/app/controllermanager.go</code>&#x8DEF;&#x5F84;&#x4E0B;&#x53BB;&#x770B;&#x5177;&#x4F53;&#x903B;&#x8F91;&#x3002;&#x8FD8;&#x662F;&#x5173;&#x6CE8;<code>RunE()</code>&#x4E2D;return&#x7684;<code>Run()</code>&#x51FD;&#x6570;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-comment">// NewControllerManagerCommand creates a *cobra.Command object with default parameters</span>
+<span class="hljs-keyword">func</span> NewControllerManagerCommand() *cobra.Command {
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x7279;&#x6027;&#x95E8;&#x63A7;</span>
+    _, _ = featuregate.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
+        featuregate.DefaultKubeComponent, utilversion.DefaultBuildEffectiveVersion(), utilfeature.DefaultMutableFeatureGate)
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x914D;&#x7F6E;&#x4FE1;&#x606F;KubeControllerManagerOptions&#x5BF9;&#x8C61;</span>
+    s, err := options.NewKubeControllerManagerOptions()
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        klog.Background().Error(err, <span class="hljs-string">&quot;Unable to initialize command options&quot;</span>)
+        klog.FlushAndExit(klog.ExitFlushTimeout, <span class="hljs-number">1</span>)
+    }
+
+    cmd := &amp;cobra.Command{
+        ......
+        <span class="hljs-comment">// &#x6838;&#x5FC3;&#x903B;&#x8F91;</span>
+        RunE: <span class="hljs-keyword">func</span>(cmd *cobra.Command, args []<span class="hljs-keyword">string</span>) error {
+            verflag.PrintAndExitIfRequested()
+
+            <span class="hljs-comment">// Activate logging as soon as possible, after that</span>
+            <span class="hljs-comment">// show flags with the final logging configuration.</span>
+            <span class="hljs-keyword">if</span> err := logsapi.ValidateAndApply(s.Logs, utilfeature.DefaultFeatureGate); err != <span class="hljs-literal">nil</span> {
+                <span class="hljs-keyword">return</span> err
+            }
+            cliflag.PrintFlags(cmd.Flags())
+            <span class="hljs-comment">// KubeControllerManagerOptions--&gt;Config</span>
+            c, err := s.Config(KnownControllers(), ControllersDisabledByDefault(), ControllerAliases())
+            <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                <span class="hljs-keyword">return</span> err
+            }
+
+            <span class="hljs-comment">// add feature enablement metrics</span>
+            fg := s.ComponentGlobalsRegistry.FeatureGateFor(featuregate.DefaultKubeComponent)
+            fg.(featuregate.MutableFeatureGate).AddMetrics()
+            <span class="hljs-comment">// &#x4F20;&#x5165;CompletedConfig&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;</span>
+            <span class="hljs-keyword">return</span> Run(context.Background(), c.Complete())
+        },
+        Args: <span class="hljs-keyword">func</span>(cmd *cobra.Command, args []<span class="hljs-keyword">string</span>) error {
+            <span class="hljs-keyword">for</span> _, arg := <span class="hljs-keyword">range</span> args {
+                <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(arg) &gt; <span class="hljs-number">0</span> {
+                    <span class="hljs-keyword">return</span> fmt.Errorf(<span class="hljs-string">&quot;%q does not take any arguments, got %q&quot;</span>, cmd.CommandPath(), args)
+                }
+            }
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+        },
+    }
+
+    fs := cmd.Flags()
+    namedFlagSets := s.Flags(KnownControllers(), ControllersDisabledByDefault(), ControllerAliases())
+    verflag.AddFlags(namedFlagSets.FlagSet(<span class="hljs-string">&quot;global&quot;</span>))
+    globalflag.AddGlobalFlags(namedFlagSets.FlagSet(<span class="hljs-string">&quot;global&quot;</span>), cmd.Name(), logs.SkipLoggingConfigurationFlags())
+    <span class="hljs-keyword">for</span> _, f := <span class="hljs-keyword">range</span> namedFlagSets.FlagSets {
+        fs.AddFlagSet(f)
+    }
+
+    cols, _, _ := term.TerminalSize(cmd.OutOrStdout())
+    cliflag.SetUsageAndHelpFunc(cmd, namedFlagSets, cols)
+
+    <span class="hljs-keyword">return</span> cmd
+}
+</code></pre>
+<p>&#x914D;&#x7F6E;&#x4FE1;&#x606F;&#x4E0D;&#x662F;&#x6211;&#x4EEC;&#x9700;&#x8981;&#x5173;&#x6CE8;&#x7684;&#xFF0C;&#x5728;&#x63A7;&#x5236;&#x5668;&#x4E2D;&#x914D;&#x7F6E;&#x7684;&#x521B;&#x5EFA;&#x5B9E;&#x9645;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x4E2D;&#x662F;&#x57FA;&#x672C;&#x4E00;&#x81F4;&#x7684;&#x7684;&#xFF0C;&#x90FD;&#x662F;<code>Options -&gt; Config -&gt; CompletedConfig</code>&#xFF0C;&#x628A;&#x5B8C;&#x6574;&#x914D;&#x7F6E;&#x4F20;&#x5165;&#x6838;&#x5FC3;&#x903B;&#x8F91;<code>Run()</code>&#x51FD;&#x6570;&#xFF0C;</p>
+<h3 id="&#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;">&#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;</h3>
+<p><code>Run()</code>&#x51FD;&#x6570;&#x7684;&#x5B9E;&#x73B0;&#x4E5F;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x5341;&#x5206;&#x76F8;&#x4F3C;&#xFF0C;&#x9996;&#x5148;&#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;&#xFF0C;&#x6253;&#x5370;&#x57FA;&#x672C;&#x73AF;&#x5883;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;&#xFF0C;&#x6CE8;&#x518C;&#x914D;&#x7F6E;&#x548C;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x8BBE;&#x7F6E;&#xFF0C;&#x542F;&#x52A8;Server&#x5E76;&#x521B;&#x5EFA;&#x4E24;&#x4E2A;&#x4E0D;&#x540C;&#x6743;&#x9650;&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#x3002;&#x8FD9;&#x91CC;&#x6D89;&#x53CA;&#x4E86;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> Run(ctx context.Context, c *config.CompletedConfig) error {
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;</span>
+    logger := klog.FromContext(ctx)
+    stopCh := ctx.Done()
+
+    <span class="hljs-comment">// &#x6253;&#x5370;&#x7248;&#x672C;&#x4FE1;&#x606F;</span>
+    logger.Info(<span class="hljs-string">&quot;Starting&quot;</span>, <span class="hljs-string">&quot;version&quot;</span>, utilversion.Get())
+    <span class="hljs-comment">// &#x6253;&#x5370;Golang&#x73AF;&#x5883;&#x53D8;&#x91CF;</span>
+    logger.Info(<span class="hljs-string">&quot;Golang settings&quot;</span>, <span class="hljs-string">&quot;GOGC&quot;</span>, os.Getenv(<span class="hljs-string">&quot;GOGC&quot;</span>), <span class="hljs-string">&quot;GOMAXPROCS&quot;</span>, os.Getenv(<span class="hljs-string">&quot;GOMAXPROCS&quot;</span>), <span class="hljs-string">&quot;GOTRACEBACK&quot;</span>, os.Getenv(<span class="hljs-string">&quot;GOTRACEBACK&quot;</span>))
+
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;</span>
+    c.EventBroadcaster.StartStructuredLogging(<span class="hljs-number">0</span>)
+    c.EventBroadcaster.StartRecordingToSink(&amp;v1core.EventSinkImpl{Interface: c.Client.CoreV1().Events(<span class="hljs-string">&quot;&quot;</span>)})
+    <span class="hljs-keyword">defer</span> c.EventBroadcaster.Shutdown()
+    <span class="hljs-comment">// &#x6CE8;&#x518C;&#x914D;&#x7F6E;&#x4FE1;&#x606F;</span>
+    <span class="hljs-keyword">if</span> cfgz, err := configz.New(ConfigzName); err == <span class="hljs-literal">nil</span> {
+        cfgz.Set(c.ComponentConfig)
+    } <span class="hljs-keyword">else</span> {
+        logger.Error(err, <span class="hljs-string">&quot;Unable to register configz&quot;</span>)
+    }
+
+    <span class="hljs-comment">// &#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x8BBE;&#x7F6E;</span>
+    <span class="hljs-keyword">var</span> checks []healthz.HealthChecker
+    <span class="hljs-keyword">var</span> electionChecker *leaderelection.HealthzAdaptor
+    <span class="hljs-keyword">if</span> c.ComponentConfig.Generic.LeaderElection.LeaderElect {
+        electionChecker = leaderelection.NewLeaderHealthzAdaptor(time.Second * <span class="hljs-number">20</span>)
+        checks = <span class="hljs-built_in">append</span>(checks, electionChecker)
+    }
+    healthzHandler := controllerhealthz.NewMutableHealthzHandler(checks...)
+
+    <span class="hljs-comment">// &#x542F;&#x52A8;http&#x670D;&#x52A1;&#x5668;</span>
+    <span class="hljs-keyword">var</span> unsecuredMux *mux.PathRecorderMux
+    <span class="hljs-keyword">if</span> c.SecureServing != <span class="hljs-literal">nil</span> {
+        unsecuredMux = genericcontrollermanager.NewBaseHandler(&amp;c.ComponentConfig.Generic.Debugging, healthzHandler)
+        slis.SLIMetricsWithReset{}.Install(unsecuredMux)
+
+        handler := genericcontrollermanager.BuildHandlerChain(unsecuredMux, &amp;c.Authorization, &amp;c.Authentication)
+        <span class="hljs-keyword">if</span> _, _, err := c.SecureServing.Serve(handler, <span class="hljs-number">0</span>, stopCh); err != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span> err
+        }
+    }
+    <span class="hljs-comment">// &#x521B;&#x5EFA;root&#x6743;&#x9650;&#x5BA2;&#x6237;&#x7AEF;&#x548C;&#x666E;&#x901A;&#x5BA2;&#x6237;&#x7AEF;</span>
+    clientBuilder, rootClientBuilder := createClientBuilders(c)
+
+    saTokenControllerDescriptor := newServiceAccountTokenControllerDescriptor(rootClientBuilder)
+    <span class="hljs-comment">// &#x95ED;&#x5305;&#x51FD;&#x6570;</span>
+    run := <span class="hljs-keyword">func</span>(ctx context.Context, controllerDescriptors <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*ControllerDescriptor) {
+        controllerContext, err := CreateControllerContext(ctx, c, rootClientBuilder, clientBuilder)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            logger.Error(err, <span class="hljs-string">&quot;Error building controller context&quot;</span>)
+            klog.FlushAndExit(klog.ExitFlushTimeout, <span class="hljs-number">1</span>)
+        }
+
+        <span class="hljs-keyword">if</span> err := StartControllers(ctx, controllerContext, controllerDescriptors, unsecuredMux, healthzHandler); err != <span class="hljs-literal">nil</span> {
+            logger.Error(err, <span class="hljs-string">&quot;Error starting controllers&quot;</span>)
+            klog.FlushAndExit(klog.ExitFlushTimeout, <span class="hljs-number">1</span>)
+        }
+
+        controllerContext.InformerFactory.Start(stopCh)
+        controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
+        <span class="hljs-built_in">close</span>(controllerContext.InformersStarted)
+
+        &lt;-ctx.Done()
+    }
+
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x6CA1;&#x5F00;&#x542F;&#x9009;&#x4E3E; &#x76F4;&#x63A5;&#x8FD0;&#x884C;Controller&#x5E76;&#x8FD4;&#x56DE;</span>
+    <span class="hljs-keyword">if</span> !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
+        <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x96C6;&#x5408;</span>
+        controllerDescriptors := NewControllerDescriptors()
+        controllerDescriptors[names.ServiceAccountTokenController] = saTokenControllerDescriptor
+        <span class="hljs-comment">// &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;</span>
+        run(ctx, controllerDescriptors)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// &#x5F00;&#x542F;&#x9009;&#x4E3E;&#x7684;&#x60C5;&#x51B5;</span>
+    ......
+}
+</code></pre>
+<p>&#x5728;&#x5BF9;<code>run()</code>&#x95ED;&#x5305;&#x51FD;&#x6570;&#x4EE5;&#x53CA;&#x5185;&#x90E8;&#x903B;&#x8F91;&#x505A;&#x89E3;&#x91CA;&#x4E4B;&#x524D;&#xFF0C;&#x5148;&#x4E86;&#x89E3;&#x4E00;&#x4E2A;&#x6570;&#x636E;&#x7ED3;&#x6784;<code>ControllerDescriptor</code>&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x8BE5;&#x51FD;&#x6570;&#x7684;&#x5165;&#x53C2;&#x7C7B;&#x578B;&#xFF0C;&#x5B83;&#x7528;&#x4E8E;&#x63CF;&#x8FF0;&#x548C;&#x7BA1;&#x7406;&#x63A7;&#x5236;&#x5668;&#x7684;&#x4FE1;&#x606F;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">type</span> InitFunc <span class="hljs-keyword">func</span>(ctx context.Context, controllerContext ControllerContext, controllerName <span class="hljs-keyword">string</span>) (controller controller.Interface, enabled <span class="hljs-keyword">bool</span>, err error)
+
+<span class="hljs-keyword">type</span> ControllerDescriptor <span class="hljs-keyword">struct</span> {
+    <span class="hljs-comment">// &#x63A7;&#x5236;&#x5668;&#x540D;&#x79F0;</span>
+    name                      <span class="hljs-keyword">string</span>
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;</span>
+    initFunc                  InitFunc
+    <span class="hljs-comment">// &#x7279;&#x6027;&#x95E8;&#x63A7;&#x5217;&#x8868;</span>
+    requiredFeatureGates      []featuregate.Feature
+    <span class="hljs-comment">// &#x522B;&#x540D;</span>
+    aliases                   []<span class="hljs-keyword">string</span>
+    <span class="hljs-comment">// &#x662F;&#x5426;&#x9ED8;&#x8BA4;&#x7981;&#x7528;</span>
+    isDisabledByDefault       <span class="hljs-keyword">bool</span>
+    <span class="hljs-comment">// &#x662F;&#x5426;&#x548C;&#x4E91;&#x4F9B;&#x5E94;&#x5546;&#x6709;&#x5173;</span>
+    isCloudProviderController <span class="hljs-keyword">bool</span>
+    <span class="hljs-comment">// &#x662F;&#x5426;&#x6709;&#x7279;&#x6B8A;&#x5904;&#x7406;&#x903B;&#x8F91;</span>
+    requiresSpecialHandling   <span class="hljs-keyword">bool</span>
+}
+</code></pre>
+<p>&#x4EE5;&#x4E0D;&#x5F00;&#x542F;&#x9009;&#x4E3E;&#x7684;&#x6D41;&#x7A0B;&#x4E3A;&#x4F8B;&#xFF0C;&#x4E0D;&#x6D89;&#x53CA;&#x9009;&#x4E3B;&#x903B;&#x8F91;&#x4F1A;&#x76F4;&#x63A5;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x9996;&#x5148;&#x4F1A;&#x521D;&#x59CB;&#x5316;<code>ControllerDescriptor</code>&#x96C6;&#x5408;&#xFF0C;&#x7136;&#x540E;&#x4F20;&#x9012;&#x7ED9;<code>run()</code>&#x3002;</p>
+<pre><code class="lang-Go">    <span class="hljs-keyword">if</span> !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
+        controllerDescriptors := NewControllerDescriptors()
+        controllerDescriptors[names.ServiceAccountTokenController] = saTokenControllerDescriptor
+        run(ctx, controllerDescriptors)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+    }
+</code></pre>
+<p><code>NewControllerDescriptors()</code>&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#x4E86;&#x4E00;&#x4E2A;key&#x662F;&#x63A7;&#x5236;&#x5668;&#x540D;&#x79F0;&#xFF0C;value&#x662F;<code>ControllerDescriptor</code>&#x7684;&#x6620;&#x5C04;&#xFF0C;&#x5176;&#x4E2D;&#x6709;&#x4E00;&#x4E2A;&#x9700;&#x8981;&#x6CE8;&#x610F;&#x7684;&#x5730;&#x65B9;&#xFF0C;<code>ServiceAccountTokenControllerDescriptor</code>&#x662F;&#x552F;&#x4E00;&#x7279;&#x6B8A;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x9700;&#x8981;&#x6700;&#x5148;&#x542F;&#x52A8;&#x800C;&#x4E14;&#x4F7F;&#x7528;&#x5177;&#x6709;<strong>&#x6839;&#x6743;&#x9650;</strong>&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#x521D;&#x59CB;&#x5316;&#xFF0C;&#x5728;&#x4E4B;&#x524D;&#x7684;&#x4EE3;&#x7801;&#x4E2D;&#x4EE5;&#x53CA;&#x521B;&#x5EFA;&#x4E86;&#x5BF9;&#x8C61;<code>saTokenControllerDescriptor</code>&#xFF0C;&#x90A3;&#x4E48;&#x4E3A;&#x4EC0;&#x4E48;&#x5728;&#x4E0B;&#x9762;&#x8FD9;&#x6BB5;&#x51FD;&#x6570;&#x4E2D;&#x8FD8;&#x8981;&#x6CE8;&#x518C;&#x5462;&#xFF1F;&#x4E3B;&#x8981;&#x7684;&#x539F;&#x56E0;&#x662F;<code>NewControllerDescriptors()</code>&#x51FD;&#x6570;&#x6CA1;&#x6709;&#x5165;&#x53C2;&#x800C;<code>ServiceAccountTokenControllerDescriptor</code>&#x7684;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x9700;&#x8981;&#x4F20;&#x5165;&#x6839;&#x6743;&#x9650;&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#xFF0C;&#x4F46;&#x662F;&#x8981;&#x4FDD;&#x8BC1;&#x548C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x5143;&#x6570;&#x636E;&#x521B;&#x5EFA;&#x65F6;&#x7684;&#x4E00;&#x81F4;&#x6027;&#xFF0C;&#x5E76;&#x4E14;&#x5176;&#x4E2D;<code>register()</code>&#x6821;&#x9A8C;&#x4E86;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x7684;&#x5408;&#x6CD5;&#x6027;&#xFF0C;&#x867D;&#x7136;&#x540E;&#x9762;&#x4F1A;&#x88AB;&#x5355;&#x72EC;&#x521B;&#x5EFA;&#x7684;<code>saTokenControllerDescriptor</code>&#x66FF;&#x6362;&#xFF0C;&#x4F46;&#x662F;&#x4E0D;&#x5F71;&#x54CD;&#x548C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x4E00;&#x8D77;&#x521D;&#x59CB;&#x5316;&#x4E00;&#x6B21;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> NewControllerDescriptors() <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*ControllerDescriptor {
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;</span>
+    controllers := <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*ControllerDescriptor{}
+    <span class="hljs-comment">// &#x4F7F;&#x7528;Set&#x907F;&#x514D;&#x91CD;&#x590D;&#x5143;&#x7D20;</span>
+    aliases := sets.NewString()
+
+    <span class="hljs-comment">// &#x5408;&#x6CD5;&#x6027;&#x6821;&#x9A8C;&#x4E0E;&#x96C6;&#x5408;&#x5143;&#x7D20;&#x6DFB;&#x52A0;</span>
+    register := <span class="hljs-keyword">func</span>(controllerDesc *ControllerDescriptor) {
+        <span class="hljs-keyword">if</span> controllerDesc == <span class="hljs-literal">nil</span> {
+            <span class="hljs-built_in">panic</span>(<span class="hljs-string">&quot;received nil controller for a registration&quot;</span>)
+        }
+        name := controllerDesc.Name()
+        <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(name) == <span class="hljs-number">0</span> {
+            <span class="hljs-built_in">panic</span>(<span class="hljs-string">&quot;received controller without a name for a registration&quot;</span>)
+        }
+        <span class="hljs-keyword">if</span> _, found := controllers[name]; found {
+            <span class="hljs-built_in">panic</span>(fmt.Sprintf(<span class="hljs-string">&quot;controller name %q was registered twice&quot;</span>, name))
+        }
+        <span class="hljs-keyword">if</span> controllerDesc.GetInitFunc() == <span class="hljs-literal">nil</span> {
+            <span class="hljs-built_in">panic</span>(fmt.Sprintf(<span class="hljs-string">&quot;controller %q does not have an init function&quot;</span>, name))
+        }
+
+        <span class="hljs-keyword">for</span> _, alias := <span class="hljs-keyword">range</span> controllerDesc.GetAliases() {
+            <span class="hljs-keyword">if</span> aliases.Has(alias) {
+                <span class="hljs-built_in">panic</span>(fmt.Sprintf(<span class="hljs-string">&quot;controller %q has a duplicate alias %q&quot;</span>, name, alias))
+            }
+            aliases.Insert(alias)
+        }
+
+        controllers[name] = controllerDesc
+    }
+
+    <span class="hljs-comment">// &#x6CE8;&#x518C;&#x6240;&#x6709;&#x7684;ControllerDescriptor</span>
+    register(newServiceAccountTokenControllerDescriptor(<span class="hljs-literal">nil</span>))
+
+    register(newEndpointsControllerDescriptor())
+    register(newEndpointSliceControllerDescriptor())
+    register(newEndpointSliceMirroringControllerDescriptor())
+    register(newReplicationControllerDescriptor())
+    register(newPodGarbageCollectorControllerDescriptor())
+    register(newResourceQuotaControllerDescriptor())
+    register(newNamespaceControllerDescriptor())
+    register(newServiceAccountControllerDescriptor())
+    register(newGarbageCollectorControllerDescriptor())
+    register(newDaemonSetControllerDescriptor())
+    register(newJobControllerDescriptor())
+    register(newDeploymentControllerDescriptor())
+    register(newReplicaSetControllerDescriptor())
+    register(newHorizontalPodAutoscalerControllerDescriptor())
+    register(newDisruptionControllerDescriptor())
+    register(newStatefulSetControllerDescriptor())
+    register(newCronJobControllerDescriptor())
+    register(newCertificateSigningRequestSigningControllerDescriptor())
+    register(newCertificateSigningRequestApprovingControllerDescriptor())
+    register(newCertificateSigningRequestCleanerControllerDescriptor())
+    register(newTTLControllerDescriptor())
+    register(newBootstrapSignerControllerDescriptor())
+    register(newTokenCleanerControllerDescriptor())
+    register(newNodeIpamControllerDescriptor())
+    register(newNodeLifecycleControllerDescriptor())
+
+    register(newServiceLBControllerDescriptor())          <span class="hljs-comment">// cloud provider controller</span>
+    register(newNodeRouteControllerDescriptor())          <span class="hljs-comment">// cloud provider controller</span>
+    register(newCloudNodeLifecycleControllerDescriptor()) <span class="hljs-comment">// cloud provider controller</span>
+
+    register(newPersistentVolumeBinderControllerDescriptor())
+    register(newPersistentVolumeAttachDetachControllerDescriptor())
+    register(newPersistentVolumeExpanderControllerDescriptor())
+    register(newClusterRoleAggregrationControllerDescriptor())
+    register(newPersistentVolumeClaimProtectionControllerDescriptor())
+    register(newPersistentVolumeProtectionControllerDescriptor())
+    register(newVolumeAttributesClassProtectionControllerDescriptor())
+    register(newTTLAfterFinishedControllerDescriptor())
+    register(newRootCACertificatePublisherControllerDescriptor())
+    register(newKubeAPIServerSignerClusterTrustBundledPublisherDescriptor())
+    register(newEphemeralVolumeControllerDescriptor())
+
+    <span class="hljs-comment">// feature gated</span>
+    register(newStorageVersionGarbageCollectorControllerDescriptor())
+    register(newResourceClaimControllerDescriptor())
+    register(newLegacyServiceAccountTokenCleanerControllerDescriptor())
+    register(newValidatingAdmissionPolicyStatusControllerDescriptor())
+    register(newTaintEvictionControllerDescriptor())
+    register(newServiceCIDRsControllerDescriptor())
+    register(newStorageVersionMigratorControllerDescriptor())
+    register(newSELinuxWarningControllerDescriptor())
+
+    <span class="hljs-keyword">for</span> _, alias := <span class="hljs-keyword">range</span> aliases.UnsortedList() {
+        <span class="hljs-keyword">if</span> _, ok := controllers[alias]; ok {
+            <span class="hljs-built_in">panic</span>(fmt.Sprintf(<span class="hljs-string">&quot;alias %q conflicts with a controller name&quot;</span>, alias))
+        }
+    }
+    <span class="hljs-comment">// &#x8FD4;&#x56DE;ControllerDescriptor&#x96C6;&#x5408;</span>
+    <span class="hljs-keyword">return</span> controllers
+}
+</code></pre>
+<p>&#x6240;&#x6709;&#x7684;<code>ControllerDescriptor</code>&#x5143;&#x6570;&#x636E;&#x90FD;&#x521D;&#x59CB;&#x5316;&#x540E;&#xFF0C;&#x66FF;&#x6362;<code>ServiceAccountTokenControllerDescriptor</code>&#x4E3A;&#x6B64;&#x524D;&#x521B;&#x5EFA;&#x7684;&#x5185;&#x5BB9;&#xFF0C;&#x7136;&#x540E;&#x8C03;&#x7528;&#x6838;&#x5FC3;&#x5165;&#x53E3;&#x903B;&#x8F91;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#xFF0C;&#x4E0B;&#x9762;&#x6765;&#x770B;&#x5B83;&#x7684;&#x5B9E;&#x73B0;&#x903B;&#x8F91;&#x3002;</p>
+<pre><code class="lang-Go">    run := <span class="hljs-keyword">func</span>(ctx context.Context, controllerDescriptors <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*ControllerDescriptor) {
+        <span class="hljs-comment">// &#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x4E0A;&#x4E0B;&#x6587;</span>
+        controllerContext, err := CreateControllerContext(ctx, c, rootClientBuilder, clientBuilder)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            logger.Error(err, <span class="hljs-string">&quot;Error building controller context&quot;</span>)
+            klog.FlushAndExit(klog.ExitFlushTimeout, <span class="hljs-number">1</span>)
+        }
+        <span class="hljs-comment">// &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;</span>
+        <span class="hljs-keyword">if</span> err := StartControllers(ctx, controllerContext, controllerDescriptors, unsecuredMux, healthzHandler); err != <span class="hljs-literal">nil</span> {
+            logger.Error(err, <span class="hljs-string">&quot;Error starting controllers&quot;</span>)
+            klog.FlushAndExit(klog.ExitFlushTimeout, <span class="hljs-number">1</span>)
+        }
+        <span class="hljs-comment">// &#x542F;&#x52A8;SharedInformer&#x5DE5;&#x5382; &#x76D1;&#x63A7;Kubernetes&#x6807;&#x51C6;&#x8D44;&#x6E90;</span>
+        controllerContext.InformerFactory.Start(stopCh)
+        <span class="hljs-comment">// &#x542F;&#x52A8;MetadataInformerFactory&#x5DE5;&#x5382; &#x76D1;&#x63A7;&#x7C7B;&#x578B;&#x5316;&#x8D44;&#x6E90;&#x5982;CRD</span>
+        controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
+        <span class="hljs-built_in">close</span>(controllerContext.InformersStarted)
+
+        &lt;-ctx.Done()
+    }
+</code></pre>
+<p>&#x5173;&#x4E8E;<code>CreateControllerContext()</code>&#x51FD;&#x6570;&#xFF0C;&#x5B83;&#x7684;&#x4F5C;&#x7528;&#x662F;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> CreateControllerContext(ctx context.Context, s *config.CompletedConfig, rootClientBuilder, clientBuilder clientbuilder.ControllerClientBuilder) (ControllerContext, error) {
+    <span class="hljs-comment">// &#x95ED;&#x5305;&#x51FD;&#x6570; &#x7528;&#x4E8E;&#x88C1;&#x526A;obj&#x5BF9;&#x8C61;&#x7684;ManagedFields&#x5B57;&#x6BB5;&#x6765;&#x63D0;&#x9AD8;&#x5185;&#x5B58;&#x6548;&#x7387;</span>
+    trim := <span class="hljs-keyword">func</span>(obj <span class="hljs-keyword">interface</span>{}) (<span class="hljs-keyword">interface</span>{}, error) {
+        <span class="hljs-comment">// &#x83B7;&#x53D6;obj&#x5BF9;&#x8C61;&#x5143;&#x6570;&#x636E;</span>
+        <span class="hljs-keyword">if</span> accessor, err := meta.Accessor(obj); err == <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">if</span> accessor.GetManagedFields() != <span class="hljs-literal">nil</span> {
+                <span class="hljs-comment">// &#x88C1;&#x526A;ManagedFields&#x5B57;&#x6BB5;</span>
+                accessor.SetManagedFields(<span class="hljs-literal">nil</span>)
+            }
+        }
+        <span class="hljs-keyword">return</span> obj, <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// &#x521B;&#x5EFA;SharedInformer&#x5DE5;&#x5382;</span>
+    versionedClient := rootClientBuilder.ClientOrDie(<span class="hljs-string">&quot;shared-informers&quot;</span>)
+    sharedInformers := informers.NewSharedInformerFactoryWithOptions(versionedClient, ResyncPeriod(s)(), informers.WithTransform(trim))
+    <span class="hljs-comment">// &#x521B;&#x5EFA;MetadataInformers&#x5DE5;&#x5382;</span>
+    metadataClient := metadata.NewForConfigOrDie(rootClientBuilder.ConfigOrDie(<span class="hljs-string">&quot;metadata-informers&quot;</span>))
+    metadataInformers := metadatainformer.NewSharedInformerFactoryWithOptions(metadataClient, ResyncPeriod(s)(), metadatainformer.WithTransform(trim))
+
+    <span class="hljs-comment">// &#x7B49;&#x5F85;ApiServer&#x542F;&#x52A8; &#x8D85;&#x65F6;&#x65F6;&#x95F4;&#x8BBE;&#x7F6E;&#x4E3A;10s</span>
+    <span class="hljs-keyword">if</span> err := genericcontrollermanager.WaitForAPIServer(versionedClient, <span class="hljs-number">10</span>*time.Second); err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> ControllerContext{}, fmt.Errorf(<span class="hljs-string">&quot;failed to wait for apiserver being healthy: %v&quot;</span>, err)
+    }
+
+    <span class="hljs-comment">// &#x521B;&#x5EFA;Discovery&#x5BA2;&#x6237;&#x7AEF;</span>
+    discoveryClient := rootClientBuilder.DiscoveryClientOrDie(<span class="hljs-string">&quot;controller-discovery&quot;</span>)
+    <span class="hljs-comment">// &#x628A;Discovery&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;</span>
+    cachedClient := cacheddiscovery.NewMemCacheClient(discoveryClient)
+    <span class="hljs-comment">// &#x518D;&#x628A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;REST&#x6620;&#x5C04;&#x5668;</span>
+    restMapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedClient)
+    <span class="hljs-comment">// &#x542F;&#x52A8;&#x4E00;&#x4E2A;&#x534F;&#x7A0B;&#x5B9A;&#x65F6;&#x6BCF;30s&#x5237;&#x65B0;REST&#x6620;&#x5C04;&#x5668;&#x7F13;&#x5B58; &#x786E;&#x4FDD;&#x83B7;&#x53D6;&#x6700;&#x65B0;&#x7684;API&#x4FE1;&#x606F;</span>
+    <span class="hljs-keyword">go</span> wait.Until(<span class="hljs-keyword">func</span>() {
+        restMapper.Reset()
+    }, <span class="hljs-number">30</span>*time.Second, ctx.Done())
+    <span class="hljs-comment">// &#x7EC4;&#x88C5;ControllerContext&#x5BF9;&#x8C61;</span>
+    controllerContext := ControllerContext{
+        ClientBuilder:                   clientBuilder,
+        InformerFactory:                 sharedInformers,
+        ObjectOrMetadataInformerFactory: informerfactory.NewInformerFactory(sharedInformers, metadataInformers),
+        ComponentConfig:                 s.ComponentConfig,
+        RESTMapper:                      restMapper,
+        InformersStarted:                <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">struct</span>{}),
+        ResyncPeriod:                    ResyncPeriod(s),
+        ControllerManagerMetrics:        controllersmetrics.NewControllerManagerMetrics(<span class="hljs-string">&quot;kube-controller-manager&quot;</span>),
+    }
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x5F00;&#x542F;&#x4E86;GarbageCollectorController&#x5783;&#x573E;&#x56DE;&#x6536;&#x63A7;&#x5236;&#x5668;</span>
+    <span class="hljs-keyword">if</span> controllerContext.ComponentConfig.GarbageCollectorController.EnableGarbageCollector &amp;&amp;
+        controllerContext.IsControllerEnabled(NewControllerDescriptors()[names.GarbageCollectorController]) {
+        ignoredResources := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">map</span>[schema.GroupResource]<span class="hljs-keyword">struct</span>{})
+        <span class="hljs-keyword">for</span> _, r := <span class="hljs-keyword">range</span> controllerContext.ComponentConfig.GarbageCollectorController.GCIgnoredResources {
+            <span class="hljs-comment">// &#x83B7;&#x53D6;&#x5FFD;&#x7565;&#x8D44;&#x6E90;&#x5217;&#x8868;</span>
+            ignoredResources[schema.GroupResource{Group: r.Group, Resource: r.Resource}] = <span class="hljs-keyword">struct</span>{}{}
+        }
+        <span class="hljs-comment">// &#x521B;&#x5EFA;GraphBuilder&#x7528;&#x6765;&#x6784;&#x5EFA;&#x8D44;&#x6E90;&#x5173;&#x7CFB;&#x4F9D;&#x8D56;</span>
+        controllerContext.GraphBuilder = garbagecollector.NewDependencyGraphBuilder(
+            ctx,
+            metadataClient,
+            controllerContext.RESTMapper,
+            ignoredResources,
+            controllerContext.ObjectOrMetadataInformerFactory,
+            controllerContext.InformersStarted,
+        )
+    }
+    <span class="hljs-comment">// &#x6CE8;&#x518C;&#x6307;&#x6807;&#x8BA1;&#x6570;&#x5668;</span>
+    controllersmetrics.Register()
+    <span class="hljs-keyword">return</span> controllerContext, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x7531;&#x4E8E;<code>ControllerManager</code>&#x7684;&#x8FD0;&#x884C;&#x6240;&#x8C13;&#x7B49;&#x5F85;<code>ApiServer</code>&#x6210;&#x529F;&#x542F;&#x52A8;&#xFF0C;&#x5C31;&#x662F;&#x7B49;&#x5F85;&#x5B83;&#x7684;<code>/healthz</code>&#x7AEF;&#x70B9;&#x8FD4;&#x56DE;<code>OK</code>&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
+    <span class="hljs-keyword">var</span> lastErr error
+    <span class="hljs-comment">// &#x8F6E;&#x8BE2;&#x5668;&#x6267;&#x884C;&#x76EE;&#x6807;&#x51FD;&#x6570;</span>
+    err := wait.PollImmediate(time.Second, timeout, <span class="hljs-keyword">func</span>() (<span class="hljs-keyword">bool</span>, error) {
+        healthStatus := <span class="hljs-number">0</span>
+        result := client.Discovery().RESTClient().Get().AbsPath(<span class="hljs-string">&quot;/healthz&quot;</span>).Do(context.TODO()).StatusCode(&amp;healthStatus)
+        <span class="hljs-keyword">if</span> result.Error() != <span class="hljs-literal">nil</span> {
+            lastErr = fmt.Errorf(<span class="hljs-string">&quot;failed to get apiserver /healthz status: %v&quot;</span>, result.Error())
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>, <span class="hljs-literal">nil</span>
+        }
+        <span class="hljs-keyword">if</span> healthStatus != http.StatusOK {
+            content, _ := result.Raw()
+            lastErr = fmt.Errorf(<span class="hljs-string">&quot;APIServer isn&apos;t healthy: %v&quot;</span>, <span class="hljs-keyword">string</span>(content))
+            klog.Warningf(<span class="hljs-string">&quot;APIServer isn&apos;t healthy yet: %v. Waiting a little while.&quot;</span>, <span class="hljs-keyword">string</span>(content))
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>, <span class="hljs-literal">nil</span>
+        }
+        <span class="hljs-comment">// &#x8FD4;&#x56DE;200OK&#x7ED3;&#x675F;&#x8F6E;&#x8BE2;</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>, <span class="hljs-literal">nil</span>
+    })
+
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-keyword">return</span> fmt.Errorf(<span class="hljs-string">&quot;%v: %v&quot;</span>, err, lastErr)
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x5728;<code>CreateControllerContext()</code>&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#x4E86;&#x63A7;&#x5236;&#x5668;&#x7684;&#x516C;&#x5171;&#x914D;&#x7F6E;&#x540E;&#xFF0C;&#x5C31;&#x8FDB;&#x5165;&#x5230;&#x4E0B;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x6B65;&#x9AA4;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x9010;&#x4E2A;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;&#x3002;</p>
+<p>&#x9996;&#x5148;&#x4F1A;&#x542F;&#x52A8;<code>ServiceAccountToken</code>&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x56E0;&#x4E3A;&#x4E0E;<code>ApiServer</code>&#x4EA4;&#x4E92;&#x65F6;&#x4F1A;&#x7528;&#x5230;&#x4EE4;&#x724C;&#x9A8C;&#x8BC1;&#x8EAB;&#x4EFD;&#xFF0C;&#x5982;&#x679C;&#x8BE5;&#x63A7;&#x5236;&#x5668;&#x6CA1;&#x6709;&#x542F;&#x52A8;&#x4F1A;&#x5F71;&#x54CD;&#x5230;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x7684;&#x6B63;&#x5E38;&#x8FD0;&#x884C;&#x3002;&#x7136;&#x540E;&#x518D;&#x904D;&#x5386;<code>ControllerDescriptor</code>&#x96C6;&#x5408;&#x542F;&#x52A8;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> StartControllers(ctx context.Context, controllerCtx ControllerContext, controllerDescriptors <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]*ControllerDescriptor,
+    unsecuredMux *mux.PathRecorderMux, healthzHandler *controllerhealthz.MutableHealthzHandler) error {
+    <span class="hljs-keyword">var</span> controllerChecks []healthz.HealthChecker
+
+    <span class="hljs-comment">// ServiceAccountTokenController&#x9700;&#x8981;&#x7B2C;&#x4E00;&#x4E2A;&#x88AB;&#x542F;&#x52A8;</span>
+    <span class="hljs-keyword">if</span> serviceAccountTokenControllerDescriptor, ok := controllerDescriptors[names.ServiceAccountTokenController]; ok {
+        check, err := StartController(ctx, controllerCtx, serviceAccountTokenControllerDescriptor, unsecuredMux)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span> err
+        }
+        <span class="hljs-keyword">if</span> check != <span class="hljs-literal">nil</span> {
+            <span class="hljs-comment">// HealthChecker should be present when controller has started</span>
+            controllerChecks = <span class="hljs-built_in">append</span>(controllerChecks, check)
+        }
+    }
+
+    <span class="hljs-comment">// &#x904D;&#x5386;&#x542F;&#x52A8;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;</span>
+    <span class="hljs-keyword">for</span> _, controllerDesc := <span class="hljs-keyword">range</span> controllerDescriptors {
+        <span class="hljs-keyword">if</span> controllerDesc.RequiresSpecialHandling() {
+            <span class="hljs-keyword">continue</span>
+        }
+
+        check, err := StartController(ctx, controllerCtx, controllerDesc, unsecuredMux)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">return</span> err
+        }
+        <span class="hljs-keyword">if</span> check != <span class="hljs-literal">nil</span> {
+            <span class="hljs-comment">// HealthChecker should be present when controller has started</span>
+            controllerChecks = <span class="hljs-built_in">append</span>(controllerChecks, check)
+        }
+    }
+
+    healthzHandler.AddHealthChecker(controllerChecks...)
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<h4 id="serviceaccounttoken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;">ServiceAccountToken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;</h4>
+<p>&#x770B;&#x4E00;&#x4E0B;<code>ServiceAccountTokenController</code>&#x662F;&#x5982;&#x4F55;&#x542F;&#x52A8;&#x7684;&#xFF0C;<code>StartController()</code>&#x662F;&#x8BE5;&#x63A7;&#x5236;&#x5668;&#x542F;&#x52A8;&#x7684;&#x76F4;&#x63A5;&#x6B65;&#x9AA4;&#x3002;&#x7ECF;&#x8FC7;&#x4E00;&#x7CFB;&#x5217;&#x7684;&#x68C0;&#x67E5;&#x540E;&#xFF0C;&#x8C03;&#x7528;&#x6B64;&#x524D;&#x5728;<code>ControllerDescriptor</code>&#x5BF9;&#x8C61;&#x4E2D;&#x6CE8;&#x518C;&#x7684;<code>InitFunc</code>&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;&#xFF0C;&#x5E76;&#x6CE8;&#x518C;&#x8C03;&#x8BD5;&#x63A5;&#x53E3;&#x548C;&#x521B;&#x5EFA;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x5668;&#x3002;</p>
+<pre><code class="lang-Go"><span class="hljs-keyword">func</span> StartController(ctx context.Context, controllerCtx ControllerContext, controllerDescriptor *ControllerDescriptor,
+    unsecuredMux *mux.PathRecorderMux) (healthz.HealthChecker, error) {
+    <span class="hljs-comment">// &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;</span>
+    logger := klog.FromContext(ctx)
+    controllerName := controllerDescriptor.Name()
+    <span class="hljs-comment">// &#x6821;&#x9A8C;&#x9700;&#x8981;&#x7684;&#x7279;&#x6027;&#x95E8;&#x63A7;&#x662F;&#x5426;&#x5168;&#x90E8;&#x5F00;&#x542F;</span>
+    <span class="hljs-keyword">for</span> _, featureGate := <span class="hljs-keyword">range</span> controllerDescriptor.GetRequiredFeatureGates() {
+        <span class="hljs-keyword">if</span> !utilfeature.DefaultFeatureGate.Enabled(featureGate) {
+            logger.Info(<span class="hljs-string">&quot;Controller is disabled by a feature gate&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName, <span class="hljs-string">&quot;requiredFeatureGates&quot;</span>, controllerDescriptor.GetRequiredFeatureGates())
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, <span class="hljs-literal">nil</span>
+        }
+    }
+    <span class="hljs-comment">// &#x5982;&#x679C;&#x662F;&#x4E91;&#x5382;&#x5546;&#x63A7;&#x5236;&#x5668;&#x5219;&#x8DF3;&#x8FC7;</span>
+    <span class="hljs-keyword">if</span> controllerDescriptor.IsCloudProviderController() {
+        logger.Info(<span class="hljs-string">&quot;Skipping a cloud provider controller&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// &#x6821;&#x9A8C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x662F;&#x5426;&#x88AB;&#x542F;&#x7528;</span>
+    <span class="hljs-keyword">if</span> !controllerCtx.IsControllerEnabled(controllerDescriptor) {
+        logger.Info(<span class="hljs-string">&quot;Warning: controller is disabled&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, <span class="hljs-literal">nil</span>
+    }
+    <span class="hljs-comment">// &#x968F;&#x673A;&#x5EF6;&#x8FDF;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668; &#x907F;&#x514D;&#x8D44;&#x6E90;&#x7ADE;&#x4E89;</span>
+    time.Sleep(wait.Jitter(controllerCtx.ComponentConfig.Generic.ControllerStartInterval.Duration, ControllerStartJitter))
+
+    logger.V(<span class="hljs-number">1</span>).Info(<span class="hljs-string">&quot;Starting controller&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+    <span class="hljs-comment">// &#x6267;&#x884C;ControllerDescriptor&#x4E2D;&#x7684;InitFunc&#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;</span>
+    initFunc := controllerDescriptor.GetInitFunc()
+    ctrl, started, err := initFunc(klog.NewContext(ctx, klog.LoggerWithName(logger, controllerName)), controllerCtx, controllerName)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        logger.Error(err, <span class="hljs-string">&quot;Error starting controller&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+    }
+    <span class="hljs-keyword">if</span> !started {
+        logger.Info(<span class="hljs-string">&quot;Warning: skipping controller&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, <span class="hljs-literal">nil</span>
+    }
+
+    check := controllerhealthz.NamedPingChecker(controllerName)
+    <span class="hljs-keyword">if</span> ctrl != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// &#x6CE8;&#x518C;&#x8C03;&#x8BD5;&#x63A5;&#x53E3;</span>
+        <span class="hljs-keyword">if</span> debuggable, ok := ctrl.(controller.Debuggable); ok &amp;&amp; unsecuredMux != <span class="hljs-literal">nil</span> {
+            <span class="hljs-keyword">if</span> debugHandler := debuggable.DebuggingHandler(); debugHandler != <span class="hljs-literal">nil</span> {
+                basePath := <span class="hljs-string">&quot;/debug/controllers/&quot;</span> + controllerName
+                unsecuredMux.UnlistedHandle(basePath, http.StripPrefix(basePath, debugHandler))
+                unsecuredMux.UnlistedHandlePrefix(basePath+<span class="hljs-string">&quot;/&quot;</span>, http.StripPrefix(basePath, debugHandler))
+            }
+        }
+        <span class="hljs-comment">// &#x521B;&#x5EFA;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x5668;</span>
+        <span class="hljs-keyword">if</span> healthCheckable, ok := ctrl.(controller.HealthCheckable); ok {
+            <span class="hljs-keyword">if</span> realCheck := healthCheckable.HealthChecker(); realCheck != <span class="hljs-literal">nil</span> {
+                check = controllerhealthz.NamedHealthChecker(controllerName, realCheck)
+            }
+        }
+    }
+
+    logger.Info(<span class="hljs-string">&quot;Started controller&quot;</span>, <span class="hljs-string">&quot;controller&quot;</span>, controllerName)
+    <span class="hljs-keyword">return</span> check, <span class="hljs-literal">nil</span>
+}
+</code></pre>
+<p>&#x5728;&#x8FD9;&#x91CC;&#x5148;&#x4E0D;&#x5173;&#x6CE8;&#x5404;&#x79CD;&#x63A7;&#x5236;&#x5668;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x7684;&#x5177;&#x4F53;&#x5B9E;&#x73B0;&#xFF0C;&#x540E;&#x7EED;&#x4F1A;&#x5728;&#x5206;&#x6790;&#x6BCF;&#x79CD;&#x5177;&#x4F53;&#x63A7;&#x5236;&#x5668;&#x65F6;&#x4E00;&#x5E76;&#x8BF4;&#x660E;&#xFF0C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x4E5F;&#x90FD;&#x901A;&#x8FC7;<code>StartController</code>&#x521B;&#x5EFA;&#x51FA;&#x6765;&#x540E;&#xFF0C;&#x7EE7;&#x7EED;&#x56DE;&#x5230;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#x4E2D;&#xFF0C;&#x5269;&#x4E0B;&#x7684;&#x6700;&#x540E;&#x4E00;&#x4E2A;&#x6B65;&#x9AA4;&#x5C31;&#x662F;&#x901A;&#x8FC7;&#x5DE5;&#x5382;&#x542F;&#x52A8;<code>ControllerContext</code>&#x4E2D;&#x7684;&#x4E24;&#x7C7B;<code>Informer</code>&#xFF0C;&#x6240;&#x6709;<code>Informer</code>&#x5B9E;&#x4F8B;&#x90FD;&#x542F;&#x52A8;&#x540E;&#x5173;&#x95ED;&#x63A7;&#x5236;&#x5668;&#x4E0A;&#x4E0B;&#x6587;&#x4E2D;&#x7684;<code>ControllerContext.InformersStarted</code>&#x901A;&#x9053;&#xFF0C;&#x6700;&#x540E;&#x901A;&#x8FC7;&#x5E38;&#x89C1;&#x7684;&#x65B9;&#x5F0F;<code>&lt;-ctx.Done()</code>&#x6302;&#x8D77;&#x4E3B;&#x7EBF;&#x7A0B;&#xFF0C;&#x76F4;&#x81F3;&#x6536;&#x5230;&#x505C;&#x6B62;&#x4FE1;&#x53F7;&#x540E;&#x4F18;&#x96C5;&#x9000;&#x51FA;&#x3002;</p>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="./" class="navigation navigation-prev " aria-label="Previous page: Controller Manager">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="02 DeploymentController原理详解.html" class="navigation navigation-next " aria-label="Next page: DeploymentController原理详解">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"next":{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02 DeploymentController原理详解.md","ref":"kube-controller-manager/02 DeploymentController原理详解.md","articles":[]},"previous":{"title":"Controller Manager","level":"1.3","depth":1,"path":"kube-controller-manager/README.md","ref":"kube-controller-manager/README.md","articles":[{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"path":"kube-controller-manager/01 ControllerManager创建流程.md","ref":"kube-controller-manager/01 ControllerManager创建流程.md","articles":[]},{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02 DeploymentController原理详解.md","ref":"kube-controller-manager/02 DeploymentController原理详解.md","articles":[]}]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"}},"file":{"path":"kube-controller-manager/01 ControllerManager创建流程.md","mtime":"2025-05-22T08:34:21.009Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-16T05:08:39.558Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-livereload/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
