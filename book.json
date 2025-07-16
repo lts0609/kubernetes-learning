@@ -17,31 +17,39 @@
     "-sharing",
     "-sharing-plus",
     "pageview-count",
-    "page-toc-button",
     "page-treeview",
-    "back-to-top-button",
-    "splitter",
     "code",
+    "chapter-fold",
     "search-pro",
     "popup",
     "scroll-to-top",
     "auto-scroll-table",
-    "anchors",
+    "anchor-navigation-ex",
     "klipse",
     "prism",
     "tbfed-pagefooter"
   ],
   "pluginsConfig": {
+    "anchor-navigation-ex": {
+      "tocLevel1Icon": "fa fa-cog",
+      "tocLevel2Icon": "fa fa-cog",
+      "tocLevel3Icon": "fa fa-cog",
+      "multipleH1": false,
+      "multipleH2": false,
+      "multipleH3": false,
+      "multipleH4": false,
+      "showLevelIcon": false,
+      "showLevel": true
+    },
     "prism": {
       "css": [
-        "prismjs/themes/prism-tomorrow.css"
+        "prismjs/themes/prism-okaidia.css"
       ],
       "lang": {
         "go": "go",
         "yaml": "yaml"
       }
     },
-
     "search-pro": {
       "multilingual": false,
       "indexing": {
@@ -54,15 +62,11 @@
       "modify_label": "最后更新时间：",
       "modify_format": "YYYY-MM-DD HH:mm:ss"
     },
-    "page-toc-button": {
-      "maxDepth": 3,
-      "minDepth": 1,
-      "position": "left"
-    },
     "page-treeview": {
       "sidebarHeader": "目录",
       "copyright": "",
-      "collapse": true
+      "minHeaderCount": "2",
+      "minHeaderDeep": "2"
     },
     "klipse": {
       "languages": ["go", "yaml"]
