@@ -288,3 +288,81 @@ func (pl *DynamicResources) bindClaim(ctx context.Context, state *stateData, ind
 
 ### Bind扩展点
 
+`PreBind`结束后调用`Done()`方法释放调度队列中的Pod对象，随后调用`bind()`方法进行绑定操作。其中包括执行扩展绑定插件、执行绑定插件和绑定结果确认三部分。
+
+```Go
+func (sched *Scheduler) bind(ctx context.Context, fwk framework.Framework, assumed *v1.Pod, targetNode string, state *framework.CycleState) (status *framework.Status) {
+    logger := klog.FromContext(ctx)
+    defer func() {
+        // 绑定结果检查
+        sched.finishBinding(logger, fwk, assumed, targetNode, status)
+    }()
+
+    bound, err := sched.extendersBinding(logger, assumed, targetNode)
+    if bound {
+        return framework.AsStatus(err)
+    }
+    // 执行Bind插件
+    return fwk.RunBindPlugins(ctx, state, assumed, targetNode)
+}
+```
+
+分析`DefaultBinder`默认绑定插件的实现，实际上只是组装一个`Binding`对象，其中包括绑定主体的`ObjectMeta`和绑定目标的资源类型和名称，然后通过调用`API Server`的`Pods.Bind()`接口提交请求信息。可以理解`Bind`阶段只涉及API接口调用，不涉及其他的逻辑。
+
+```Go
+func (b DefaultBinder) Bind(ctx context.Context, state *framework.CycleState, p *v1.Pod, nodeName string) *framework.Status {
+    logger := klog.FromContext(ctx)
+    logger.V(3).Info("Attempting to bind pod to node", "pod", klog.KObj(p), "node", klog.KRef("", nodeName))
+    // 创建Binding对象
+    binding := &v1.Binding{
+        // 对象元数据
+        ObjectMeta: metav1.ObjectMeta{Namespace: p.Namespace, Name: p.Name, UID: p.UID},
+        // 绑定目标对象
+        Target:     v1.ObjectReference{Kind: "Node", Name: nodeName},
+    }
+    // 调用API Server接口
+    err := b.handle.ClientSet().CoreV1().Pods(binding.Namespace).Bind(ctx, binding, metav1.CreateOptions{})
+    if err != nil {
+        return framework.AsStatus(err)
+    }
+    return nil
+}
+```
+
+### PostBind扩展点
+
+根据绑定周期的代码实现来看，`PostBind`并不是像`PostFilter`一样的失败后处理流程，而是标准成功流程中的一部分，但是默认调度器中没有设置`PostBind`插件，一般来说该扩展点的作用包括：执行非阻塞的后置任务、传递结果触发外部联动、临时资源清理等。作为所有扩展点的最后一站，其核心价值在于绑定成功后的自定义后置操作，扩展调度器和外部系统的联动能力，而且不影响调度逻辑的稳定性。
+
+```Go
+func (sched *Scheduler) bindingCycle(
+    ctx context.Context,
+    state *framework.CycleState,
+    fwk framework.Framework,
+    scheduleResult ScheduleResult,
+    assumedPodInfo *framework.QueuedPodInfo,
+    start time.Time,
+    podsToActivate *framework.PodsToActivate) *framework.Status {
+    ......
+    // Run "prebind" plugins.
+    if status := fwk.RunPreBindPlugins(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+    ......
+    // Run "bind" plugins.
+    if status := sched.bind(ctx, fwk, assumedPod, scheduleResult.SuggestedHost, state)
+    ......
+    // Run "postbind" plugins.
+    fwk.RunPostBindPlugins(ctx, state, assumedPod, scheduleResult.SuggestedHost)
+
+    // At the end of a successful binding cycle, move up Pods if needed.
+    if len(podsToActivate.Map) != 0 {
+        sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
+    }
+
+    return nil
+}
+```
+
+## 新的开始
+
+如果`podsToActivate`集合不为空，把其中的Pod激活放入`ActiveQ`，这里的待激活Pod是`UnschedulableQ`中的，通过检查外部条件的变化，使满足条件的Pod转换为活跃状态，需要通过`Activate()`方法激活，而`BackoffQ`依赖退避机制，重新入队的动作由内部计时器自动触发。
+
+在绑定成功后把满足调度条件的Pod激活后，一次完整的调度流程就此结束了。总的来看调度器的设计是巧妙的，其中包含如`Filter`阶段的二次判断(结合`NominatedPod`的条件判断)，`Score`阶段的蓄水池算法等，以`Scheduler Framework`为骨架，十二个标准扩展点构成调度的流水线，扩展点的插件为其填充血肉，插件的精细策略构成调度器的灵魂。`ActiveQ`、`BackoffQ`、`UnschedulableQ`的组成的调度队列协同工作，实现了高并发场景下的调度效率和稳定性的平衡。
