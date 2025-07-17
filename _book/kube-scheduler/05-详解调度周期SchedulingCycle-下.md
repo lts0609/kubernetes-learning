@@ -1,5 +1,8 @@
 # 详解调度周期SchedulingCycle(下)
 
+
+## 调度周期
+
 在上篇中详细介绍了调度周期的上半段，也就是`Predicates`过滤阶段，在其过程中返回了一个重要的对象`feasibleNodes`，它是一个`NodeInfo`类型的切片，保存了在条件过滤后符合Pod调度要求的节点信息。
 
 回到`Predicates`结束的位置，也就是`schedulePod()`方法中
@@ -46,7 +49,7 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
 }
 ```
 
-### Priorities阶段
+## Priorities阶段
 
 `Priorities`阶段的入口函数是`prioritizeNodes()`，对调度流程有过基本了解的一定都知道Pod的调度有`预选`和`优选`两个阶段，很明显在这个阶段要做的事情就是对上一步中过滤出来的节点进行排序，然后选择最合适的一个。
 
@@ -353,7 +356,7 @@ func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.
 }
 ```
 
-#### Score扩展点与NormalizeScore评分归一化
+### Score扩展点与NormalizeScore评分归一化
 
 `RunScorePlugins()`的实现和`RunFilterPlugins()`类似。首先，`Filter`插件执行的过程中，状态被存储在`CycleState`对象并读写，过滤的行为属于责任链模式，如果一处不通过就直接失败退出，所以过滤阶段节点层面并行但插件层面是串行的。评分阶段也是节点层面串行和插件层面并行，如有疑问可以对比`Predicates`阶段的`findNodesThatPassFilters()`与`Priorities`阶段的`RunScorePlugins()`方法并加以详细对比。
 
@@ -485,7 +488,7 @@ type NodePluginScores struct {
 }
 ```
 
-##### NormalizeScore插件
+### NormalizeScore插件
 
 一些插件的`NormalizeScore()`实现是直接调用了默认的归一化评分方法`DefaultNormalizeScore()`，在文件`pkg/scheduler/framework/plugins/helper/normalize_score.go`中定义，仅注释不做过多说明。
 
@@ -634,7 +637,7 @@ func down(h Interface, i0, n int) bool {
 }
 ```
 
-#### SelectHost
+### SelectHost
 
 此时已经得到了每个节点和其评分的对应关系，还需要进行`Priorities`阶段的最后一步，那就是从上一步的结果中选出最优先的那个，然后以`ScheduleResult`结构的形式返回给上层。
 
@@ -721,7 +724,7 @@ func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, 
     }, err
 ```
 
-### Assume阶段
+## Assume阶段
 
 `ScheduleResult`对象返回以后，`schedulingCycle()`方法中的第一个逻辑终于结束了，先不纠结于失败处理，继续分析标准的成功流程。
 
@@ -771,7 +774,7 @@ func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string)
 }
 ```
 
-### Reserve扩展点
+## Reserve扩展点
 
 在`Assume`阶段后，调度周期还剩下两个扩展点，此时关于调度的选择已经结束了，所做的内容是要为绑定和下次调度做准备，接下来的扩展点是资源预留`Reserve`扩展点和准入`Permit`扩展点。
 
@@ -989,7 +992,7 @@ func (b *volumeBinder) AssumePodVolumes(logger klog.Logger, assumedPod *v1.Pod, 
 }
 ```
 
-#### 失败后的状态回滚
+### 失败后的状态回滚
 
 仍以`VolumeBinding`为例，失败后的`Unreserve`插件获取调度开始时从`ApiServer`中获取到的对象信息，并借助`Restore()`方法向`FIFO`中发送更新事件，使本地缓存中的数据回滚到最初状态。
 
@@ -1049,7 +1052,7 @@ func (c *AssumeCache) Restore(objName string) {
 
 然后调用`Cache.ForgetPod()`方法，把Pod的信息从本地缓存的`cache.podStates`以及`cache.assumedPods`集合中删除。`Permit`扩展点的失败处理与之完全相同。
 
-### Permit扩展点
+## Permit扩展点
 
 `Reserve`扩展点之后紧接着就是`Permit`扩展点，通过代码逻辑可以看出，在执行完具体插件之后会对返回的状态`status`做出判断，这里和其他插件返回状态相比，多了一个`Wait`状态，如果没有返回`Success`而是`Wait`时，根据返回值设置插件等待的超时时长(最大不超过`15分钟`)，并修改`statusCode`标识位，在遍历执行完所有的插件之后，如果是需要等待的，就将其加入到等待队列中。
 
@@ -1193,7 +1196,7 @@ func (w *waitingPod) Allow(pluginName string) {
 }
 ```
 
-#### Permit扩展点的延伸
+### Permit扩展点的延伸
 
 在调度周期中，`Permit`阶段如果返回的是`Wait`状态，调度器不会因为等待它返回的结果而去影响其他Pod调度的效率，而是在异步执行绑定周期`BindingCycle`的开始处确认`waitingPod`的最终结果是`Success`还是`Rejected`。
 

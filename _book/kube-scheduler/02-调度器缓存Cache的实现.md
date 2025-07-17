@@ -4,7 +4,7 @@
 
 需要注意的是，`client-go`中的`Cache`和此处提到的调度器`Cache`并不是一个。`client-go`中的缓存依赖`List-Watch`机制，虽然调度器中的缓存也依赖`Informer`，但缓存中的数据是不同的，如`client-go`中的缓存的是Kubernetes的`API`对象，而调度器的缓存主要保存了`Node`和`Pod`的映射和聚合信息。
 
-### 定义与实现
+## 定义与实现
 
 `Cache`接口定义位于代码路径`pkg/scheduler/backend/cache/interface.go`下，此处有一个小的概念，当Pod的调度周期成功完成后，异步的绑定周期完成前，调度器会假定这个Pod会正常完成绑定，此时该Pod成为`AssumePod`，它所使用的资源通过`reserve`插件预留，在缓存中也认为该Pod会成功上线，并在`cacheImpl`中使用`assumedPods`集合存储这个状态的Pod。
 
@@ -118,9 +118,9 @@ type cacheImpl struct {
 }
 ```
 
-#### 相关数据结构
+## 相关数据结构
 
-##### podState
+### podState
 
 Pod在缓存中是以`namespace-podname`为key，`podState`为value的形式存储的。
 
@@ -135,7 +135,7 @@ type podState struct {
 }
 ```
 
-##### nodeInfoListItem
+### nodeInfoListItem
 
 `nodeInfoListItem`是存储节点信息的双向链表。
 
@@ -150,7 +150,7 @@ type nodeInfoListItem struct {
 }
 ```
 
-##### nodeTree
+### nodeTree
 
 `nodeTree`是根据`zone`划分的节点集合。
 
@@ -165,11 +165,11 @@ type nodeTree struct {
 }
 ```
 
-### 相关方法
+## 相关方法
 
 代码逻辑都比较清晰，故仅在代码片段中简单注释。
 
-#### New
+### New
 
 启动一个`Cache`实例，代码实现如下。
 
@@ -263,7 +263,7 @@ func (cache *cacheImpl) removePod(logger klog.Logger, pod *v1.Pod) error {
 }
 ```
 
-#### Dump
+### Dump
 
 主要用于调试，属于`CacheDebugger`的一部分，通常把`Cache`中的信息记录到日志，从而定位调度过程中的问题。
 
@@ -291,7 +291,7 @@ type CacheDebugger struct {
 }
 ```
 
-#### UpdateSnapshot
+### UpdateSnapshot
 
 把`Cache`的信息更新到一个`Snapshot`快照结构，每一轮调度Pod时都会使用此方法更新快照。
 
@@ -426,7 +426,7 @@ func (cache *cacheImpl) updateNodeInfoSnapshotList(logger klog.Logger, snapshot 
 }
 ```
 
-#### AssumePod
+### AssumePod
 
 假定一个Pod调度成功，把它以`AssumedPod`的形式添加到节点缓存中。
 
@@ -474,7 +474,7 @@ func (cache *cacheImpl) addPod(logger klog.Logger, pod *v1.Pod, assumePod bool) 
 }
 ```
 
-#### ForgetPod
+### ForgetPod
 
 `AssumePod`过期，将其从调度缓存中移除。
 
@@ -501,7 +501,7 @@ func (cache *cacheImpl) ForgetPod(logger klog.Logger, pod *v1.Pod) error {
 }
 ```
 
-#### updatePod
+### updatePod
 
 更新缓存中Pod信息，先删除后添加能够保证缓存信息的一致性。
 
@@ -516,7 +516,7 @@ func (cache *cacheImpl) updatePod(logger klog.Logger, oldPod, newPod *v1.Pod) er
 }
 ```
 
-### Cache中数据的同步
+## Cache中数据的同步
 
 在调度器启动过程中，代码位于`cmd/kube-scheduler/app/server.go`，`Cache`同步的重要代码就在`Run()`函数中，此处会涉及到`Informer`机制。但可以提前了解到，在调度器启动之前，通过和`Informer`的协同，保证了`Cache`中数据和集群信息的一致性。
 
@@ -568,7 +568,7 @@ func WaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool
 }
 ```
 
-### Pod在缓存中的流程图
+## Pod在缓存中的流程图
 
 ```go
 // State Machine of a pod's events in scheduler's cache:

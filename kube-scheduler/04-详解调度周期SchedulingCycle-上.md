@@ -1,5 +1,7 @@
 # 详解调度周期SchedulingCycle(上)
 
+## 调度周期
+
 调度周期的实现可以说是整个调度器的核心内容，所以展开说明。在`ScheduleOne()`中调度周期的入口方法是`schedulingCycl()`。
 
 ```Go
@@ -140,7 +142,7 @@ func (sched *Scheduler) schedulingCycle(
 }
 ```
 
-## SchedulePod阶段
+### SchedulePod阶段
 
 因为选节点失败会触发抢占流程，先对可以成功选到节点的标准情况进行了解，也就是下面简化后的代码片段，做概述说明。首先调用`sched.SchedulePod()`方法，这个步骤可以说是整个调度周期的核心，其中包括了我们常说的预选`Predicates`和优选`Priorities`流程。回顾一下调度器实例的创建`sched.applyDefaultHandlers()`步骤中设置了`调度函数`和`调度失败handler`，没有采用硬编码的方式设置逻辑，提高了代码的灵活性。
 
@@ -253,7 +255,7 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
 }
 ```
 
-### Predicates阶段
+## Predicates阶段
 
 在`schedulePod()`方法中，`Predicates`阶段的入口代码如下，其中返回结果为`PodInfo`类型的列表`feasibleNodes`和节点不符合条件的原因`diagnosis`。
 
@@ -308,7 +310,7 @@ type Status struct {
 
 `Pending `是外部依赖条件不满足导致的等待，如存储卷未准备好或有依赖Pod的处理项未完成;
 
-#### 核心函数findNodesThatFitPod
+### 核心函数findNodesThatFitPod
 
 ```Go
 func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) ([]*framework.NodeInfo, framework.Diagnosis, error) {
@@ -390,7 +392,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, fwk framework.F
 }
 ```
 
-#### PreFilter扩展点
+### PreFilter扩展点
 
 `PreFilter`的作用主要是缩小集群范围，可能会收集集群/节点信息，一般会通过`cycleState.Write()`方法，以`扩展点+插件名`为key写入`CycleState`对象中。
 
@@ -463,7 +465,7 @@ func (f *frameworkImpl) RunPreFilterPlugins(ctx context.Context, state *framewor
 
 一个插件可以实现多个扩展点的接口，如`Fit`插件就同时实现了`PreFilter`、`Filter`和`Score`。
 
-#### Filter扩展点
+### Filter扩展点
 
 以有被提名节点的处理流程为例，与标准流程相同，`Filter`阶段的两个重要方法为`findNodesThatPassFilters()`和`findNodesThatPassExtenders`。
 
@@ -584,7 +586,7 @@ func (sched *Scheduler) findNodesThatPassFilters(
 }
 ```
 
-##### 节点列表长度确定规则
+#### 节点列表长度确定规则
 
 为了平衡调度的效率，不会把所有符合条件的节点都列出并打分，所以`feasiblenodes`切片会有一个预估长度，最小长度是100。`numFeasibleNodesToFind()`抽样方法接收两个参数，分别是打分抽样百分比和集群节点总数。
 
@@ -621,7 +623,7 @@ func (sched *Scheduler) numFeasibleNodesToFind(percentageOfNodesToScore *int32, 
 }
 ```
 
-##### 运行Filter插件
+#### 运行Filter插件
 
 `RunFilterPluginsWithNominatedPods()`是真正运行插件`RunFilterPlugins()`前的重要方法，也是Filter插件的上层入口函数。在之前先说明一个关键的点，`NominatedPod`是在抢占计算后产生的，会在后续调度循环中尝试调度。
 

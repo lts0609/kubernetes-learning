@@ -1224,7 +1224,7 @@ func (p *PriorityQueue) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 }
 ```
 
-### 调度队列小结及流程图
+## 调度队列小结及流程图
 
 1. 调度队列实际上都是`Map`，以`PodName_Namespace`为key，`PodInfo`的指针为value来进行存储，和`unschedulablePods`的区别在于是否通过`Slice`维护了优先顺序，`Map`的key和`Slice`的排序提高了查询和出队的速度。
 2. 每次有Pod加入`ActiveQ`，都会通过`broadcast()`去唤醒等待中的协程，因为如果一个线程要调用`Pop()`方法时会先判断队列长度，如果队列为空时通过执行`cond.Wait()`挂起进程。

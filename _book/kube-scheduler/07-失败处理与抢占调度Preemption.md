@@ -1,8 +1,6 @@
 # 失败处理与抢占调度Preemption
 
-## 抢占调度流程
-
-### 抢占事件发生的时机
+## 抢占事件发生的时机
 
 在代码中搜索关键字`Preempt`会找到路径`pkg/scheduler/framework/preemption`下的`Preempt()`方法，向上寻找调用关系可以到路径`pkg/scheduler/framework/plugins/defaultpreemption`，被其中`default_preemption.go`中的`PostFilter()`方法直接调用，可以说明抢占流程作为调度插件之一存在于`PostFilter`扩展点。`RunPostFilterPlugins()`方法的调用发生在`SchedulePod()`方法返回的错误信息不为空时，也就是`Predicates`与`Priorities`两个阶段存在失败，没有能找到一个符合条件的节点运行Pod，方法调用如下方代码内容所示。
 
@@ -48,9 +46,9 @@ func (pl *DefaultPreemption) PostFilter(ctx context.Context, state *framework.Cy
 
 `PostFilter()`中调用了`Preempt()`方法，它是实际的抢占逻辑入口，在简单了解抢占的相关组件后，再正式开始深入分析抢占逻辑的实现。
 
-### 关键组件
+## 关键组件
 
-#### 评估器
+### 评估器
 
 在`kube-scheduler`中，`Evaluator `评估器是负责抢占流程的核心组件。在抢占中`Evaluator`负责流程控制和协调，具体的策略逻辑由实现了`Interface`接口的插件控制，`PreemptPod()`方法是抢占过程中的核心动作之一。
 
@@ -95,7 +93,7 @@ type Interface interface {
 }
 ```
 
-##### 创建评估器
+#### 创建评估器
 
 评估器实例的创建最早可以追溯到`NewInTreeRegistry()`函数，它实现了内置插件的创建和注册。插件结构包括调度框架句柄`fh`，特性开关集合`fts`，插件参数`args`，`Pod`和`PDB`的`Lister`以及评估器实例`Evaluator`。
 
@@ -157,7 +155,7 @@ func NewEvaluator(pluginName string, fh framework.Handle, i Interface, enableAsy
 }
 ```
 
-#### 提名器
+### 提名器
 
 在前面的学习中了解过调度队列的组件`Nominator`提名器，虽然它是`SchedulingQueue`的组件，但是和抢占流程也有一些关系。因为抢占插件返回的结构`framework.PostFilterResult`实际是一个`NominatingInfo`的指针，该结构的使用一般出现在提名器中。并且在抢占流程的最后，会修改Pod对象的`Status.NominatedNodeName`字段，在后面的调度周期中使用，如在`Predicates`阶段`findNodesThatFitPod()`方法的逻辑中，如果`Pod.Status.NominatedNodeName`不为空，会优先单独评估`NominatedNodeName`是否满足条件，如果不满足才会走后续标准流程。
 
@@ -172,7 +170,7 @@ type NominatingInfo struct {
 }
 ```
 
-### 抢占流程详解
+## 抢占流程详解
 
 前面已经做好了铺垫，在`PostFilter()`方法中执行`Preempt()`方法直接返回抢占的结果，所以从`pkg/scheduler/framework/preemption/preemption.go`路径的`Preempt()`方法开始详细的抢占流程分析。
 
@@ -268,7 +266,7 @@ func (ev *Evaluator) Preempt(ctx context.Context, state *framework.CycleState, p
 
 下面对每一个阶段分别进行分析，Pod信息更新作为常规操作不多说明。
 
-#### 抢占资格判断
+### 抢占资格判断
 
 通过`NodeToStatusReader`的`Get()`方法获取提名节点的状态信息记录，传递给`PodEligibleToPreemptOthers()`方法判断Pod是否有资格进行抢占操作。首先判断`Pod.Spec.PreemptionPolicy`中的抢占策略是否存在且不为`Never`，然后获取节点快照和Pod的`NominatedNodeName`，如果字段存在表示已经在之前进行过抢占流程了，现在又出现在`PostFilter`阶段表示抢占失败。此时需要判断这个Pod是否重新进行抢占操作，如果是`UnschedulableAndUnresolvable`表示提名节点因为某些问题出现了永久不可用的情况，允许开始重新抢占;如果是其他失败原因如`Unschedulable`则需要没有低于当前优先级的Pod正因抢占而退出才可以重新抢占，在这种因为临时资源导致抢占失败的情况下，为了避免资源浪费Pod还可以重试抢占尝试调度到其他节点。一般来说，抢占解决的是`Unschedulable`的问题，而`UnschedulableAndUnresolvable`的重试是上一次调度到当前调度周期之间发生了预期以外的变化，所以允许重新抢占。
 
@@ -313,7 +311,7 @@ func (pl *DefaultPreemption) PodEligibleToPreemptOthers(_ context.Context, pod *
 
 ```
 
-#### 获取候选节点
+### 获取候选节点
 
 确认Pod可以进行抢占后，通过`NodeLister`获取全量节点信息，`findCandidates`返回所有候选节点和状态。然后通过`NodeToStatusReader`接口获取信息记录为`Unschedulable`的节点，因为`UnschedulableAndUnresolvable`是硬性条件的不满足，这种条件不会以Pod的生命周期变化转换为满足，所以不在抢占的考虑范围以内。如果此时的潜在节点`potentialNodes`长度为0，已经没有合适的节点可以发生抢占，会清除当前Pod的`NominatedNodeName`信息并结束。`potentialNodes`长度大于0时，先获取集群中的所有`PDB`信息，驱逐某个Pod可能还会影响到其他命名空间的`PDB`，所以此处获取全量对象。
 
@@ -351,11 +349,11 @@ func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleS
 }
 ```
 
-##### Pod干扰预算
+#### Pod干扰预算
 
 **PDB(PodDisruptionBudget，Pod干扰预算)**用于控制Pod副本的最小可用/最大不可用数量，保护应用避免发生服务中断。涉及到如`抢占驱逐`、`节点排空`、`滚动更新`、`水平扩缩容`等场景，该特性在1.21版本进入稳定状态，详情可见[官方文档](https://kubernetes.io/zh-cn/docs/reference/kubernetes-api/policy-resources/pod-disruption-budget-v1/)。
 
-##### 节点批量选择
+#### 节点批量选择
 
 `GetOffsetAndNumCandidates()`方法接收一个`INT32`的整数，返回两个值，分别代表选择节点的`起始偏移量`和`候选节点数量`。
 
@@ -399,7 +397,7 @@ func (pl *DefaultPreemption) calculateNumCandidates(numNodes int32) int32 {
 }
 ```
 
-##### 模拟抢占
+#### 模拟抢占
 
 `DryRunPreemption()`方法进行模拟抢占，根据函数签名，接收上下文`ctx`、调度状态`state`、抢占主体`pod`、潜在节点列表`potentialNodes`、Pod干扰预算`pdbs`、索引偏移量`offset`、采样数量`candidatesNum`，返回`[]Candidate`类型的候选节点列表和`NodeToStatus`类型的节点状态映射。具体的逻辑实现是先初始化两个列表分别记录`违反PDB`和`不违反PDB`的候选节点，然后使用并行器在所有的采样节点中执行闭包函数`checkNode()`来获取每个节点上能让出足够资源的**最小Pod集合**，然后经过类型转换为`Candidate`对象，并根据是否违反PDB做区分加入对应的列表中，如果没有成功返回Pod集合`victims`，就更新该节点的状态信息，最终返回合并后的节点列表和节点状态信息。
 
@@ -469,7 +467,7 @@ func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.Cycl
 }
 ```
 
-##### 在节点上选择被驱逐的Pod
+#### 在节点上选择被驱逐的Pod
 
 并行器会在每个潜在的候选节点上执行`checkNode()`函数，其中的`SelectVictimsOnNode()`方法会在节点上找出能为抢占Pod让出足够资源的最小Pod集合。首先会初始化一个潜在受害者列表`potentialVictims`，然后遍历节点上的所有Pod，比较优先级把所有低于抢占者的Pod加入这个列表，并且临时移除这些Pod。此时已经没有更多的Pod可以被抢占驱逐了，执行在标准`Filter`流程中就使用的`RunFilterPluginsWithNominatedPods()`方法确认抢占者是否可以调度，如果仍然不可调度表示即使抢占也无法调度到该节点。如果可以调度，那么下一步就需要寻找最小的驱逐成本了，先根据是否违反PDB对这些低优先级的Pod进行分类，然后优先尝试恢复违反PDB的Pod，因为这类Pod更不希望收到影响。恢复Pod就是先在NodeInfo中添加Pod信息，然后执行`RunFilterPluginsWithNominatedPods()`方法验证Pod是否仍可以调度，如果添加后导致资源不足以让抢占者调度，那么添加这个Pod到`victims`列表，如果是违反PDB受害者的Pod，还需要对`numViolatingVictim`计数加一，该变量会返回给上层并作为评估标准之一。如果违反PDB和不违反PDB的节点都存在，需要对`victims`按优先级进行一次排序，最终返回受害者列表、违反PDB的受害者数量和成功状态。
 
@@ -582,7 +580,7 @@ func (pl *DefaultPreemption) SelectVictimsOnNode(
 }
 ```
 
-#### 执行扩展器过滤
+### 执行扩展器过滤
 
 获取到候选节点和受害者后，会遍历执行注册的扩展器并执行其逻辑，把每个扩展器的输出作为下一个扩展器的输入，最终经过所有扩展器的过滤，返回了更小范围的候选节点列表。
 
@@ -647,7 +645,7 @@ func (ev *Evaluator) callExtenders(logger klog.Logger, pod *v1.Pod, candidates [
 }
 ```
 
-#### 获取最优候选节点
+### 获取最优候选节点
 
 这个阶段可以理解为标准流程中的`Priorities`，根据执行评分插件，选出最适合抢占的候选节点，其中的核心函数是`pickOneNodeForPreemption()`，作用可以类比标准流程的`RunScorePlugins()`方法。
 
@@ -776,7 +774,7 @@ func pickOneNodeForPreemption(logger klog.Logger, nodesToVictims map[string]*ext
 }
 ```
 
-#### 候选节点提名前准备
+### 候选节点提名前准备
 
 确定了候选节点和受害者以后，就需要把这些倒霉的Pod从节点上驱逐出去，当前Kubernetes支持同步抢占和异步抢占两种方式。调度器根据特性门控`EnableAsyncPreemption`的开关决定使用同步或异步。
 
@@ -792,7 +790,7 @@ if ev.enableAsyncPreemption {
 }
 ```
 
-##### 同步抢占
+#### 同步抢占
 
 同步抢占通过`prepareCandidate()`方法实现，通过并行器驱逐所有受害者，然后检查是否存在比抢占者优先级低但是提名了同一个节点的Pod，如果存在就清除它们的`NominatedNodeName`字段。
 
@@ -876,7 +874,7 @@ PreemptPod = func(ctx context.Context, c Candidate, preemptor, victim *v1.Pod, p
 }
 ```
 
-##### 异步抢占
+#### 异步抢占
 
 异步抢占能够避免阻塞调度主流程，可以提高调度器的吞吐量和响应速度。异步抢占的核心逻辑和同步抢占基本相同，但是异步抢占会额外维护评估器中的`preempting`集合，在其中记录正处于抢占状态的Pod，并通过加锁/解锁避免并发问题。在驱逐受害者Pod时，同步抢占直接并行驱逐所有，而异步抢占的驱逐动作通过协程启动，首先并行驱逐`N-1`个受害者Pod，驱逐成功后删除`preempting`集合中的对象，并单独驱逐最后一个受害者Pod。
 
@@ -951,7 +949,7 @@ func (ev *Evaluator) prepareCandidateAsync(c Candidate, pod *v1.Pod, pluginName 
 }
 ```
 
-#### 抢占的结束
+### 抢占的结束
 
 在成功驱逐了所有受害者Pod后，返回`PostFilterResult`类型的抢占结果，在其中包含了提名节点的名称。组装错误信息并返回，这一个调度周期就结束了，在后续的错误处理环节，如果发现结果的`nominatingInfo`字段不为空，则修改Pod的`Status.NominatedNodeName`字段为`nominatingInfo`的值，Pod状态设置为`Unschedulable`状态，在后面的调度周期会重新入队并尝试调度到提名节点。
 

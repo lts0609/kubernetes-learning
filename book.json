@@ -27,6 +27,7 @@
     "anchor-navigation-ex",
     "klipse",
     "prism",
+    "theme-comscore",
     "tbfed-pagefooter"
   ],
   "pluginsConfig": {
@@ -58,18 +59,20 @@
       }
     },
     "tbfed-pagefooter": {
-      "copyright": "© 2025 lts0609. All rights reserved.",
-      "modify_label": "最后更新时间：",
+      "copyright": "© 2025 lts0609. ",
+      "modify_label": "最后更新时间:",
       "modify_format": "YYYY-MM-DD HH:mm:ss"
     },
     "page-treeview": {
-      "sidebarHeader": "目录",
       "copyright": "",
       "minHeaderCount": "2",
       "minHeaderDeep": "2"
     },
     "klipse": {
-      "languages": ["go", "yaml"]
+      "languages": [
+        "go",
+        "yaml"
+      ]
     }
   }
 }
