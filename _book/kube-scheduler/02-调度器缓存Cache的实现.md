@@ -1,6 +1,6 @@
 # 调度器缓存Cache的实现
 
-在正式进入调度器的工作流程之前，先再来了解一下`Cache`概念。 如果对`Informer`机制有一定的了解，会知道其中`Indexer`组件作为集群信息的`Local Storage`，但是在Pod调度过程中，其实使用的是调度器实现的由`Cache`专门提供的集群`节点- Pod`快照信息，下面一起看`Cache`的设计和实现。
+在正式进入调度器的工作流程之前，先再来了解一下`Cache`概念。 如果对`Informer`机制有一定的了解，会知道其中`Indexer`组件作为集群信息的`Local Storage`，但是在Pod调度过程中，其实使用的是调度器实现的由`Cache`专门提供的集群`Node-Pod`快照信息，下面一起看`Cache`的设计和实现。
 
 需要注意的是，`client-go`中的`Cache`和此处提到的调度器`Cache`并不是一个。`client-go`中的缓存依赖`List-Watch`机制，虽然调度器中的缓存也依赖`Informer`，但缓存中的数据是不同的，如`client-go`中的缓存的是Kubernetes的`API`对象，而调度器的缓存主要保存了`Node`和`Pod`的映射和聚合信息。
 
