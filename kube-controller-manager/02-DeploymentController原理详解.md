@@ -1,10 +1,10 @@
-## DeploymentController原理详解
+# DeploymentController原理详解
 
 在上一章节中，我们简单了解了ControllerManager的创建，本篇文章中深入学习Kubernetes中最重要的控制器之一`DeploymentController`。
 
 当一个`Deployment`创建的时候，其实总共创建了三种资源对象，分别是`Deployment`、`ReplicaSet`、`Pod`，这是非常重要的，因为`Deployment`资源并不会直接管理`Pod`，而是通过管理`ReplicaSet`对象来间接地管理`Pod`，所以一个无状态负载的`Pod`的直接归属是`ReplicaSet`。这种设计和滚动更新相关，当一个`Deployment`中定义的`Pod`模板发生变化时，会创建出一个新的`ReplicaSet`，再根据一定的规则去替换旧的`ReplicaSet`对象。
 
-# 实例创建
+## 实例创建
 
 下面先从`DeploymentController`的创建开始学习，它的初始化函数如下，其中包含创建控制器实例和启动控制器两个逻辑。
 
@@ -164,7 +164,7 @@ func (dc *DeploymentController) Run(ctx context.Context, workers int) {
 }
 ```
 
-# 调谐基本流程
+## 调谐基本流程
 
 循环执行的逻辑是`worker()`方法，根据其中方法的命名，很明显它要做的就是不停地处理下一个元素。
 
@@ -287,7 +287,7 @@ func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) 
 }
 ```
 
-## 下属资源对象的获取
+###下属资源对象的获取
 
 我们知道资源对象归属关系的匹配是基于标签选择的，在一个`yaml`文件的声明中，上层资源如`Deployment`、
 
@@ -318,7 +318,7 @@ spec:
 
 标签的选择规则定义在字段`spec.selector`下，在和下层资源匹配时必须全部满足，所以在内部匹配时会进行一个非常重要的阶段，也就是把规则或一组规则的集合转换为统一的标识方法，然后在所有下层资源中过滤符合所有条件的，即认为两者具有从属关系。
 
-## API资源的描述
+### API资源的描述
 
 根据`Deployment`类型为开始层层分析，首先`Deployment`结构体中包含`DeploymentSpec`类型的描述信息，后面如果学习`Operator`开发会了解到，一般定义一个`API`对象，通常会包含`metav1.TypeMeta`、`metav1.ObjectMeta`、`Spec`以及`Status`四个字段。
 
@@ -403,7 +403,7 @@ type LabelSelector struct {
 }
 ```
 
-## 标签选择的转换
+### 标签选择的转换
 
 上面说到过，在控制器内部进行从属资源选择时，会对上层资源进行标签的转换以匹配所属资，`metav1.LabelSelectorAsSelector()`方法实现了这一逻辑，把`metav1.LabelSelector`类型转换为`labels.Selector`对象，下面来看它的实现。
 
@@ -640,7 +640,7 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 }
 ```
 
-# 调谐的具体动作
+## 调谐的具体动作
 
 根据不同的场景会有不同的调谐动作，场景大概可以分为几类：
 
@@ -652,7 +652,7 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 
 下面根据几种场景，结合代码分别进行详细的说明。
 
-## Deployment对象正在删除中
+### Deployment对象正在删除中
 
 在这种情况下，仅会同步状态，但不做任何可能影响资源状态的操作。
 
@@ -687,7 +687,7 @@ func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Con
 }
 ```
 
-### 获取旧的ReplicaSet对象
+#### 获取旧的ReplicaSet对象
 
 这部分的逻辑也比较简单，首先获取新的`ReplicaSet`对象，然后遍历所有`ReplicaSet`并根据`UID`判断是否是旧的对象，并且如果旧的`ReplicaSet`还关联`Pod`，单独存放一份到`requiredRSs`中，返回的两个列表分别是：有`Pod`存在的旧`ReplicaSet`和旧`ReplicaSet`全集。
 

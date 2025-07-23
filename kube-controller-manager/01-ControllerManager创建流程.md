@@ -1,6 +1,6 @@
 # ControllerManager创建流程
 
-# 控制器创建入口函数
+## 控制器创建入口函数
 
 根据在之前调度器学习过程中对`Cobra`框架构建组件的了解，首先就会想到`kube-controller- manager`的创建入口也在`cmd/kube-controller-manager/controller-manager.go`中，其中同样也只包含简单的三行代码。
 
