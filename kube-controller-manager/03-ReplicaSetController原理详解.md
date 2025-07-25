@@ -333,31 +333,30 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
         if diff > rsc.burstReplicas {
             diff = rsc.burstReplicas
         }
-        // 记录预期创建数量
+        // 记录预期创建数量 与Informer协同作用
         rsc.expectations.ExpectCreations(logger, rsKey, diff)
         logger.V(2).Info("Too few replicas", "replicaSet", klog.KObj(rs), "need", *(rs.Spec.Replicas), "creating", diff)
-        // 
+        // 创建期望数量的Pod
         successfulCreations, err := slowStartBatch(diff, controller.SlowStartInitialBatchSize, func() error {
             err := rsc.podControl.CreatePods(ctx, rs.Namespace, &rs.Spec.Template, rs, metav1.NewControllerRef(rs, rsc.GroupVersionKind))
             if err != nil {
                 if apierrors.HasStatusCause(err, v1.NamespaceTerminatingCause) {
-                    // if the namespace is being terminated, we don't have to do
-                    // anything because any creation will fail
                     return nil
                 }
             }
             return err
         })
-
+		// 存在Pod创建失败
         if skippedPods := diff - successfulCreations; skippedPods > 0 {
             logger.V(2).Info("Slow-start failure. Skipping creation of pods, decrementing expectations", "podsSkipped", skippedPods, "kind", rsc.Kind, "replicaSet", klog.KObj(rs))
             for i := 0; i < skippedPods; i++ {
-                // Decrement the expected number of creates because the informer won't observe this pod
+                // 修改期望创建数量
                 rsc.expectations.CreationObserved(logger, rsKey)
             }
         }
         return err
     } else if diff > 0 {
+        // 实际副本数大于期望副本数
         if diff > rsc.burstReplicas {
             diff = rsc.burstReplicas
         }
@@ -410,7 +409,7 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
 }
 ```
 
-#### 批量创建
+#### 慢启动批量创建
 
 使用`slowStartBatch()`函数批量创建Pod，函数名为慢启动批处理，用于控制并发的速率，避免一次性发起过多请求造成的系统压力。接收处理总数`count`、初始批处理大小`initialBatchSize`和逻辑函数`fn`。循环执行输入的逻辑函数，初始批处理大小为1，通过`channel`控制并发，每一轮循环后更新计数和批处理大小，最后返回成功数量。
 
@@ -423,6 +422,7 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
     for batchSize := min(remaining, initialBatchSize); batchSize > 0; batchSize = min(2*batchSize, remaining) {
         errCh := make(chan error, batchSize)
         var wg sync.WaitGroup
+        // 并发控制
         wg.Add(batchSize)
         for i := 0; i < batchSize; i++ {
             go func() {
@@ -433,8 +433,10 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
             }()
         }
         wg.Wait()
+        // 更新计数
         curSuccesses := batchSize - len(errCh)
         successes += curSuccesses
+        // 有失败事件直接返回
         if len(errCh) > 0 {
             return successes, <-errCh
         }
@@ -444,6 +446,6 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 }
 ```
 
+##### 创建失败处理
 
-
-
+在上面的流程中曾调用`expectations.ExpectCreations()`方法设置期望创建/删除副本数量，期望值`expectations`充当缓冲计数器，并且会传递到下一个周期，控制器在启动时的`SatisfiedExpectations() `方法就是对期望值进行检查。
