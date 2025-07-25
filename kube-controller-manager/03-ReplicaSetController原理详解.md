@@ -412,12 +412,14 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
 
 #### 批量创建
 
-使用`slowStartBatch()`函数批量创建Pod，
+使用`slowStartBatch()`函数批量创建Pod，函数名为慢启动批处理，用于控制并发的速率，避免一次性发起过多请求造成的系统压力。接收处理总数`count`、初始批处理大小`initialBatchSize`和逻辑函数`fn`。循环执行输入的逻辑函数，初始批处理大小为1，通过`channel`控制并发，每一轮循环后更新计数和批处理大小，最后返回成功数量。
 
 ```Go
 func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, error) {
+    // 剩余处理次数
     remaining := count
     successes := 0
+    // 循环执行逻辑 批处理数量逐步增加
     for batchSize := min(remaining, initialBatchSize); batchSize > 0; batchSize = min(2*batchSize, remaining) {
         errCh := make(chan error, batchSize)
         var wg sync.WaitGroup
@@ -441,6 +443,7 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
     return successes, nil
 }
 ```
+
 
 
 
