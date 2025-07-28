@@ -157,6 +157,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(ctx context.Context, key string)
     if rsNeedsSync && rs.DeletionTimestamp == nil {
         manageReplicasErr = rsc.manageReplicas(ctx, filteredPods, rs)
     }
+    // 更新ReplicaSet对象状态
     rs = rs.DeepCopy()
     newStatus := calculateStatus(rs, filteredPods, manageReplicasErr)
 
@@ -176,6 +177,41 @@ func (rsc *ReplicaSetController) syncReplicaSet(ctx context.Context, key string)
     return manageReplicasErr
 }
 ```
+
+### 期望副本状态判断
+
+`SatisfiedExpectations()`方法用来检查对象的当前状态和期望状态是否需要进行同步，用于`ReplicaSetController`、`DaemonSetController`、`JobController`这几个存在副本期望的控制器中。
+
+```Go
+func (r *ControllerExpectations) SatisfiedExpectations(logger klog.Logger, controllerKey string) bool {
+    if exp, exists, err := r.GetExpectations(controllerKey); exists {
+        // 检查期望数量是否满足
+        if exp.Fulfilled() {
+            logger.V(4).Info("Controller expectations fulfilled", "expectations", exp)
+            return true
+        // 检查期望是否过期
+        } else if exp.isExpired() {
+            logger.V(4).Info("Controller expectations expired", "expectations", exp)
+            return true
+        } else {
+            logger.V(4).Info("Controller still waiting on expectations", "expectations", exp)
+            return false
+        }
+    } else if err != nil {
+        logger.V(2).Info("Error encountered while checking expectations, forcing sync", "err", err)
+    } else {
+        logger.V(4).Info("Controller either never recorded expectations, or the ttl expired", "controller", controllerKey)
+    }
+    return true
+}
+
+func (e *ControlleeExpectations) Fulfilled() bool {
+    // 期望创建和删除的副本数都不大于0表示满足
+    return atomic.LoadInt64(&e.add) <= 0 && atomic.LoadInt64(&e.del) <= 0
+}
+```
+
+期望状态的检查发生在每次调谐的开始，如果`SatisfiedExpectations()`方法返回了`false`，那就意味着`manageReplicas()`方法不会被执行，会导致该对象在控制器中逻辑被阻塞。
 
 ### 过滤控制器管理Pod
 
@@ -346,7 +382,7 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
             }
             return err
         })
-		// 存在Pod创建失败
+        // 存在Pod创建失败
         if skippedPods := diff - successfulCreations; skippedPods > 0 {
             logger.V(2).Info("Slow-start failure. Skipping creation of pods, decrementing expectations", "podsSkipped", skippedPods, "kind", rsc.Kind, "replicaSet", klog.KObj(rs))
             for i := 0; i < skippedPods; i++ {
@@ -446,6 +482,20 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 }
 ```
 
-##### 创建失败处理
+##### 创建失败处理和EventHandler
 
-在上面的流程中曾调用`expectations.ExpectCreations()`方法设置期望创建/删除副本数量，期望值`expectations`充当缓冲计数器，并且会传递到下一个周期，控制器在启动时的`SatisfiedExpectations() `方法就是对期望值进行检查。
+在上面的流程中曾调用`expectations.ExpectCreations()`方法设置期望创建/删除副本数量，期望值`expectations`充当缓冲计数器，并且会传递到后面的周期，控制器在启动时的`SatisfiedExpectations() `方法就是对期望值进行检查，为了保证核心逻辑的顺利执行，会期望每次检查时的`ControlleeExpectations.add`和`ControlleeExpectations.del`都不大于0。这依赖`PodInformer`和`CreationObserved()`的协同处理，在注册的`EventHandler`中，每观测到创建了一个属于该`ReplicaSet`对象的Pod副本，就会调用`CreationObserved()方法使`计数器的`add`字段值减一，也就是说如果所有的创建操作都执行成功，那下一次的期望检查就会通过，然后重新在`manageReplicas()`方法中计算差值并进行创建/删除。当创建过程中发生错误，那么就会调用`CreationObserved()`方法，执行`期望扩容数-成功扩容数`的次数，最终使计数器清零。
+
+```Go
+func (r *ControllerExpectations) CreationObserved(logger klog.Logger, controllerKey string) {
+    r.LowerExpectations(logger, controllerKey, 1, 0)
+}
+
+func (r *ControllerExpectations) LowerExpectations(logger klog.Logger, controllerKey string, add, del int) {
+    if exp, exists, err := r.GetExpectations(controllerKey); err == nil && exists {
+        exp.Add(int64(-add), int64(-del))
+        // The expectations might've been modified since the update on the previous line.
+        logger.V(4).Info("Lowered expectations", "expectations", exp)
+    }
+}
+```
