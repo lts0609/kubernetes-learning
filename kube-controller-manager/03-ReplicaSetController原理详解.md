@@ -482,7 +482,7 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 }
 ```
 
-##### 创建失败处理和EventHandler
+#### 创建失败处理和EventHandler
 
 在上面的流程中曾调用`expectations.ExpectCreations()`方法设置期望创建/删除副本数量，期望值`expectations`充当缓冲计数器，并且会传递到后面的周期，控制器在启动时的`SatisfiedExpectations() `方法就是对期望值进行检查，为了保证核心逻辑的顺利执行，会期望每次检查时的`ControlleeExpectations.add`和`ControlleeExpectations.del`都不大于0。这依赖`PodInformer`和`CreationObserved()`的协同处理，在注册的`EventHandler`中，每观测到创建了一个属于该`ReplicaSet`对象的Pod副本，就会调用`CreationObserved()方法使`计数器的`add`字段值减一，也就是说如果所有的创建操作都执行成功，那下一次的期望检查就会通过，然后重新在`manageReplicas()`方法中计算差值并进行创建/删除。当创建过程中发生错误，那么就会调用`CreationObserved()`方法，执行`期望扩容数-成功扩容数`的次数，最终使计数器清零。
 
