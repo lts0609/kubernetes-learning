@@ -4,7 +4,7 @@
 
 上一节调度周期的流程已经完全结束了，整个Pod调度的生命周期已经结束了大半，回到`ScheduleOne()`方法来看，在调度周期`schedulingCycle()`返回了结果以后，如果是失败就`return`了，如果是成功就通过`go`关键字启动一个`Goroutine`协程来做绑定周期的逻辑，也相当于是这一次的`ScheduleOne()`调用结束了，但别忘了它是通过`UntilWithContext()`启动的间隔为`0`的循环逻辑，表明调度周期结束后就立刻开始了下个Pod的调度计算，而绑定逻辑以及它的结果交给协程去处理，调度器的`ScheduleOne()`每次只能处理一个Pod，因此如果等待不确定会耗时多久的绑定动作结束才开始调度新Pod是不明智的，包括`Permit`插件返回`Wait`后的结果也是在绑定周期的一开始去等待接收的，这十分符合效率优先的原则。
 
-```Go
+```go
 func (sched *Scheduler) ScheduleOne(ctx context.Context) {
     ......
     // 调度周期
@@ -40,7 +40,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 
 这里相关的设计思想会在`PreBind`扩展点详细展开分析。
 
-```Go
+```go
 // Any failures after this point cannot lead to the Pod being considered unschedulable.
 // We define the Pod as "unschedulable" only when Pods are rejected at specific extension points, and PreBind is the last one in the scheduling/binding cycle.
 //
@@ -48,7 +48,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 // we can free the cluster events stored in the scheduling queue sonner, which is worth for busy clusters memory consumption wise.
 ```
 
-```Go
+```go
 func (sched *Scheduler) bindingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -132,7 +132,7 @@ func (sched *Scheduler) bindingCycle(
 
 `PreBind`插件调用入口和其他扩展点没有任何区别，查看`PreBind()`方法主要有`DynamicResources`和`VolumeBinding`两个插件实现，简单分析这两个插件在该阶段都实现了什么逻辑。首先`VolumeBinding`插件通过`CycleState`对象获取状态信息，然后判断是否所有需要的卷都已经和Pod进行了绑定，如果都已绑定则跳过。否则获取目标节点上的卷，然后调用`BindPodVolumes()`方法绑定Pod和卷。
 
-```Go
+```go
 func (pl *VolumeBinding) PreBind(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
     // 获取状态信息
     s, err := getStateData(cs)
@@ -163,7 +163,7 @@ func (pl *VolumeBinding) PreBind(ctx context.Context, cs *framework.CycleState, 
 
 第二个插件`DynamicResources`处理动态资源如GPU在Pod绑定到节点前的分配，首先还是从`CycleState`获取状态信息，然后判断声明的资源是否已经在节点上被预留，如果没有被预留则执行`bindClaim()`方法，`bindClaim()`返回更新后的资源对象，实际上是更新了它的`ReservedFor`、`Allocation`和`Finalizers`字段，把返回的对象更新到调度上下文`CycleState`中。
 
-```Go
+```go
 func (pl *DynamicResources) PreBind(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
     if !pl.enabled {
         return nil
@@ -292,7 +292,7 @@ func (pl *DynamicResources) bindClaim(ctx context.Context, state *stateData, ind
 
 `PreBind`结束后调用`Done()`方法释放调度队列中的Pod对象，随后调用`bind()`方法进行绑定操作。其中包括执行扩展绑定插件、执行绑定插件和绑定结果确认三部分。
 
-```Go
+```go
 func (sched *Scheduler) bind(ctx context.Context, fwk framework.Framework, assumed *v1.Pod, targetNode string, state *framework.CycleState) (status *framework.Status) {
     logger := klog.FromContext(ctx)
     defer func() {
@@ -311,7 +311,7 @@ func (sched *Scheduler) bind(ctx context.Context, fwk framework.Framework, assum
 
 分析`DefaultBinder`默认绑定插件的实现，实际上只是组装一个`Binding`对象，其中包括绑定主体的`ObjectMeta`和绑定目标的资源类型和名称，然后通过调用`API Server`的`Pods.Bind()`接口提交请求信息。可以理解`Bind`阶段只涉及API接口调用，不涉及其他的逻辑。
 
-```Go
+```go
 func (b DefaultBinder) Bind(ctx context.Context, state *framework.CycleState, p *v1.Pod, nodeName string) *framework.Status {
     logger := klog.FromContext(ctx)
     logger.V(3).Info("Attempting to bind pod to node", "pod", klog.KObj(p), "node", klog.KRef("", nodeName))
@@ -335,7 +335,7 @@ func (b DefaultBinder) Bind(ctx context.Context, state *framework.CycleState, p 
 
 根据绑定周期的代码实现来看，`PostBind`并不是像`PostFilter`一样的失败后处理流程，而是标准成功流程中的一部分，但是默认调度器中没有设置`PostBind`插件，一般来说该扩展点的作用包括：执行非阻塞的后置任务、传递结果触发外部联动、临时资源清理等。作为所有扩展点的最后一站，其核心价值在于绑定成功后的自定义后置操作，扩展调度器和外部系统的联动能力，而且不影响调度逻辑的稳定性。
 
-```Go
+```go
 func (sched *Scheduler) bindingCycle(
     ctx context.Context,
     state *framework.CycleState,

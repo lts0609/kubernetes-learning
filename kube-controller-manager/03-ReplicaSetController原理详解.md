@@ -4,7 +4,7 @@
 
 实例创建的部分属于通用基本逻辑，创建`Pod`和`ReplicaSet`对象的Informer，GVK标识为{Group: apps, Version: v1, Kind: ReplicaSet}。
 
-```Go
+```go
 // 创建ReplicaSetController的Descriptor
 func newReplicaSetControllerDescriptor() *ControllerDescriptor {
     return &ControllerDescriptor{
@@ -78,7 +78,7 @@ func (rsc *ReplicaSetController) Run(ctx context.Context, workers int) {
 
 这部分代码是标准化的，和其他所有控制器都相同，`syncHandler()`方法在创建实例的`NewBaseController()`函数中注册，实际为`syncReplicaSet()`方法。
 
-```Go
+```go
 func (rsc *ReplicaSetController) worker(ctx context.Context) {
     for rsc.processNextWorkItem(ctx) {
     }
@@ -108,7 +108,7 @@ func (rsc *ReplicaSetController) processNextWorkItem(ctx context.Context) bool {
 
 `Informer`监测到变化时`object`对象是以key为`namespace/name`的形式加入工作队列的，调谐逻辑处理时要通过`key`再把命名空间和对象名称分离。
 
-```Go
+```go
 func (rsc *ReplicaSetController) syncReplicaSet(ctx context.Context, key string) error {
     logger := klog.FromContext(ctx)
     startTime := time.Now()
@@ -180,7 +180,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(ctx context.Context, key string)
 
 `SatisfiedExpectations()`方法用来检查对象的当前状态和期望状态是否需要进行同步，用于`ReplicaSetController`、`DaemonSetController`、`JobController`这几个存在副本期望的控制器中。
 
-```Go
+```go
 func (r *ControllerExpectations) SatisfiedExpectations(logger klog.Logger, controllerKey string) bool {
     if exp, exists, err := r.GetExpectations(controllerKey); exists {
         // 检查期望数量是否满足
@@ -215,7 +215,7 @@ func (e *ControlleeExpectations) Fulfilled() bool {
 
 首先通过`PodLister`获取命名空间下的所有Pod，然后调用`claimPods()`方法进行处理。该方法会先创建一个`PodControllerRefManager`对象，也就是说在每次调谐时都会给目标`ReplicaSet`创建一个`PodControllerRefManager`用来认领Pod，它作为局部变量生命周期随`claimPods()`方法一同结束。
 
-```Go
+```go
 func (rsc *ReplicaSetController) claimPods(ctx context.Context, rs *apps.ReplicaSet, selector labels.Selector, filteredPods []*v1.Pod) ([]*v1.Pod, error) {
     // Pod认领判断函数
     canAdoptFunc := controller.RecheckDeletionTimestamp(func(ctx context.Context) (metav1.Object, error) {
@@ -237,7 +237,7 @@ func (rsc *ReplicaSetController) claimPods(ctx context.Context, rs *apps.Replica
 
 对象创建后只有一个任务，调用`ClaimPods()`方法过滤属于这个`ReplicaSet`管理的Pod。在这个过程中要匹配Pod标签和`ReplicaSet`的标签选择器，所以输入参数除了上下文信息只传入了Pod列表，实际上还可以根据需要传递过滤函数`filters`。其中定义了`match`、`adopt`、`release`三种方法用于在对应的情况下处理Pod。
 
-```Go
+```go
 func (m *PodControllerRefManager) ClaimPods(ctx context.Context, pods []*v1.Pod, filters ...func(*v1.Pod) bool) ([]*v1.Pod, error) {
     var claimed []*v1.Pod
     var errlist []error
@@ -282,7 +282,7 @@ func (m *PodControllerRefManager) ClaimPods(ctx context.Context, pods []*v1.Pod,
 
 处理单个Pod的具体动作由`ClaimObject()`方法完成，首先检查Pod是否存在`OwnerReference`，如果不存在那么当前它是一个孤儿对象，检查Pod是否正处于删除状态以及它的命名空间和当前控制器的是否相同，然后尝试认领该Pod;如果存在，检查`OwnerReference`的`UID`和当前控制器是否相同，`UID`如果相同还需要确认标签选择器是否满足，然后返回结果。
 
-```Go
+```go
 func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.Object, match func(metav1.Object) bool, adopt, release func(context.Context, metav1.Object) error) (bool, error) {
     // 获取Pod的OwnerReference对象
     controllerRef := metav1.GetControllerOfNoCopy(obj)
@@ -349,7 +349,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 
 如果当前状态和期望状态不一致，就会调用`manageReplicas()`方法使副本状态趋于期望。根据函数签名，输入参数包括上下文信息、控制器管理的Pod列表`filteredPods`和`ReplicaSet`对象`rs`。
 
-```Go
+```go
 func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPods []*v1.Pod, rs *apps.ReplicaSet) error {
     // 计算期望副本数和实际副本数的差值
     diff := len(filteredPods) - int(*(rs.Spec.Replicas))
@@ -443,7 +443,7 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
 
 使用`slowStartBatch()`函数批量创建Pod，函数名为慢启动批处理，用于控制并发的速率，避免一次性发起过多请求造成的系统压力。接收处理总数`count`、初始批处理大小`initialBatchSize`和逻辑函数`fn`。循环执行输入的逻辑函数，初始批处理大小为1，通过`channel`控制并发，每一轮循环后更新计数和批处理大小，最后返回成功数量。
 
-```Go
+```go
 func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, error) {
     // 剩余处理次数
     remaining := count
@@ -480,7 +480,7 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 
 在上面的流程中曾调用`expectations.ExpectCreations()`方法设置期望创建/删除副本数量，期望值`expectations`充当缓冲计数器，并且会传递到后面的周期，控制器在启动时的`SatisfiedExpectations() `方法就是对期望值进行检查，为了保证核心逻辑的顺利执行，会期望每次检查时的`ControlleeExpectations.add`和`ControlleeExpectations.del`都不大于0。这依赖`PodInformer`和`CreationObserved()`的协同处理，在注册的`EventHandler`中，每观测到创建了一个属于该`ReplicaSet`对象的Pod副本，就会调用`CreationObserved()方法使`计数器的`add`字段值减一，也就是说如果所有的创建操作都执行成功，那下一次的期望检查就会通过，然后重新在`manageReplicas()`方法中计算差值并进行创建/删除。当创建过程中发生错误，那么就会调用`CreationObserved()`方法，执行`期望扩容数-成功扩容数`的次数，最终使计数器清零。
 
-```Go
+```go
 func (r *ControllerExpectations) CreationObserved(logger klog.Logger, controllerKey string) {
     r.LowerExpectations(logger, controllerKey, 1, 0)
 }
@@ -498,7 +498,7 @@ func (r *ControllerExpectations) LowerExpectations(logger klog.Logger, controlle
 
 如果实际副本数大于期望副本数，就需要对Pod副本进行缩容。首先设置处理数量，然后找出和当前`ReplicaSet`关联的Pod，再从中选出要删除的Pod副本，最后通过`goroutine`和`channel`实现删除的并发控制。并持续读监听错误通道，如果出现错误数据就中断操作。
 
-```Go
+```go
 func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPods []*v1.Pod, rs *apps.ReplicaSet) error {
     ......
     } else if diff > 0 {
@@ -552,7 +552,7 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
 
 `getIndirectlyRelatedPods()`方法用来找到有间接从属关系的Pod。先初始化一个列表，通过`getReplicaSetsWithSameController()`方法获取和当前`ReplicaSet`有相同上层控制器的所有`ReplicaSet`对象，因为如`Deployment`在滚动更新过程中可能会同时管理多个版本的`ReplicaSet`对象，在管理副本时需要考虑这些场景。
 
-```Go
+```go
 func (rsc *ReplicaSetController) getReplicaSetsWithSameController(logger klog.Logger, rs *apps.ReplicaSet) []*apps.ReplicaSet {
     // 获取OwnerReference
     controllerRef := metav1.GetControllerOf(rs)
@@ -584,7 +584,7 @@ func (rsc *ReplicaSetController) getReplicaSetsWithSameController(logger klog.Lo
 
 `relatedPods`是一个扩展的副本集合，不仅有满足当前`ReplicaSet`对象标签选择器的Pod副本，还包含通过兄弟`ReplicaSet`(与当前`ReplicaSet`有相同的上层控制器)标签选择器的Pod副本。
 
-```Go
+```go
 func (rsc *ReplicaSetController) getIndirectlyRelatedPods(logger klog.Logger, rs *apps.ReplicaSet) ([]*v1.Pod, error) {
     // 初始化Pod集合
     var relatedPods []*v1.Pod
@@ -622,7 +622,7 @@ func (rsc *ReplicaSetController) getIndirectlyRelatedPods(logger klog.Logger, rs
 
 如果差值大于当前`ReplicaSet`管理的副本数，结果就是全部删除。如果差值小于副本数，根据节点上的副本分布情况构造一个`ActivePodsWithRanks`类型的对象，进行排序后截取`diff`长度的数组返回。
 
-```Go
+```go
 func getPodsToDelete(filteredPods, relatedPods []*v1.Pod, diff int) []*v1.Pod {
     // 期望删除数量小于当前副本数
     if diff < len(filteredPods) {
@@ -640,7 +640,7 @@ func getPodsToDelete(filteredPods, relatedPods []*v1.Pod, diff int) []*v1.Pod {
 
 `getPodsRankedByRelatedPodsOnSameNode()`函数的输入参数包括当前`ReplicaSet`管理的待排序副本列表`podsToRank`和所有满足标签选择器的副本列表`relatedPods`，首先遍历`relatedPods`计算关联副本在节点上的分布情况，然后遍历`podsToRank`并填充`rank`数组，组装成`ActivePodsWithRanks`对象后返回，`ActivePodsWithRanks`中定义了`Swap()`和`Less()`方法，执行`Sort()`排序时传入的`Pods`列表由于是引用传递，底层数组会被直接修改。
 
-```Go
+```go
 func getPodsRankedByRelatedPodsOnSameNode(podsToRank, relatedPods []*v1.Pod) controller.ActivePodsWithRanks {
     // 初始化变量
     podsOnNode := make(map[string]int)

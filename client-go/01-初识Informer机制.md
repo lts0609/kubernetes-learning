@@ -6,7 +6,7 @@
 
 `cmd/kube-scheduler/app/server.go`文件中的`Run()`函数完成了调度器实例的启动，看一下其中的`Informer`使用
 
-```Go
+```go
 startInformersAndWaitForSync := func(ctx context.Context) {
   // Start all informers.
   cc.InformerFactory.Start(ctx.Done())
@@ -38,13 +38,13 @@ if !cc.ComponentConfig.DelayCacheUntilActive || cc.LeaderElection == nil {
 
 其中的`InformerFactory`往前找来自于`cmd/kube-scheduler/app/options/options.go`中的`Config()`方法
 
-```Go
+```go
 c.InformerFactory = scheduler.NewInformerFactory(client, 0)
 ```
 
 其中`scheduler.NewInformerFactory`的作用就是创建了一个`PodInformer`
 
-```Go
+```go
 func NewInformerFactory(cs clientset.Interface, resyncPeriod time.Duration) informers.SharedInformerFactory {
     informerFactory := informers.NewSharedInformerFactory(cs, resyncPeriod)
     informerFactory.InformerFor(&v1.Pod{}, newPodInformer)
@@ -54,7 +54,7 @@ func NewInformerFactory(cs clientset.Interface, resyncPeriod time.Duration) info
 
 在`pkg/scheduler/scheduler.go`的`New()`函数中，创建了两个`Lister`。通过代码可以看出，创建`Lister`会使用到`Informer`的`Indexer`，从而间接创建`Informer`。
 
-```Go
+```go
 podLister := informerFactory.Core().V1().Pods().Lister()
 nodeLister := informerFactory.Core().V1().Nodes().Lister()
 
@@ -69,7 +69,7 @@ func (f *nodeInformer) Lister() corev1.NodeLister {
 
 以及注册了所有的事件处理方法
 
-```Go
+```go
 if err = addAllEventHandlers(sched, informerFactory, dynInformerFactory, resourceClaimCache, unionedGVKs(queueingHintsPerProfile)); err != nil {
   return nil, fmt.Errorf("adding event handlers: %w", err)
 }

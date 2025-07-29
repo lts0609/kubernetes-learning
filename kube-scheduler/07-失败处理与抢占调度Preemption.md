@@ -4,7 +4,7 @@
 
 在代码中搜索关键字`Preempt`会找到路径`pkg/scheduler/framework/preemption`下的`Preempt()`方法，向上寻找调用关系可以到路径`pkg/scheduler/framework/plugins/defaultpreemption`，被其中`default_preemption.go`中的`PostFilter()`方法直接调用，可以说明抢占流程作为调度插件之一存在于`PostFilter`扩展点。`RunPostFilterPlugins()`方法的调用发生在`SchedulePod()`方法返回的错误信息不为空时，也就是`Predicates`与`Priorities`两个阶段存在失败，没有能找到一个符合条件的节点运行Pod，方法调用如下方代码内容所示。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -29,7 +29,7 @@ func (sched *Scheduler) schedulingCycle(
 
 `RunPostFilterPlugins()`方法与`PostFilter()`方法之间的逻辑与其他种类插件一致，下面从分析`DefaultPreemption`实现的`PostFilter()`方法开始分析抢占的流程。
 
-```Go
+```go
 func (pl *DefaultPreemption) PostFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod, m framework.NodeToStatusReader) (*framework.PostFilterResult, *framework.Status) {
     defer func() {
         metrics.PreemptionAttempts.Inc()
@@ -52,7 +52,7 @@ func (pl *DefaultPreemption) PostFilter(ctx context.Context, state *framework.Cy
 
 在`kube-scheduler`中，`Evaluator `评估器是负责抢占流程的核心组件。在抢占中`Evaluator`负责流程控制和协调，具体的策略逻辑由实现了`Interface`接口的插件控制，`PreemptPod()`方法是抢占过程中的核心动作之一。
 
-```Go
+```go
 type Evaluator struct {
     // 插件名称
     PluginName string
@@ -77,7 +77,7 @@ type Evaluator struct {
 
 `Interface`接口实现的方法如下，其中的方法实现在抢占流程中分析，此处不做说明。
 
-```Go
+```go
 type Interface interface {
     // 获取候选节点偏移量
     GetOffsetAndNumCandidates(nodes int32) (int32, int32)
@@ -97,7 +97,7 @@ type Interface interface {
 
 评估器实例的创建最早可以追溯到`NewInTreeRegistry()`函数，它实现了内置插件的创建和注册。插件结构包括调度框架句柄`fh`，特性开关集合`fts`，插件参数`args`，`Pod`和`PDB`的`Lister`以及评估器实例`Evaluator`。
 
-```GO
+```go
 func NewInTreeRegistry() runtime.Registry {
     ......
     registry := runtime.Registry{
@@ -159,7 +159,7 @@ func NewEvaluator(pluginName string, fh framework.Handle, i Interface, enableAsy
 
 在前面的学习中了解过调度队列的组件`Nominator`提名器，虽然它是`SchedulingQueue`的组件，但是和抢占流程也有一些关系。因为抢占插件返回的结构`framework.PostFilterResult`实际是一个`NominatingInfo`的指针，该结构的使用一般出现在提名器中。并且在抢占流程的最后，会修改Pod对象的`Status.NominatedNodeName`字段，在后面的调度周期中使用，如在`Predicates`阶段`findNodesThatFitPod()`方法的逻辑中，如果`Pod.Status.NominatedNodeName`不为空，会优先单独评估`NominatedNodeName`是否满足条件，如果不满足才会走后续标准流程。
 
-```Go
+```go
 type PostFilterResult struct {
     *NominatingInfo
 }
@@ -190,7 +190,7 @@ type NominatingInfo struct {
 
 这六个步骤执行后会返回抢占的最终结果给调度器，整体来看和标准的调度流程很类似，都会包括预选和优选的过程，实际上这些逻辑都紧紧围绕着调度器的本职工作：为Pod选择合适的`Node`，然后把`Node`的名称告诉Pod。
 
-```Go
+```go
 func (ev *Evaluator) Preempt(ctx context.Context, state *framework.CycleState, pod *v1.Pod, m framework.NodeToStatusReader) (*framework.PostFilterResult, *framework.Status) {
     logger := klog.FromContext(ctx)
 
@@ -272,7 +272,7 @@ func (ev *Evaluator) Preempt(ctx context.Context, state *framework.CycleState, p
 
 回顾一下`Filter`扩展点的错误状态，`Unschedulable`表示临时的调度失败，如`CPU`资源不足、Pod间亲和性不满足等情况，可能下一轮调度情况变化就会可以调度了，这种情况不用人工干预只需要调度器重试;`UnschedulableAndUnresolvable`表示硬性条件的不满足，比如`NodeSelector`节点标签不满足、`PV`绑定失败等情况，其中临时条件和永久条件的关键区别在于**资源是否随着Pod的生命周期而发生变化**。
 
-```Go
+```go
 // 1) Ensure the preemptor is eligible to preempt other pods.
 nominatedNodeStatus := m.Get(pod.Status.NominatedNodeName)
 if ok, msg := ev.PodEligibleToPreemptOthers(ctx, pod, nominatedNodeStatus); !ok {
@@ -315,7 +315,7 @@ func (pl *DefaultPreemption) PodEligibleToPreemptOthers(_ context.Context, pod *
 
 确认Pod可以进行抢占后，通过`NodeLister`获取全量节点信息，`findCandidates`返回所有候选节点和状态。然后通过`NodeToStatusReader`接口获取信息记录为`Unschedulable`的节点，因为`UnschedulableAndUnresolvable`是硬性条件的不满足，这种条件不会以Pod的生命周期变化转换为满足，所以不在抢占的考虑范围以内。如果此时的潜在节点`potentialNodes`长度为0，已经没有合适的节点可以发生抢占，会清除当前Pod的`NominatedNodeName`信息并结束。`potentialNodes`长度大于0时，先获取集群中的所有`PDB`信息，驱逐某个Pod可能还会影响到其他命名空间的`PDB`，所以此处获取全量对象。
 
-```Go
+```go
 func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleState, allNodes []*framework.NodeInfo, pod *v1.Pod, m framework.NodeToStatusReader) ([]Candidate, *framework.NodeToStatus, error) {
     // 全量节点数量判断
     if len(allNodes) == 0 {
@@ -357,7 +357,7 @@ func (ev *Evaluator) findCandidates(ctx context.Context, state *framework.CycleS
 
 `GetOffsetAndNumCandidates()`方法接收一个`INT32`的整数，返回两个值，分别代表选择节点的`起始偏移量`和`候选节点数量`。
 
-```Go
+```go
 func (pl *DefaultPreemption) GetOffsetAndNumCandidates(numNodes int32) (int32, int32) {
     return rand.Int31n(numNodes), pl.calculateNumCandidates(numNodes)
 }
@@ -365,7 +365,7 @@ func (pl *DefaultPreemption) GetOffsetAndNumCandidates(numNodes int32) (int32, i
 
 候选节点数量的选择规则如下，此处涉及到两个参数值`MinCandidateNodesPercentage`和`MinCandidateNodesAbsolute`，分别表示**最小百分比**和**最小绝对值**，这两个变量的默认值可以在`pkg/scheduler/apis/config/testing/defaults/defaults.go`中找到。
 
-```Go
+```go
 var PluginConfigsV1 = []config.PluginConfig{
     {
         Name: "DefaultPreemption",
@@ -379,7 +379,7 @@ var PluginConfigsV1 = []config.PluginConfig{
 
 采样数量=节点总数*最小百分比，且不小于最小绝对值，不大于节点总数。
 
-```Go
+```go
 func (pl *DefaultPreemption) calculateNumCandidates(numNodes int32) int32 {
     // 采样数量=节点总数*最小百分比
     n := (numNodes * pl.args.MinCandidateNodesPercentage) / 100
@@ -401,7 +401,7 @@ func (pl *DefaultPreemption) calculateNumCandidates(numNodes int32) int32 {
 
 `DryRunPreemption()`方法进行模拟抢占，根据函数签名，接收上下文`ctx`、调度状态`state`、抢占主体`pod`、潜在节点列表`potentialNodes`、Pod干扰预算`pdbs`、索引偏移量`offset`、采样数量`candidatesNum`，返回`[]Candidate`类型的候选节点列表和`NodeToStatus`类型的节点状态映射。具体的逻辑实现是先初始化两个列表分别记录`违反PDB`和`不违反PDB`的候选节点，然后使用并行器在所有的采样节点中执行闭包函数`checkNode()`来获取每个节点上能让出足够资源的**最小Pod集合**，然后经过类型转换为`Candidate`对象，并根据是否违反PDB做区分加入对应的列表中，如果没有成功返回Pod集合`victims`，就更新该节点的状态信息，最终返回合并后的节点列表和节点状态信息。
 
-```Go
+```go
 func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.CycleState, pod *v1.Pod, potentialNodes []*framework.NodeInfo,
     pdbs []*policy.PodDisruptionBudget, offset int32, candidatesNum int32) ([]Candidate, *framework.NodeToStatus, error) {
 
@@ -473,7 +473,7 @@ func (ev *Evaluator) DryRunPreemption(ctx context.Context, state *framework.Cycl
 
 `SelectVictimsOnNode()`方法作为抢占的核心逻辑之一，使用了`最大删除-验证-逐步恢复`的筛选策略，使用闭包函数减少了代码冗余;逐步恢复阶段分别处理两类受害者列表，优先保障了高优先级Pod和服务可用(PDB)。体现了调度器在复杂场景下的实用主义思想，在算法复杂度和执行效率之间寻找动态平衡点。
 
-```Go
+```go
 func (pl *DefaultPreemption) SelectVictimsOnNode(
     ctx context.Context,
     state *framework.CycleState,
@@ -586,7 +586,7 @@ func (pl *DefaultPreemption) SelectVictimsOnNode(
 
 `HTTPExtender`是通过HTTP接口调用外部扩展程序的机制，`extender.ProcessPreemption()`方法把抢占信息封装成HTTP请求发送给外部程序，接收到外部程序的响应后将其转换为内部数据形式并返回。
 
-```Go
+```go
 func (ev *Evaluator) callExtenders(logger klog.Logger, pod *v1.Pod, candidates []Candidate) ([]Candidate, *framework.Status) {
     // 获取注册的扩展器
     extenders := ev.Handler.Extenders()
@@ -649,7 +649,7 @@ func (ev *Evaluator) callExtenders(logger klog.Logger, pod *v1.Pod, candidates [
 
 这个阶段可以理解为标准流程中的`Priorities`，根据执行评分插件，选出最适合抢占的候选节点，其中的核心函数是`pickOneNodeForPreemption()`，作用可以类比标准流程的`RunScorePlugins()`方法。
 
-```Go
+```go
 func (ev *Evaluator) SelectCandidate(ctx context.Context, candidates []Candidate) Candidate {
     logger := klog.FromContext(ctx)
 
@@ -684,7 +684,7 @@ func (ev *Evaluator) SelectCandidate(ctx context.Context, candidates []Candidate
 
 `pickOneNodeForPreemption()`函数实现了节点的选择，根据对代码的分析，它的实现比`Priorities`要简单很多，不涉及节点的并行计算和归一化。使用贪心算法不断更新最高评分和最高分节点列表，并把当前评分函数的输出作为下一个评分函数的输入。值得一提的是，评分函数列表中的策略是存在优先级的，前一个评分函数的重要性永远高于后一个评分函数，只有当一个评分函数无法完全区分节点是否最优时，才会进入策略链的下一环继续评估。如果某一个评分函数只得到了一个最高分节点，那么就可以直接返回该节点了。
 
-```Go
+```go
 func pickOneNodeForPreemption(logger klog.Logger, nodesToVictims map[string]*extenderv1.Victims, scoreFuncs []func(node string) int64) string {
     if len(nodesToVictims) == 0 {
         return ""
@@ -778,7 +778,7 @@ func pickOneNodeForPreemption(logger klog.Logger, nodesToVictims map[string]*ext
 
 确定了候选节点和受害者以后，就需要把这些倒霉的Pod从节点上驱逐出去，当前Kubernetes支持同步抢占和异步抢占两种方式。调度器根据特性门控`EnableAsyncPreemption`的开关决定使用同步或异步。
 
-```Go
+```go
 if ev.enableAsyncPreemption {
     // 异步抢占
     ev.prepareCandidateAsync(bestCandidate, pod, ev.PluginName)
@@ -794,7 +794,7 @@ if ev.enableAsyncPreemption {
 
 同步抢占通过`prepareCandidate()`方法实现，通过并行器驱逐所有受害者，然后检查是否存在比抢占者优先级低但是提名了同一个节点的Pod，如果存在就清除它们的`NominatedNodeName`字段。
 
-```Go
+```go
 func (ev *Evaluator) prepareCandidate(ctx context.Context, c Candidate, pod *v1.Pod, pluginName string) *framework.Status {
     // 初始化对象
     fh := ev.Handler
@@ -829,7 +829,7 @@ func (ev *Evaluator) prepareCandidate(ctx context.Context, c Candidate, pod *v1.
 
 上面有提到`PreemptPod()`方法是在创建评估器时注册的，具体实现如下。首先判断受害者Pod是否在等待准入插件返回结果，如果正处于`Waiting`状态则直接调用`Reject()`方法终止其调度。如果不是`Waiting`状态先构造一个新的状态信息，然后先进行本地更新，如果本地更新成功才会调用API接口更新`API Server`中受害者Pod的状态信息并删除实例对象。
 
-```Go
+```go
 PreemptPod = func(ctx context.Context, c Candidate, preemptor, victim *v1.Pod, pluginName string) error {
     logger := klog.FromContext(ctx)
     // 检查受害者Pod是否为WaitingPod
@@ -878,7 +878,7 @@ PreemptPod = func(ctx context.Context, c Candidate, preemptor, victim *v1.Pod, p
 
 异步抢占能够避免阻塞调度主流程，可以提高调度器的吞吐量和响应速度。异步抢占的核心逻辑和同步抢占基本相同，但是异步抢占会额外维护评估器中的`preempting`集合，在其中记录正处于抢占状态的Pod，并通过加锁/解锁避免并发问题。在驱逐受害者Pod时，同步抢占直接并行驱逐所有，而异步抢占的驱逐动作通过协程启动，首先并行驱逐`N-1`个受害者Pod，驱逐成功后删除`preempting`集合中的对象，并单独驱逐最后一个受害者Pod。
 
-```Go
+```go
 func (ev *Evaluator) prepareCandidateAsync(c Candidate, pod *v1.Pod, pluginName string) {
     metrics.PreemptionVictims.Observe(float64(len(c.Victims().Pods)))
 
@@ -953,7 +953,7 @@ func (ev *Evaluator) prepareCandidateAsync(c Candidate, pod *v1.Pod, pluginName 
 
 在成功驱逐了所有受害者Pod后，返回`PostFilterResult`类型的抢占结果，在其中包含了提名节点的名称。组装错误信息并返回，这一个调度周期就结束了，在后续的错误处理环节，如果发现结果的`nominatingInfo`字段不为空，则修改Pod的`Status.NominatedNodeName`字段为`nominatingInfo`的值，Pod状态设置为`Unschedulable`状态，在后面的调度周期会重新入队并尝试调度到提名节点。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -988,7 +988,7 @@ func (sched *Scheduler) schedulingCycle(
 }
 ```
 
-```Go
+```go
 func (sched *Scheduler) ScheduleOne(ctx context.Context) {
     ......
     scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
@@ -1005,7 +1005,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 
 在`ScheduleOne()`方法中可以看到调度器在两个位置进行了失败处理，不难想到这两处就是`SchedulingCycle`与`BindingCycle`的结尾，在两个生命周期结束时进行错误判断与处理。
 
-```Go
+```go
 func (sched *Scheduler) ScheduleOne(ctx context.Context) {
     ......
 
@@ -1029,7 +1029,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 
 失败处理接口`FailureHandler`是`FailureHandlerFn`类型的函数，在调度器创建时的`applyDefaultHandlers()`方法设置。
 
-```Go
+```go
 func (sched *Scheduler) applyDefaultHandlers() {
     sched.SchedulePod = sched.schedulePod
     sched.FailureHandler = sched.handleSchedulingFailure
@@ -1038,7 +1038,7 @@ func (sched *Scheduler) applyDefaultHandlers() {
 
 下面来详细分析`handleSchedulingFailure()`方法内的逻辑。首先来看函数签名，该方法接收六个参数，分别是上下文信息`ctx`，调度配置`fwk`，Pod信息`podInfo`，返回状态`status`，提名信息`nominatingInfo`和调度起始时间`start`。整体上包括调度事件记录、Pod提名节点信息处理、Pod对象重新入队和Pod状态更新。
 
-```Go
+```go
 func (sched *Scheduler) handleSchedulingFailure(ctx context.Context, fwk framework.Framework, podInfo *framework.QueuedPodInfo, status *framework.Status, nominatingInfo *framework.NominatingInfo, start time.Time) {
     calledDone := false
     defer func() {

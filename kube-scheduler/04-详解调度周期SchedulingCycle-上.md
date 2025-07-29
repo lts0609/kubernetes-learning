@@ -4,13 +4,13 @@
 
 调度周期的实现可以说是整个调度器的核心内容，所以展开说明。在`ScheduleOne()`中调度周期的入口方法是`schedulingCycl()`。
 
-```Go
+```go
 scheduleResult, assumedPodInfo, status := sched.schedulingCycle(schedulingCycleCtx, state, fwk, podInfo, start, podsToActivate)
 ```
 
 根据函数签名部分，它接收六个参数，包括调度周期的上下文`ctx`，用于协程的生命周期管理;调度周期状态`state`，调度插件通过该对象读取或写入数据以便协同工作;调度框架接口对象`fwk`，调度过程中根据`Pod.Status.SchedulerName`字段调度框架获取对应`Framework`实例，对应调度流程中的配置以及扩展点插件列表;Pod的信息`podInfo`，根据其中的信息选择节点;开始调度的时间戳`start`;待激活Pod集合`podsToActivate`。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -23,7 +23,7 @@ func (sched *Scheduler) schedulingCycle(
 
 然后来分析`schedulingCycle()`方法的实现逻辑，完整代码如下。
 
-```Go
+```go
 // schedulingCycle tries to schedule a single Pod.
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
@@ -146,7 +146,7 @@ func (sched *Scheduler) schedulingCycle(
 
 因为选节点失败会触发抢占流程，先对可以成功选到节点的标准情况进行了解，也就是下面简化后的代码片段，做概述说明。首先调用`sched.SchedulePod()`方法，这个步骤可以说是整个调度周期的核心，其中包括了我们常说的预选`Predicates`和优选`Priorities`流程。回顾一下调度器实例的创建`sched.applyDefaultHandlers()`步骤中设置了`调度函数`和`调度失败handler`，没有采用硬编码的方式设置逻辑，提高了代码的灵活性。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -198,7 +198,7 @@ func (sched *Scheduler) schedulingCycle(
 
 分析一下`schedulePod()`方法的逻辑，
 
-```Go
+```go
 func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) (result ScheduleResult, err error) {
     // 创建一个调度过程中的跟踪器
     trace := utiltrace.New("Scheduling", utiltrace.Field{Key: "namespace", Value: pod.Namespace}, utiltrace.Field{Key: "name", Value: pod.Name})
@@ -259,13 +259,13 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
 
 在`schedulePod()`方法中，`Predicates`阶段的入口代码如下，其中返回结果为`PodInfo`类型的列表`feasibleNodes`和节点不符合条件的原因`diagnosis`。
 
-```Go
+```go
 feasibleNodes, diagnosis, err := sched.findNodesThatFitPod(ctx, fwk, state, pod)
 ```
 
 其中`Diagnosis`类型组成如下，记录全局的`Predicates`节点诊断信息。
 
-```Go
+```go
 type Diagnosis struct {
     // PreFilter/Filter阶段不可用节点的信息集合
     NodeToStatus *NodeToStatus
@@ -312,7 +312,7 @@ type Status struct {
 
 ### 核心函数findNodesThatFitPod
 
-```Go
+```go
 func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) ([]*framework.NodeInfo, framework.Diagnosis, error) {
     logger := klog.FromContext(ctx)
     // 初始化节点级的诊断字典
@@ -396,7 +396,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, fwk framework.F
 
 `PreFilter`的作用主要是缩小集群范围，可能会收集集群/节点信息，一般会通过`cycleState.Write()`方法，以`扩展点+插件名`为key写入`CycleState`对象中。
 
-```Go
+```go
 func (f *frameworkImpl) RunPreFilterPlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod) (_ *framework.PreFilterResult, status *framework.Status, _ sets.Set[string]) {
     // 开始时间戳
     startTime := time.Now()
@@ -469,7 +469,7 @@ func (f *frameworkImpl) RunPreFilterPlugins(ctx context.Context, state *framewor
 
 以有被提名节点的处理流程为例，与标准流程相同，`Filter`阶段的两个重要方法为`findNodesThatPassFilters()`和`findNodesThatPassExtenders`。
 
-```Go
+```go
 func (sched *Scheduler) evaluateNominatedNode(ctx context.Context, pod *v1.Pod, fwk framework.Framework, state *framework.CycleState, diagnosis framework.Diagnosis) ([]*framework.NodeInfo, error) {
     // 获取被提名Node的信息
     nnn := pod.Status.NominatedNodeName
@@ -496,7 +496,7 @@ func (sched *Scheduler) evaluateNominatedNode(ctx context.Context, pod *v1.Pod, 
 
 `findNodesThatPassFilters()`方法过滤出了通过`Filter`插件的节点列表。
 
-```Go
+```go
 func (sched *Scheduler) findNodesThatPassFilters(
     ctx context.Context,
     fwk framework.Framework,
@@ -590,7 +590,7 @@ func (sched *Scheduler) findNodesThatPassFilters(
 
 为了平衡调度的效率，不会把所有符合条件的节点都列出并打分，所以`feasiblenodes`切片会有一个预估长度，最小长度是100。`numFeasibleNodesToFind()`抽样方法接收两个参数，分别是打分抽样百分比和集群节点总数。
 
-```Go
+```go
 func (sched *Scheduler) numFeasibleNodesToFind(percentageOfNodesToScore *int32, numAllNodes int32) (numNodes int32) {
     // 节点总数<100 直接返回节点总数
     if numAllNodes < minFeasibleNodesToFind {
@@ -629,7 +629,7 @@ func (sched *Scheduler) numFeasibleNodesToFind(percentageOfNodesToScore *int32, 
 
 此处的巧妙设计充分表现了调度器的**保守决策**，两次插件执行必须全部通过才算做节点可用：第一次循环先设置模拟添加提名Pod标识位`podsAdded`，然后调用`RunFilterPlugins()`执行`Filter`插件，第二次时判断标识位和上一次结果，如果没有提名Pod可模拟或模拟后节点不可用，直接返回不用再执行第二次。如果考虑了提名Pod且第一次结果为成功，那么还需要执行第二次，保证如Pod间亲和性等条件在没有提名Pod在节点上运行时仍然能够满足。如果第二次评估失败，那么会覆盖第一次的评估结果，认为当前节点不可用。
 
-```Go
+```go
 func (f *frameworkImpl) RunFilterPluginsWithNominatedPods(ctx context.Context, state *framework.CycleState, pod *v1.Pod, info *framework.NodeInfo) *framework.Status {
     var status *framework.Status
 
@@ -666,7 +666,7 @@ func (f *frameworkImpl) RunFilterPluginsWithNominatedPods(ctx context.Context, s
 
 `addNominatedPods()`函数把被提名到当前节点且优先级高于当前对象的Pod临时添加到节点信息中，以模拟成功抢占后的状态。
 
-```Go
+```go
 func addNominatedPods(ctx context.Context, fh framework.Handle, pod *v1.Pod, state *framework.CycleState, nodeInfo *framework.NodeInfo) (bool, *framework.CycleState, *framework.NodeInfo, error) {
     if fh == nil {
         return false, state, nodeInfo, nil
@@ -702,7 +702,7 @@ func addNominatedPods(ctx context.Context, fh framework.Handle, pod *v1.Pod, sta
 
 运行`Filter`插件的实际入口在`RunFilterPlugins()`方法中，和`PreFilter`的调用类似，都是循环执行集合中的插件然后返回状态，没有需要特别说明的地方。
 
-```Go
+```go
 func (f *frameworkImpl) RunFilterPlugins(
     ctx context.Context,
     state *framework.CycleState,
@@ -739,7 +739,7 @@ func (f *frameworkImpl) RunFilterPlugins(
 
 回到之前的流程中，也就是`evaluateNominatedNode()`方法中，这里涉及到调度扩展器`Scheduler Extenders`，在此处先不详细说明
 
-```Go
+```go
 func findNodesThatPassExtenders(ctx context.Context, extenders []framework.Extender, pod *v1.Pod, feasibleNodes []*framework.NodeInfo, statuses *framework.NodeToStatus) ([]*framework.NodeInfo, error) {
     logger := klog.FromContext(ctx)
 
@@ -783,7 +783,7 @@ func findNodesThatPassExtenders(ctx context.Context, extenders []framework.Exten
 
 至此`Predicates`阶段以返回一个`feasibleNodes`为结束，简单来看一下Pod中没有`NominatedNodeName`的标准情况，部分代码如下，并没有实际上的区别，基本相当于是未被封装的`evaluateNominatedNode()`
 
-```Go
+```go
     // 初始化nodes为全部节点
     nodes := allNodes
     // 如果Prefilter阶段返回的不是全部节点

@@ -7,7 +7,7 @@
 
 回到`Predicates`结束的位置，也就是`schedulePod()`方法中
 
-```Go
+```go
 func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework, state *framework.CycleState, pod *v1.Pod) (result ScheduleResult, err error) {
     ......
     // Predicates阶段 返回预选Node和诊断结果
@@ -53,7 +53,7 @@ func (sched *Scheduler) schedulePod(ctx context.Context, fwk framework.Framework
 
 `Priorities`阶段的入口函数是`prioritizeNodes()`，对调度流程有过基本了解的一定都知道Pod的调度有`预选`和`优选`两个阶段，很明显在这个阶段要做的事情就是对上一步中过滤出来的节点进行排序，然后选择最合适的一个。
 
-```Go
+```go
 func prioritizeNodes(
     ctx context.Context,
     extenders []framework.Extender,
@@ -168,7 +168,7 @@ func prioritizeNodes(
 
 通过对`Kubernetes源码`的学习，可以感觉到它的代码是很结构化的，`prioritizeNodes()`函数整体较长，我们分块来理清它的逻辑。首先根据函数签名，它的入参包括：用于控制生命周期的上下文参数`ctx`，调度扩展器`extenders`，调度框架实例`fwk`，存储调度状态的`state`，Pod信息对象`pod`，以及上一步返回的节点列表`nodes`。返回值是一个`NodePluginScores`切片类型的节点评分结果，后续会经过`selectHost()`函数，最终敲定的目标节点并返回节点名称。
 
-```Go
+```go
 func prioritizeNodes(
     ctx context.Context,
     extenders []framework.Extender,
@@ -181,7 +181,7 @@ func prioritizeNodes(
 
 先来看不包括调度扩展器的逻辑部分，如果没有调度扩展器和`Score`插件，就把所有的节点都打`1分`然后返回。
 
-```Go
+```go
 func prioritizeNodes(
     ctx context.Context,
     extenders []framework.Extender,
@@ -230,7 +230,7 @@ func prioritizeNodes(
 
 `RunPreScorePlugins()`的实现和`RunPreFilterPlugins()`非常类似，同样是做了两大类事情：在遍历执行`PreScore`插件的过程中，调用`cycleState.Write()`记录信息到`cycleState`中，如污点容忍和亲和性等，并在遍历结束后把没有相关条件后续不需要执行的`Score`插件也记录到`cycleState`。
 
-```Go
+```go
 func (f *frameworkImpl) RunPreScorePlugins(
     ctx context.Context,
     state *framework.CycleState,
@@ -271,7 +271,7 @@ func (f *frameworkImpl) RunPreScorePlugins(
 
 以Kubernetes的默认插件配置为例，分析`PreScore`和`Score`插件的行为，由于`Weight`权重字段一定是作用于`Score`相关的扩展点，所以选择`TaintToleration`插件作为分析对象。
 
-```Go
+```go
 func getDefaultPlugins() *v1.Plugins {
     plugins := &v1.Plugins{
         MultiPoint: v1.PluginSet{
@@ -307,7 +307,7 @@ func getDefaultPlugins() *v1.Plugins {
 
 在`taint_toleration.go`文件中，可以看到该插件实现了`Filter、PreScore、Score、NormalizeScore`接口，其中的逻辑比较简单，`PreScore`扩展点时使用`cycleState.Write()`记录污点容忍信息到`cycleState`，到`Score`扩展点时`TaintToleration`根据写入时的key使用`cycleState.Read()`读出`PreScore`阶段记录的数据，如果不能容忍软性污点就计数加一，最后返回结果。`NormalizeScore`扩展点调用了默认的归一化逻辑。
 
-```Go
+```go
 func (pl *TaintToleration) PreScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) *framework.Status {
     if len(nodes) == 0 {
         return nil
@@ -360,7 +360,7 @@ func countIntolerableTaintsPreferNoSchedule(taints []v1.Taint, tolerations []v1.
 
 `RunScorePlugins()`的实现和`RunFilterPlugins()`类似。首先，`Filter`插件执行的过程中，状态被存储在`CycleState`对象并读写，过滤的行为属于责任链模式，如果一处不通过就直接失败退出，所以过滤阶段节点层面并行但插件层面是串行的。评分阶段也是节点层面串行和插件层面并行，如有疑问可以对比`Predicates`阶段的`findNodesThatPassFilters()`与`Priorities`阶段的`RunScorePlugins()`方法并加以详细对比。
 
-```Go
+```go
 func (f *frameworkImpl) RunScorePlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*framework.NodeInfo) (ns []framework.NodePluginScores, status *framework.Status) {
     startTime := time.Now()
     defer func() {
@@ -492,7 +492,7 @@ type NodePluginScores struct {
 
 一些插件的`NormalizeScore()`实现是直接调用了默认的归一化评分方法`DefaultNormalizeScore()`，在文件`pkg/scheduler/framework/plugins/helper/normalize_score.go`中定义，仅注释不做过多说明。
 
-```Go
+```go
 func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.NodeScoreList) *framework.Status {
     var maxCount int64
     // 获取所有节点中的最高分
@@ -529,7 +529,7 @@ func DefaultNormalizeScore(maxPriority int64, reverse bool, scores framework.Nod
 
 对上面例如`TaintToleration`插件的了解，不难发现其实调度器的算法实现并不复杂，重点在于整体流程的设计，实际上在了解了`Scheduler Framework`后，Pod的整个调度流程就已经非常清晰了。到目前为止总共接触到了`PreFilter`、`Filter`、`PreScore`、`Score`这四个扩展点的插件(其中`NormalizeScore`在`Score`扩展点内部，不属于12个标准扩展点之一)。在结合流程图中，前面有三个扩展点没有看到，分别是`PreEnqueue`、`QueueSort`和`PostFilter`，其中`PreEnqueue`和`QueueSort`是调度队列相关的两个插件，所以没有出现在调度周期内，如果感兴趣可以回到调度队列的`runPreEnqueuePlugins()`方法中，在Pod添加到`ActiveQ`时调用。`QueueSort`调用点较为隐蔽，可以以`func (aq *activeQueue) update()`为入口，调用关系如下方所示，调度队列实例创建之初，就向其中注册了`Less()`方法，它的调用点不像其他的插件是`runXXXPlugin()`而是`Less()`，Pod的入队和出队都会调用`Less()`方法。`PostFilter`插件只与抢占流程有关，在后面会单独介绍。
 
-```Go
+```go
 // 入队的调用链 activeQueue.update->queue.AddOrUpdate->heap.Push->up
 func (aq *activeQueue) update(newPod *v1.Pod, oldPodInfo *framework.QueuedPodInfo) *framework.QueuedPodInfo {
     aq.lock.Lock()
@@ -641,7 +641,7 @@ func down(h Interface, i0, n int) bool {
 
 此时已经得到了每个节点和其评分的对应关系，还需要进行`Priorities`阶段的最后一步，那就是从上一步的结果中选出最优先的那个，然后以`ScheduleResult`结构的形式返回给上层。
 
-```Go
+```go
 host, _, err := selectHost(priorityList, numberOfHighestScoredNodesToReport)
 return ScheduleResult{
         SuggestedHost:  host,
@@ -652,7 +652,7 @@ return ScheduleResult{
 
 其中的一个输入参数是`numberOfHighestScoredNodesToReport`，它的值为3，可以覆盖`一主两备`的场景并避免记录过多信息的内存占用，同时用于抢占流程和错误记录，该数值是信息完整性和性能之间的平衡点。
 
-```Go
+```go
     // numberOfHighestScoredNodesToReport is the number of node scores
     // to be included in ScheduleResult.
     numberOfHighestScoredNodesToReport = 3
@@ -660,7 +660,7 @@ return ScheduleResult{
 
 下面分析`selectHost()`函数，首先是对长度做例行的判断，然后开始提取前三评分的节点，这里的设计采用了蓄水池抽样法。首先初始化了一个列表，并把`nodeScoreHeap`堆中的第一个元素`Pop`出来加入到列表中，因为`nodeScoreHeap`是按`TotalScore`从高到低来排序的。然后开始循环添加元素，在切片实际长度小于容量时，先拿当前节点的`TotalScore`和第一个元素的`TotalScore`做比较，如果值相等就根据蓄水池抽样法，以`1/相同分数节点数量`的概率替换第一个元素，以`selectedIndex`动态记录其位置，然后在元素加满之后交换列表中两个索引位置的值，最终返回第一个元素的节点名称和分数前三的节点列表，至此`Priorities`阶段完全结束。
 
-```Go
+```go
 func (h nodeScoreHeap) Less(i, j int) bool { return h[i].TotalScore > h[j].TotalScore }
 
 func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, []framework.NodePluginScores, error) {
@@ -716,7 +716,7 @@ func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, 
 
 `schedulePod()`方法返回的`ScheduleResult`中包括最后要尝试绑定的节点`SuggestedHost`，本次总共评估过的节点总数`EvaluatedNodes`，其值是过滤阶段返回的`feasibleNodes`长度与已知不可调度节点列表`NodeToStatus`的长度总和，还有可用节点数量`FeasibleNodes`。
 
-```Go
+```go
     return ScheduleResult{
         SuggestedHost:  host,
         EvaluatedNodes: len(feasibleNodes) + diagnosis.NodeToStatus.Len(),
@@ -730,7 +730,7 @@ func selectHost(nodeScoreList []framework.NodePluginScores, count int) (string, 
 
 在`SchedulePod()`方法返回了成功以后，`Kubernetes`调度器对此有乐观的预期，认为经过精密而又保守的计算逻辑以后，这个Pod最终会被成功绑定，而绑定周期又是异步进行的，所以此时Pod会进入一个`Assumed`的中间状态，它会存在于调度缓存`Cache`中。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -755,7 +755,7 @@ func (sched *Scheduler) schedulingCycle(
 
 调用`assume()`方法更新调度缓存中的内容，其中的`Cache.AssumePod()`在第一篇调度队列部分有过简单说明，这一步实际就是更新缓存一遍下一个Pod的计算能够考虑到处于`Assume`状态的Pod，不至于因为资源冲突导致绑定失败。
 
-```Go
+```go
 func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string) error {
     // 修改NodeName字段
     assumed.Spec.NodeName = host
@@ -778,7 +778,7 @@ func (sched *Scheduler) assume(logger klog.Logger, assumed *v1.Pod, host string)
 
 在`Assume`阶段后，调度周期还剩下两个扩展点，此时关于调度的选择已经结束了，所做的内容是要为绑定和下次调度做准备，接下来的扩展点是资源预留`Reserve`扩展点和准入`Permit`扩展点。
 
-```Go
+```go
 func (sched *Scheduler) schedulingCycle(
     ctx context.Context,
     state *framework.CycleState,
@@ -848,7 +848,7 @@ func (sched *Scheduler) schedulingCycle(
 
 下面看资源预留的逻辑`RunReservePluginsReserve()`和`runReservePluginReserve()`方法，外层和之前的几个`RunXXXPlugin()`没有什么区别。
 
-```Go
+```go
 func (f *frameworkImpl) RunReservePluginsReserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
     startTime := time.Now()
     defer func() {
@@ -894,7 +894,7 @@ func (f *frameworkImpl) runReservePluginReserve(ctx context.Context, pl framewor
 
 那么看一个具体的资源预留插件`VolumeBinding`实现，
 
-```Go
+```go
 func (pl *VolumeBinding) Reserve(ctx context.Context, cs *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
     // 从CycleState中获取信息
     state, err := getStateData(cs)
@@ -920,7 +920,7 @@ func (pl *VolumeBinding) Reserve(ctx context.Context, cs *framework.CycleState, 
 
 其中调用了`AssumePodVolumes()`方法，更新了`AssumeCache`缓存和原`PodVolumes`对象中的信息，其中的`pvcCache`、`pvcCache`和Pod的`Assume`原理类似，都是对预期将会存在的对象做一份在缓存中的记录。
 
-```Go
+```go
 // AssumePodVolumes will take the matching PVs and PVCs to provision in pod's
 // volume information for the chosen node, and:
 // 1. Update the pvCache with the new prebound PV.
@@ -996,7 +996,7 @@ func (b *volumeBinder) AssumePodVolumes(logger klog.Logger, assumedPod *v1.Pod, 
 
 仍以`VolumeBinding`为例，失败后的`Unreserve`插件获取调度开始时从`ApiServer`中获取到的对象信息，并借助`Restore()`方法向`FIFO`中发送更新事件，使本地缓存中的数据回滚到最初状态。
 
-```Go
+```go
 func (f *frameworkImpl) runReservePluginUnreserve(ctx context.Context, pl framework.ReservePlugin, state *framework.CycleState, pod *v1.Pod, nodeName string) {
     if !state.ShouldRecordPluginMetrics() {
         pl.Unreserve(ctx, state, pod, nodeName)
@@ -1056,7 +1056,7 @@ func (c *AssumeCache) Restore(objName string) {
 
 `Reserve`扩展点之后紧接着就是`Permit`扩展点，通过代码逻辑可以看出，在执行完具体插件之后会对返回的状态`status`做出判断，这里和其他插件返回状态相比，多了一个`Wait`状态，如果没有返回`Success`而是`Wait`时，根据返回值设置插件等待的超时时长(最大不超过`15分钟`)，并修改`statusCode`标识位，在遍历执行完所有的插件之后，如果是需要等待的，就将其加入到等待队列中。
 
-```Go
+```go
 func (f *frameworkImpl) RunPermitPlugins(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
     startTime := time.Now()
     defer func() {
@@ -1113,7 +1113,7 @@ func (f *frameworkImpl) RunPermitPlugins(ctx context.Context, state *framework.C
 
 在`frameworkImpl`中包含一个等待队列`waitingPods`的结构，其类型是`waitingPodsMap`，由`waitingPod`的集合和一个读写锁组成。
 
-```Go
+```go
 type waitingPodsMap struct {
     pods map[types.UID]*waitingPod
     mu   sync.RWMutex
@@ -1131,7 +1131,7 @@ type waitingPod struct {
 
 这里很好理解了，就是组装一个`waitingPod`结构，为每个其中要等待的插件设置一下定时器，然后把这个`waitingPod`对象加入集合中，如果时间到了就会自动执行`Reject()`方法。
 
-```Go
+```go
 func newWaitingPod(pod *v1.Pod, pluginsMaxWaitTime map[string]time.Duration) *waitingPod {
     // 组装waitingPod结构
     wp := &waitingPod{
@@ -1159,7 +1159,7 @@ func newWaitingPod(pod *v1.Pod, pluginsMaxWaitTime map[string]time.Duration) *wa
 
 如果插件返回成功会调用`Allow()`方法，从`pendingPlugins`的集合中获取插件的信息，然后停止定时器并删除当前元素。通过对集合长度的判断，在长度为0时表示所有的`Permit`插件都已经允许这个Pod的调度了，就向`waitingPod`的`s`通道中发送一个`framework.Success`的信号，该信号会在绑定周期被接收并判断。
 
-```Go
+```go
 func (w *waitingPod) Allow(pluginName string) {
     w.mu.Lock()
     defer w.mu.Unlock()
@@ -1185,7 +1185,7 @@ func (w *waitingPod) Allow(pluginName string) {
 
 `Permit`扩展点运行之后，也就是在整个`SchedulingCycle`结束之前，会激活`podsToActivate`集合中的Pod，把它们重新加入到`ActiveQ`里，为下一次调度的`SchedulingCycle`做好准备。
 
-```Go
+```go
     // At the end of a successful scheduling cycle, pop and move up Pods if needed.
     if len(podsToActivate.Map) != 0 {
         sched.SchedulingQueue.Activate(logger, podsToActivate.Map)
@@ -1200,7 +1200,7 @@ func (w *waitingPod) Allow(pluginName string) {
 
 在调度周期中，`Permit`阶段如果返回的是`Wait`状态，调度器不会因为等待它返回的结果而去影响其他Pod调度的效率，而是在异步执行绑定周期`BindingCycle`的开始处确认`waitingPod`的最终结果是`Success`还是`Rejected`。
 
-```Go
+```go
     // Run "permit" plugins.
     if status := fwk.WaitOnPermit(ctx, assumedPod); !status.IsSuccess() {
         if status.IsRejected() {
@@ -1221,7 +1221,7 @@ func (w *waitingPod) Allow(pluginName string) {
 
 先判断要绑定的Pod是否是`waitingPod`，如果不存在就直接进入后面的流程。
 
-```Go
+```go
 func (f *frameworkImpl) WaitOnPermit(ctx context.Context, pod *v1.Pod) *framework.Status {
     // 从waitingPods集合中获取当前Pod
     waitingPod := f.waitingPods.get(pod.UID)

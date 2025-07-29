@@ -370,502 +370,502 @@
 <h1 id="controllermanager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;"><a name="controllermanager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;" class="anchor-navigation-ex-anchor" href="#controllermanager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;"><i class="fa fa-link" aria-hidden="true"></i></a> ControllerManager&#x521B;&#x5EFA;&#x6D41;&#x7A0B;</h1>
 <h2 id="&#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;"><a name="&#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;" class="anchor-navigation-ex-anchor" href="#&#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;"><i class="fa fa-link" aria-hidden="true"></i></a>1. &#x63A7;&#x5236;&#x5668;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x51FD;&#x6570;</h2>
 <p>&#x6839;&#x636E;&#x5728;&#x4E4B;&#x524D;&#x8C03;&#x5EA6;&#x5668;&#x5B66;&#x4E60;&#x8FC7;&#x7A0B;&#x4E2D;&#x5BF9;<code>Cobra</code>&#x6846;&#x67B6;&#x6784;&#x5EFA;&#x7EC4;&#x4EF6;&#x7684;&#x4E86;&#x89E3;&#xFF0C;&#x9996;&#x5148;&#x5C31;&#x4F1A;&#x60F3;&#x5230;<code>kube-controller- manager</code>&#x7684;&#x521B;&#x5EFA;&#x5165;&#x53E3;&#x4E5F;&#x5728;<code>cmd/kube-controller-manager/controller-manager.go</code>&#x4E2D;&#xFF0C;&#x5176;&#x4E2D;&#x540C;&#x6837;&#x4E5F;&#x53EA;&#x5305;&#x542B;&#x7B80;&#x5355;&#x7684;&#x4E09;&#x884C;&#x4EE3;&#x7801;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func main() {
-    command := app.NewControllerManagerCommand()
-    code := cli.Run(command)
-    os.Exit(code)
-}
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    command <span class="token operator">:=</span> app<span class="token punctuation">.</span><span class="token function">NewControllerManagerCommand</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    code <span class="token operator">:=</span> cli<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span>command<span class="token punctuation">)</span>
+    os<span class="token punctuation">.</span><span class="token function">Exit</span><span class="token punctuation">(</span>code<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x8FD9;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x4E2D;&#x662F;&#x5B8C;&#x5168;&#x76F8;&#x540C;&#x7684;&#xFF0C;&#x4E0B;&#x9762;&#x8FDB;&#x5165;<code>cmd/kube-controller-manager/app/controllermanager.go</code>&#x8DEF;&#x5F84;&#x4E0B;&#x53BB;&#x770B;&#x5177;&#x4F53;&#x903B;&#x8F91;&#x3002;&#x8FD8;&#x662F;&#x5173;&#x6CE8;<code>RunE()</code>&#x4E2D;return&#x7684;<code>Run()</code>&#x51FD;&#x6570;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">// NewControllerManagerCommand creates a *cobra.Command object with default parameters
-func NewControllerManagerCommand() *cobra.Command {
-    // &#x521D;&#x59CB;&#x5316;&#x7279;&#x6027;&#x95E8;&#x63A7;
-    _, _ = featuregate.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
-        featuregate.DefaultKubeComponent, utilversion.DefaultBuildEffectiveVersion(), utilfeature.DefaultMutableFeatureGate)
-    // &#x521D;&#x59CB;&#x5316;&#x914D;&#x7F6E;&#x4FE1;&#x606F;KubeControllerManagerOptions&#x5BF9;&#x8C61;
-    s, err := options.NewKubeControllerManagerOptions()
-    if err != nil {
-        klog.Background().Error(err, &quot;Unable to initialize command options&quot;)
-        klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-    }
+<pre class="language-"><code class="lang-go"><span class="token comment">// NewControllerManagerCommand creates a *cobra.Command object with default parameters</span>
+<span class="token keyword">func</span> <span class="token function">NewControllerManagerCommand</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span>cobra<span class="token punctuation">.</span>Command <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x7279;&#x6027;&#x95E8;&#x63A7;</span>
+    <span class="token boolean">_</span><span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">=</span> featuregate<span class="token punctuation">.</span>DefaultComponentGlobalsRegistry<span class="token punctuation">.</span><span class="token function">ComponentGlobalsOrRegister</span><span class="token punctuation">(</span>
+        featuregate<span class="token punctuation">.</span>DefaultKubeComponent<span class="token punctuation">,</span> utilversion<span class="token punctuation">.</span><span class="token function">DefaultBuildEffectiveVersion</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> utilfeature<span class="token punctuation">.</span>DefaultMutableFeatureGate<span class="token punctuation">)</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x914D;&#x7F6E;&#x4FE1;&#x606F;KubeControllerManagerOptions&#x5BF9;&#x8C61;</span>
+    s<span class="token punctuation">,</span> err <span class="token operator">:=</span> options<span class="token punctuation">.</span><span class="token function">NewKubeControllerManagerOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        klog<span class="token punctuation">.</span><span class="token function">Background</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Unable to initialize command options&quot;</span><span class="token punctuation">)</span>
+        klog<span class="token punctuation">.</span><span class="token function">FlushAndExit</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span>ExitFlushTimeout<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    cmd := &amp;cobra.Command{
-        ......
-        // &#x6838;&#x5FC3;&#x903B;&#x8F91;
-        RunE: func(cmd *cobra.Command, args []string) error {
-            verflag.PrintAndExitIfRequested()
+    cmd <span class="token operator">:=</span> <span class="token operator">&amp;</span>cobra<span class="token punctuation">.</span>Command<span class="token punctuation">{</span>
+        <span class="token operator">...</span><span class="token operator">...</span>
+        <span class="token comment">// &#x6838;&#x5FC3;&#x903B;&#x8F91;</span>
+        RunE<span class="token punctuation">:</span> <span class="token keyword">func</span><span class="token punctuation">(</span>cmd <span class="token operator">*</span>cobra<span class="token punctuation">.</span>Command<span class="token punctuation">,</span> args <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+            verflag<span class="token punctuation">.</span><span class="token function">PrintAndExitIfRequested</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
-            // Activate logging as soon as possible, after that
-            // show flags with the final logging configuration.
-            if err := logsapi.ValidateAndApply(s.Logs, utilfeature.DefaultFeatureGate); err != nil {
-                return err
-            }
-            cliflag.PrintFlags(cmd.Flags())
-            // KubeControllerManagerOptions--&gt;Config
-            c, err := s.Config(KnownControllers(), ControllersDisabledByDefault(), ControllerAliases())
-            if err != nil {
-                return err
-            }
+            <span class="token comment">// Activate logging as soon as possible, after that</span>
+            <span class="token comment">// show flags with the final logging configuration.</span>
+            <span class="token keyword">if</span> err <span class="token operator">:=</span> logsapi<span class="token punctuation">.</span><span class="token function">ValidateAndApply</span><span class="token punctuation">(</span>s<span class="token punctuation">.</span>Logs<span class="token punctuation">,</span> utilfeature<span class="token punctuation">.</span>DefaultFeatureGate<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> err
+            <span class="token punctuation">}</span>
+            cliflag<span class="token punctuation">.</span><span class="token function">PrintFlags</span><span class="token punctuation">(</span>cmd<span class="token punctuation">.</span><span class="token function">Flags</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token comment">// KubeControllerManagerOptions--&gt;Config</span>
+            c<span class="token punctuation">,</span> err <span class="token operator">:=</span> s<span class="token punctuation">.</span><span class="token function">Config</span><span class="token punctuation">(</span><span class="token function">KnownControllers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">ControllersDisabledByDefault</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">ControllerAliases</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> err
+            <span class="token punctuation">}</span>
 
-            // add feature enablement metrics
-            fg := s.ComponentGlobalsRegistry.FeatureGateFor(featuregate.DefaultKubeComponent)
-            fg.(featuregate.MutableFeatureGate).AddMetrics()
-            // &#x4F20;&#x5165;CompletedConfig&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;
-            return Run(context.Background(), c.Complete())
-        },
-        Args: func(cmd *cobra.Command, args []string) error {
-            for _, arg := range args {
-                if len(arg) &gt; 0 {
-                    return fmt.Errorf(&quot;%q does not take any arguments, got %q&quot;, cmd.CommandPath(), args)
-                }
-            }
-            return nil
-        },
-    }
+            <span class="token comment">// add feature enablement metrics</span>
+            fg <span class="token operator">:=</span> s<span class="token punctuation">.</span>ComponentGlobalsRegistry<span class="token punctuation">.</span><span class="token function">FeatureGateFor</span><span class="token punctuation">(</span>featuregate<span class="token punctuation">.</span>DefaultKubeComponent<span class="token punctuation">)</span>
+            fg<span class="token punctuation">.</span><span class="token punctuation">(</span>featuregate<span class="token punctuation">.</span>MutableFeatureGate<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">AddMetrics</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token comment">// &#x4F20;&#x5165;CompletedConfig&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;</span>
+            <span class="token keyword">return</span> <span class="token function">Run</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span><span class="token function">Background</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> c<span class="token punctuation">.</span><span class="token function">Complete</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        Args<span class="token punctuation">:</span> <span class="token keyword">func</span><span class="token punctuation">(</span>cmd <span class="token operator">*</span>cobra<span class="token punctuation">.</span>Command<span class="token punctuation">,</span> args <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+            <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> arg <span class="token operator">:=</span> <span class="token keyword">range</span> args <span class="token punctuation">{</span>
+                <span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>arg<span class="token punctuation">)</span> <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+                    <span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;%q does not take any arguments, got %q&quot;</span><span class="token punctuation">,</span> cmd<span class="token punctuation">.</span><span class="token function">CommandPath</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> args<span class="token punctuation">)</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">return</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span>
 
-    fs := cmd.Flags()
-    namedFlagSets := s.Flags(KnownControllers(), ControllersDisabledByDefault(), ControllerAliases())
-    verflag.AddFlags(namedFlagSets.FlagSet(&quot;global&quot;))
-    globalflag.AddGlobalFlags(namedFlagSets.FlagSet(&quot;global&quot;), cmd.Name(), logs.SkipLoggingConfigurationFlags())
-    for _, f := range namedFlagSets.FlagSets {
-        fs.AddFlagSet(f)
-    }
+    fs <span class="token operator">:=</span> cmd<span class="token punctuation">.</span><span class="token function">Flags</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    namedFlagSets <span class="token operator">:=</span> s<span class="token punctuation">.</span><span class="token function">Flags</span><span class="token punctuation">(</span><span class="token function">KnownControllers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">ControllersDisabledByDefault</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">ControllerAliases</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    verflag<span class="token punctuation">.</span><span class="token function">AddFlags</span><span class="token punctuation">(</span>namedFlagSets<span class="token punctuation">.</span><span class="token function">FlagSet</span><span class="token punctuation">(</span><span class="token string">&quot;global&quot;</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    globalflag<span class="token punctuation">.</span><span class="token function">AddGlobalFlags</span><span class="token punctuation">(</span>namedFlagSets<span class="token punctuation">.</span><span class="token function">FlagSet</span><span class="token punctuation">(</span><span class="token string">&quot;global&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cmd<span class="token punctuation">.</span><span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> logs<span class="token punctuation">.</span><span class="token function">SkipLoggingConfigurationFlags</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> f <span class="token operator">:=</span> <span class="token keyword">range</span> namedFlagSets<span class="token punctuation">.</span>FlagSets <span class="token punctuation">{</span>
+        fs<span class="token punctuation">.</span><span class="token function">AddFlagSet</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    cols, _, _ := term.TerminalSize(cmd.OutOrStdout())
-    cliflag.SetUsageAndHelpFunc(cmd, namedFlagSets, cols)
+    cols<span class="token punctuation">,</span> <span class="token boolean">_</span><span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> term<span class="token punctuation">.</span><span class="token function">TerminalSize</span><span class="token punctuation">(</span>cmd<span class="token punctuation">.</span><span class="token function">OutOrStdout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    cliflag<span class="token punctuation">.</span><span class="token function">SetUsageAndHelpFunc</span><span class="token punctuation">(</span>cmd<span class="token punctuation">,</span> namedFlagSets<span class="token punctuation">,</span> cols<span class="token punctuation">)</span>
 
-    return cmd
-}
+    <span class="token keyword">return</span> cmd
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x914D;&#x7F6E;&#x4FE1;&#x606F;&#x4E0D;&#x662F;&#x6211;&#x4EEC;&#x9700;&#x8981;&#x5173;&#x6CE8;&#x7684;&#xFF0C;&#x5728;&#x63A7;&#x5236;&#x5668;&#x4E2D;&#x914D;&#x7F6E;&#x7684;&#x521B;&#x5EFA;&#x5B9E;&#x9645;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x4E2D;&#x662F;&#x57FA;&#x672C;&#x4E00;&#x81F4;&#x7684;&#x7684;&#xFF0C;&#x90FD;&#x662F;<code>Options -&gt; Config -&gt; CompletedConfig</code>&#xFF0C;&#x628A;&#x5B8C;&#x6574;&#x914D;&#x7F6E;&#x4F20;&#x5165;&#x6838;&#x5FC3;&#x903B;&#x8F91;<code>Run()</code>&#x51FD;&#x6570;&#xFF0C;</p>
 <h2 id="&#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;"><a name="&#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;" class="anchor-navigation-ex-anchor" href="#&#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;"><i class="fa fa-link" aria-hidden="true"></i></a>2. &#x63A7;&#x5236;&#x5668;&#x6838;&#x5FC3;&#x521B;&#x5EFA;&#x903B;&#x8F91;</h2>
 <p><code>Run()</code>&#x51FD;&#x6570;&#x7684;&#x5B9E;&#x73B0;&#x4E5F;&#x548C;&#x8C03;&#x5EA6;&#x5668;&#x5341;&#x5206;&#x76F8;&#x4F3C;&#xFF0C;&#x9996;&#x5148;&#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;&#xFF0C;&#x6253;&#x5370;&#x57FA;&#x672C;&#x73AF;&#x5883;&#x4FE1;&#x606F;&#xFF0C;&#x7136;&#x540E;&#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;&#xFF0C;&#x6CE8;&#x518C;&#x914D;&#x7F6E;&#x548C;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x8BBE;&#x7F6E;&#xFF0C;&#x542F;&#x52A8;Server&#x5E76;&#x521B;&#x5EFA;&#x4E24;&#x4E2A;&#x4E0D;&#x540C;&#x6743;&#x9650;&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#x3002;&#x8FD9;&#x91CC;&#x6D89;&#x53CA;&#x4E86;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func Run(ctx context.Context, c *config.CompletedConfig) error {
-    // &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;
-    logger := klog.FromContext(ctx)
-    stopCh := ctx.Done()
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">Run</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> c <span class="token operator">*</span>config<span class="token punctuation">.</span>CompletedConfig<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    stopCh <span class="token operator">:=</span> ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
-    // &#x6253;&#x5370;&#x7248;&#x672C;&#x4FE1;&#x606F;
-    logger.Info(&quot;Starting&quot;, &quot;version&quot;, utilversion.Get())
-    // &#x6253;&#x5370;Golang&#x73AF;&#x5883;&#x53D8;&#x91CF;
-    logger.Info(&quot;Golang settings&quot;, &quot;GOGC&quot;, os.Getenv(&quot;GOGC&quot;), &quot;GOMAXPROCS&quot;, os.Getenv(&quot;GOMAXPROCS&quot;), &quot;GOTRACEBACK&quot;, os.Getenv(&quot;GOTRACEBACK&quot;))
+    <span class="token comment">// &#x6253;&#x5370;&#x7248;&#x672C;&#x4FE1;&#x606F;</span>
+    logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Starting&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;version&quot;</span><span class="token punctuation">,</span> utilversion<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x6253;&#x5370;Golang&#x73AF;&#x5883;&#x53D8;&#x91CF;</span>
+    logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Golang settings&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;GOGC&quot;</span><span class="token punctuation">,</span> os<span class="token punctuation">.</span><span class="token function">Getenv</span><span class="token punctuation">(</span><span class="token string">&quot;GOGC&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;GOMAXPROCS&quot;</span><span class="token punctuation">,</span> os<span class="token punctuation">.</span><span class="token function">Getenv</span><span class="token punctuation">(</span><span class="token string">&quot;GOMAXPROCS&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;GOTRACEBACK&quot;</span><span class="token punctuation">,</span> os<span class="token punctuation">.</span><span class="token function">Getenv</span><span class="token punctuation">(</span><span class="token string">&quot;GOTRACEBACK&quot;</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    // &#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;
-    c.EventBroadcaster.StartStructuredLogging(0)
-    c.EventBroadcaster.StartRecordingToSink(&amp;v1core.EventSinkImpl{Interface: c.Client.CoreV1().Events(&quot;&quot;)})
-    defer c.EventBroadcaster.Shutdown()
-    // &#x6CE8;&#x518C;&#x914D;&#x7F6E;&#x4FE1;&#x606F;
-    if cfgz, err := configz.New(ConfigzName); err == nil {
-        cfgz.Set(c.ComponentConfig)
-    } else {
-        logger.Error(err, &quot;Unable to register configz&quot;)
-    }
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x4E8B;&#x4EF6;&#x5E7F;&#x64AD;&#x5668;</span>
+    c<span class="token punctuation">.</span>EventBroadcaster<span class="token punctuation">.</span><span class="token function">StartStructuredLogging</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+    c<span class="token punctuation">.</span>EventBroadcaster<span class="token punctuation">.</span><span class="token function">StartRecordingToSink</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>v1core<span class="token punctuation">.</span>EventSinkImpl<span class="token punctuation">{</span>Interface<span class="token punctuation">:</span> c<span class="token punctuation">.</span>Client<span class="token punctuation">.</span><span class="token function">CoreV1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Events</span><span class="token punctuation">(</span><span class="token string">&quot;&quot;</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token keyword">defer</span> c<span class="token punctuation">.</span>EventBroadcaster<span class="token punctuation">.</span><span class="token function">Shutdown</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x6CE8;&#x518C;&#x914D;&#x7F6E;&#x4FE1;&#x606F;</span>
+    <span class="token keyword">if</span> cfgz<span class="token punctuation">,</span> err <span class="token operator">:=</span> configz<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span>ConfigzName<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        cfgz<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span>c<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Unable to register configz&quot;</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    // &#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x8BBE;&#x7F6E;
-    var checks []healthz.HealthChecker
-    var electionChecker *leaderelection.HealthzAdaptor
-    if c.ComponentConfig.Generic.LeaderElection.LeaderElect {
-        electionChecker = leaderelection.NewLeaderHealthzAdaptor(time.Second * 20)
-        checks = append(checks, electionChecker)
-    }
-    healthzHandler := controllerhealthz.NewMutableHealthzHandler(checks...)
+    <span class="token comment">// &#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x8BBE;&#x7F6E;</span>
+    <span class="token keyword">var</span> checks <span class="token punctuation">[</span><span class="token punctuation">]</span>healthz<span class="token punctuation">.</span>HealthChecker
+    <span class="token keyword">var</span> electionChecker <span class="token operator">*</span>leaderelection<span class="token punctuation">.</span>HealthzAdaptor
+    <span class="token keyword">if</span> c<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>Generic<span class="token punctuation">.</span>LeaderElection<span class="token punctuation">.</span>LeaderElect <span class="token punctuation">{</span>
+        electionChecker <span class="token operator">=</span> leaderelection<span class="token punctuation">.</span><span class="token function">NewLeaderHealthzAdaptor</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>Second <span class="token operator">*</span> <span class="token number">20</span><span class="token punctuation">)</span>
+        checks <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>checks<span class="token punctuation">,</span> electionChecker<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    healthzHandler <span class="token operator">:=</span> controllerhealthz<span class="token punctuation">.</span><span class="token function">NewMutableHealthzHandler</span><span class="token punctuation">(</span>checks<span class="token operator">...</span><span class="token punctuation">)</span>
 
-    // &#x542F;&#x52A8;http&#x670D;&#x52A1;&#x5668;
-    var unsecuredMux *mux.PathRecorderMux
-    if c.SecureServing != nil {
-        unsecuredMux = genericcontrollermanager.NewBaseHandler(&amp;c.ComponentConfig.Generic.Debugging, healthzHandler)
-        slis.SLIMetricsWithReset{}.Install(unsecuredMux)
+    <span class="token comment">// &#x542F;&#x52A8;http&#x670D;&#x52A1;&#x5668;</span>
+    <span class="token keyword">var</span> unsecuredMux <span class="token operator">*</span>mux<span class="token punctuation">.</span>PathRecorderMux
+    <span class="token keyword">if</span> c<span class="token punctuation">.</span>SecureServing <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        unsecuredMux <span class="token operator">=</span> genericcontrollermanager<span class="token punctuation">.</span><span class="token function">NewBaseHandler</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>c<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>Generic<span class="token punctuation">.</span>Debugging<span class="token punctuation">,</span> healthzHandler<span class="token punctuation">)</span>
+        slis<span class="token punctuation">.</span>SLIMetricsWithReset<span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">.</span><span class="token function">Install</span><span class="token punctuation">(</span>unsecuredMux<span class="token punctuation">)</span>
 
-        handler := genericcontrollermanager.BuildHandlerChain(unsecuredMux, &amp;c.Authorization, &amp;c.Authentication)
-        if _, _, err := c.SecureServing.Serve(handler, 0, stopCh); err != nil {
-            return err
-        }
-    }
-    // &#x521B;&#x5EFA;root&#x6743;&#x9650;&#x5BA2;&#x6237;&#x7AEF;&#x548C;&#x666E;&#x901A;&#x5BA2;&#x6237;&#x7AEF;
-    clientBuilder, rootClientBuilder := createClientBuilders(c)
+        handler <span class="token operator">:=</span> genericcontrollermanager<span class="token punctuation">.</span><span class="token function">BuildHandlerChain</span><span class="token punctuation">(</span>unsecuredMux<span class="token punctuation">,</span> <span class="token operator">&amp;</span>c<span class="token punctuation">.</span>Authorization<span class="token punctuation">,</span> <span class="token operator">&amp;</span>c<span class="token punctuation">.</span>Authentication<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token boolean">_</span><span class="token punctuation">,</span> <span class="token boolean">_</span><span class="token punctuation">,</span> err <span class="token operator">:=</span> c<span class="token punctuation">.</span>SecureServing<span class="token punctuation">.</span><span class="token function">Serve</span><span class="token punctuation">(</span>handler<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> stopCh<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> err
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x521B;&#x5EFA;root&#x6743;&#x9650;&#x5BA2;&#x6237;&#x7AEF;&#x548C;&#x666E;&#x901A;&#x5BA2;&#x6237;&#x7AEF;</span>
+    clientBuilder<span class="token punctuation">,</span> rootClientBuilder <span class="token operator">:=</span> <span class="token function">createClientBuilders</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span>
 
-    saTokenControllerDescriptor := newServiceAccountTokenControllerDescriptor(rootClientBuilder)
-    // &#x95ED;&#x5305;&#x51FD;&#x6570;
-    run := func(ctx context.Context, controllerDescriptors map[string]*ControllerDescriptor) {
-        controllerContext, err := CreateControllerContext(ctx, c, rootClientBuilder, clientBuilder)
-        if err != nil {
-            logger.Error(err, &quot;Error building controller context&quot;)
-            klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-        }
+    saTokenControllerDescriptor <span class="token operator">:=</span> <span class="token function">newServiceAccountTokenControllerDescriptor</span><span class="token punctuation">(</span>rootClientBuilder<span class="token punctuation">)</span>
+    <span class="token comment">// &#x95ED;&#x5305;&#x51FD;&#x6570;</span>
+    run <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerDescriptors <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        controllerContext<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">CreateControllerContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> c<span class="token punctuation">,</span> rootClientBuilder<span class="token punctuation">,</span> clientBuilder<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Error building controller context&quot;</span><span class="token punctuation">)</span>
+            klog<span class="token punctuation">.</span><span class="token function">FlushAndExit</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span>ExitFlushTimeout<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
 
-        if err := StartControllers(ctx, controllerContext, controllerDescriptors, unsecuredMux, healthzHandler); err != nil {
-            logger.Error(err, &quot;Error starting controllers&quot;)
-            klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-        }
+        <span class="token keyword">if</span> err <span class="token operator">:=</span> <span class="token function">StartControllers</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerContext<span class="token punctuation">,</span> controllerDescriptors<span class="token punctuation">,</span> unsecuredMux<span class="token punctuation">,</span> healthzHandler<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Error starting controllers&quot;</span><span class="token punctuation">)</span>
+            klog<span class="token punctuation">.</span><span class="token function">FlushAndExit</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span>ExitFlushTimeout<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
 
-        controllerContext.InformerFactory.Start(stopCh)
-        controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
-        close(controllerContext.InformersStarted)
+        controllerContext<span class="token punctuation">.</span>InformerFactory<span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span>stopCh<span class="token punctuation">)</span>
+        controllerContext<span class="token punctuation">.</span>ObjectOrMetadataInformerFactory<span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span>stopCh<span class="token punctuation">)</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>controllerContext<span class="token punctuation">.</span>InformersStarted<span class="token punctuation">)</span>
 
-        &lt;-ctx.Done()
-    }
+        <span class="token operator">&lt;-</span>ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    // &#x5982;&#x679C;&#x6CA1;&#x5F00;&#x542F;&#x9009;&#x4E3E; &#x76F4;&#x63A5;&#x8FD0;&#x884C;Controller&#x5E76;&#x8FD4;&#x56DE;
-    if !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
-        // &#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x96C6;&#x5408;
-        controllerDescriptors := NewControllerDescriptors()
-        controllerDescriptors[names.ServiceAccountTokenController] = saTokenControllerDescriptor
-        // &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;
-        run(ctx, controllerDescriptors)
-        return nil
-    }
-    // &#x5F00;&#x542F;&#x9009;&#x4E3E;&#x7684;&#x60C5;&#x51B5;
-    ......
-}
+    <span class="token comment">// &#x5982;&#x679C;&#x6CA1;&#x5F00;&#x542F;&#x9009;&#x4E3E; &#x76F4;&#x63A5;&#x8FD0;&#x884C;Controller&#x5E76;&#x8FD4;&#x56DE;</span>
+    <span class="token keyword">if</span> <span class="token operator">!</span>c<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>Generic<span class="token punctuation">.</span>LeaderElection<span class="token punctuation">.</span>LeaderElect <span class="token punctuation">{</span>
+        <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x96C6;&#x5408;</span>
+        controllerDescriptors <span class="token operator">:=</span> <span class="token function">NewControllerDescriptors</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        controllerDescriptors<span class="token punctuation">[</span>names<span class="token punctuation">.</span>ServiceAccountTokenController<span class="token punctuation">]</span> <span class="token operator">=</span> saTokenControllerDescriptor
+        <span class="token comment">// &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;</span>
+        <span class="token function">run</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerDescriptors<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x5F00;&#x542F;&#x9009;&#x4E3E;&#x7684;&#x60C5;&#x51B5;</span>
+    <span class="token operator">...</span><span class="token operator">...</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x5728;&#x5BF9;<code>run()</code>&#x95ED;&#x5305;&#x51FD;&#x6570;&#x4EE5;&#x53CA;&#x5185;&#x90E8;&#x903B;&#x8F91;&#x505A;&#x89E3;&#x91CA;&#x4E4B;&#x524D;&#xFF0C;&#x5148;&#x4E86;&#x89E3;&#x4E00;&#x4E2A;&#x6570;&#x636E;&#x7ED3;&#x6784;<code>ControllerDescriptor</code>&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x8BE5;&#x51FD;&#x6570;&#x7684;&#x5165;&#x53C2;&#x7C7B;&#x578B;&#xFF0C;&#x5B83;&#x7528;&#x4E8E;&#x63CF;&#x8FF0;&#x548C;&#x7BA1;&#x7406;&#x63A7;&#x5236;&#x5668;&#x7684;&#x4FE1;&#x606F;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">type InitFunc func(ctx context.Context, controllerContext ControllerContext, controllerName string) (controller controller.Interface, enabled bool, err error)
+<pre class="language-"><code class="lang-go"><span class="token keyword">type</span> InitFunc <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerContext ControllerContext<span class="token punctuation">,</span> controllerName <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>controller controller<span class="token punctuation">.</span>Interface<span class="token punctuation">,</span> enabled <span class="token builtin">bool</span><span class="token punctuation">,</span> err <span class="token builtin">error</span><span class="token punctuation">)</span>
 
-type ControllerDescriptor struct {
-    // &#x63A7;&#x5236;&#x5668;&#x540D;&#x79F0;
-    name                      string
-    // &#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;
+<span class="token keyword">type</span> ControllerDescriptor <span class="token keyword">struct</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x63A7;&#x5236;&#x5668;&#x540D;&#x79F0;</span>
+    name                      <span class="token builtin">string</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;</span>
     initFunc                  InitFunc
-    // &#x7279;&#x6027;&#x95E8;&#x63A7;&#x5217;&#x8868;
-    requiredFeatureGates      []featuregate.Feature
-    // &#x522B;&#x540D;
-    aliases                   []string
-    // &#x662F;&#x5426;&#x9ED8;&#x8BA4;&#x7981;&#x7528;
-    isDisabledByDefault       bool
-    // &#x662F;&#x5426;&#x548C;&#x4E91;&#x4F9B;&#x5E94;&#x5546;&#x6709;&#x5173;
-    isCloudProviderController bool
-    // &#x662F;&#x5426;&#x6709;&#x7279;&#x6B8A;&#x5904;&#x7406;&#x903B;&#x8F91;
-    requiresSpecialHandling   bool
-}
+    <span class="token comment">// &#x7279;&#x6027;&#x95E8;&#x63A7;&#x5217;&#x8868;</span>
+    requiredFeatureGates      <span class="token punctuation">[</span><span class="token punctuation">]</span>featuregate<span class="token punctuation">.</span>Feature
+    <span class="token comment">// &#x522B;&#x540D;</span>
+    aliases                   <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">string</span>
+    <span class="token comment">// &#x662F;&#x5426;&#x9ED8;&#x8BA4;&#x7981;&#x7528;</span>
+    isDisabledByDefault       <span class="token builtin">bool</span>
+    <span class="token comment">// &#x662F;&#x5426;&#x548C;&#x4E91;&#x4F9B;&#x5E94;&#x5546;&#x6709;&#x5173;</span>
+    isCloudProviderController <span class="token builtin">bool</span>
+    <span class="token comment">// &#x662F;&#x5426;&#x6709;&#x7279;&#x6B8A;&#x5904;&#x7406;&#x903B;&#x8F91;</span>
+    requiresSpecialHandling   <span class="token builtin">bool</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x4EE5;&#x4E0D;&#x5F00;&#x542F;&#x9009;&#x4E3E;&#x7684;&#x6D41;&#x7A0B;&#x4E3A;&#x4F8B;&#xFF0C;&#x4E0D;&#x6D89;&#x53CA;&#x9009;&#x4E3B;&#x903B;&#x8F91;&#x4F1A;&#x76F4;&#x63A5;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x9996;&#x5148;&#x4F1A;&#x521D;&#x59CB;&#x5316;<code>ControllerDescriptor</code>&#x96C6;&#x5408;&#xFF0C;&#x7136;&#x540E;&#x4F20;&#x9012;&#x7ED9;<code>run()</code>&#x3002;</p>
-<pre class="language-"><code class="lang-Go">    if !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
-        controllerDescriptors := NewControllerDescriptors()
-        controllerDescriptors[names.ServiceAccountTokenController] = saTokenControllerDescriptor
-        run(ctx, controllerDescriptors)
-        return nil
-    }
+<pre class="language-"><code class="lang-go">    <span class="token keyword">if</span> <span class="token operator">!</span>c<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>Generic<span class="token punctuation">.</span>LeaderElection<span class="token punctuation">.</span>LeaderElect <span class="token punctuation">{</span>
+        controllerDescriptors <span class="token operator">:=</span> <span class="token function">NewControllerDescriptors</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        controllerDescriptors<span class="token punctuation">[</span>names<span class="token punctuation">.</span>ServiceAccountTokenController<span class="token punctuation">]</span> <span class="token operator">=</span> saTokenControllerDescriptor
+        <span class="token function">run</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerDescriptors<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
 </code></pre>
 <p><code>NewControllerDescriptors()</code>&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#x4E86;&#x4E00;&#x4E2A;key&#x662F;&#x63A7;&#x5236;&#x5668;&#x540D;&#x79F0;&#xFF0C;value&#x662F;<code>ControllerDescriptor</code>&#x7684;&#x6620;&#x5C04;&#xFF0C;&#x901A;&#x8FC7;<code>Descriptor</code>&#x7684;&#x5305;&#x88C5;&#x5B9E;&#x73B0;&#x4E86;&#x63A7;&#x5236;&#x5668;&#x903B;&#x8F91;&#x4E0E;&#x914D;&#x7F6E;&#x7684;&#x5206;&#x79BB;&#x3002;&#x5176;&#x4E2D;&#x6709;&#x4E00;&#x4E2A;&#x9700;&#x8981;&#x6CE8;&#x610F;&#x7684;&#x5730;&#x65B9;&#xFF0C;<code>ServiceAccountTokenControllerDescriptor</code>&#x662F;&#x552F;&#x4E00;&#x7279;&#x6B8A;&#x7684;&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x9700;&#x8981;&#x6700;&#x5148;&#x542F;&#x52A8;&#x800C;&#x4E14;&#x4F7F;&#x7528;&#x5177;&#x6709;<strong>&#x6839;&#x6743;&#x9650;</strong>&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#x521D;&#x59CB;&#x5316;&#xFF0C;&#x5728;&#x4E4B;&#x524D;&#x7684;&#x4EE3;&#x7801;&#x4E2D;&#x5DF2;&#x7ECF;&#x521B;&#x5EFA;&#x4E86;&#x5BF9;&#x8C61;<code>saTokenControllerDescriptor</code>&#xFF0C;&#x90A3;&#x4E48;&#x4E3A;&#x4EC0;&#x4E48;&#x5728;&#x4E0B;&#x9762;&#x8FD9;&#x6BB5;&#x51FD;&#x6570;&#x4E2D;&#x8FD8;&#x8981;&#x6CE8;&#x518C;&#x5462;&#xFF1F;&#x4E3B;&#x8981;&#x7684;&#x539F;&#x56E0;&#x662F;<code>NewControllerDescriptors()</code>&#x51FD;&#x6570;&#x6CA1;&#x6709;&#x5165;&#x53C2;&#x800C;<code>ServiceAccountTokenControllerDescriptor</code>&#x7684;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x9700;&#x8981;&#x4F20;&#x5165;&#x6839;&#x6743;&#x9650;&#x7684;&#x5BA2;&#x6237;&#x7AEF;&#xFF0C;&#x4F46;&#x662F;&#x8981;&#x4FDD;&#x8BC1;&#x548C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x5143;&#x6570;&#x636E;&#x521B;&#x5EFA;&#x65F6;&#x7684;&#x4E00;&#x81F4;&#x6027;&#xFF0C;&#x5E76;&#x4E14;&#x5176;&#x4E2D;<code>register()</code>&#x6821;&#x9A8C;&#x4E86;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x7684;&#x5408;&#x6CD5;&#x6027;&#xFF0C;&#x867D;&#x7136;&#x540E;&#x9762;&#x4F1A;&#x88AB;&#x5355;&#x72EC;&#x521B;&#x5EFA;&#x7684;<code>saTokenControllerDescriptor</code>&#x66FF;&#x6362;&#xFF0C;&#x4F46;&#x662F;&#x4E0D;&#x5F71;&#x54CD;&#x548C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x63CF;&#x8FF0;&#x7B26;&#x4E00;&#x8D77;&#x521D;&#x59CB;&#x5316;&#x4E00;&#x6B21;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func NewControllerDescriptors() map[string]*ControllerDescriptor {
-    // &#x521D;&#x59CB;&#x5316;
-    controllers := map[string]*ControllerDescriptor{}
-    // &#x4F7F;&#x7528;Set&#x907F;&#x514D;&#x91CD;&#x590D;&#x5143;&#x7D20;
-    aliases := sets.NewString()
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">NewControllerDescriptors</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>ControllerDescriptor <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;</span>
+    controllers <span class="token operator">:=</span> <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">{</span><span class="token punctuation">}</span>
+    <span class="token comment">// &#x4F7F;&#x7528;Set&#x907F;&#x514D;&#x91CD;&#x590D;&#x5143;&#x7D20;</span>
+    aliases <span class="token operator">:=</span> sets<span class="token punctuation">.</span><span class="token function">NewString</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
-    // &#x5408;&#x6CD5;&#x6027;&#x6821;&#x9A8C;&#x4E0E;&#x96C6;&#x5408;&#x5143;&#x7D20;&#x6DFB;&#x52A0;
-    register := func(controllerDesc *ControllerDescriptor) {
-        if controllerDesc == nil {
-            panic(&quot;received nil controller for a registration&quot;)
-        }
-        name := controllerDesc.Name()
-        if len(name) == 0 {
-            panic(&quot;received controller without a name for a registration&quot;)
-        }
-        if _, found := controllers[name]; found {
-            panic(fmt.Sprintf(&quot;controller name %q was registered twice&quot;, name))
-        }
-        if controllerDesc.GetInitFunc() == nil {
-            panic(fmt.Sprintf(&quot;controller %q does not have an init function&quot;, name))
-        }
+    <span class="token comment">// &#x5408;&#x6CD5;&#x6027;&#x6821;&#x9A8C;&#x4E0E;&#x96C6;&#x5408;&#x5143;&#x7D20;&#x6DFB;&#x52A0;</span>
+    register <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>controllerDesc <span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> controllerDesc <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">&quot;received nil controller for a registration&quot;</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        name <span class="token operator">:=</span> controllerDesc<span class="token punctuation">.</span><span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+            <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">&quot;received controller without a name for a registration&quot;</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token boolean">_</span><span class="token punctuation">,</span> found <span class="token operator">:=</span> controllers<span class="token punctuation">[</span>name<span class="token punctuation">]</span><span class="token punctuation">;</span> found <span class="token punctuation">{</span>
+            <span class="token function">panic</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Sprintf</span><span class="token punctuation">(</span><span class="token string">&quot;controller name %q was registered twice&quot;</span><span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> controllerDesc<span class="token punctuation">.</span><span class="token function">GetInitFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token function">panic</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Sprintf</span><span class="token punctuation">(</span><span class="token string">&quot;controller %q does not have an init function&quot;</span><span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
 
-        for _, alias := range controllerDesc.GetAliases() {
-            if aliases.Has(alias) {
-                panic(fmt.Sprintf(&quot;controller %q has a duplicate alias %q&quot;, name, alias))
-            }
-            aliases.Insert(alias)
-        }
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> alias <span class="token operator">:=</span> <span class="token keyword">range</span> controllerDesc<span class="token punctuation">.</span><span class="token function">GetAliases</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> aliases<span class="token punctuation">.</span><span class="token function">Has</span><span class="token punctuation">(</span>alias<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token function">panic</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Sprintf</span><span class="token punctuation">(</span><span class="token string">&quot;controller %q has a duplicate alias %q&quot;</span><span class="token punctuation">,</span> name<span class="token punctuation">,</span> alias<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+            aliases<span class="token punctuation">.</span><span class="token function">Insert</span><span class="token punctuation">(</span>alias<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
 
-        controllers[name] = controllerDesc
-    }
+        controllers<span class="token punctuation">[</span>name<span class="token punctuation">]</span> <span class="token operator">=</span> controllerDesc
+    <span class="token punctuation">}</span>
 
-    // &#x6CE8;&#x518C;&#x6240;&#x6709;&#x7684;ControllerDescriptor
-    register(newServiceAccountTokenControllerDescriptor(nil))
+    <span class="token comment">// &#x6CE8;&#x518C;&#x6240;&#x6709;&#x7684;ControllerDescriptor</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newServiceAccountTokenControllerDescriptor</span><span class="token punctuation">(</span><span class="token boolean">nil</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    register(newEndpointsControllerDescriptor())
-    register(newEndpointSliceControllerDescriptor())
-    register(newEndpointSliceMirroringControllerDescriptor())
-    register(newReplicationControllerDescriptor())
-    register(newPodGarbageCollectorControllerDescriptor())
-    register(newResourceQuotaControllerDescriptor())
-    register(newNamespaceControllerDescriptor())
-    register(newServiceAccountControllerDescriptor())
-    register(newGarbageCollectorControllerDescriptor())
-    register(newDaemonSetControllerDescriptor())
-    register(newJobControllerDescriptor())
-    register(newDeploymentControllerDescriptor())
-    register(newReplicaSetControllerDescriptor())
-    register(newHorizontalPodAutoscalerControllerDescriptor())
-    register(newDisruptionControllerDescriptor())
-    register(newStatefulSetControllerDescriptor())
-    register(newCronJobControllerDescriptor())
-    register(newCertificateSigningRequestSigningControllerDescriptor())
-    register(newCertificateSigningRequestApprovingControllerDescriptor())
-    register(newCertificateSigningRequestCleanerControllerDescriptor())
-    register(newTTLControllerDescriptor())
-    register(newBootstrapSignerControllerDescriptor())
-    register(newTokenCleanerControllerDescriptor())
-    register(newNodeIpamControllerDescriptor())
-    register(newNodeLifecycleControllerDescriptor())
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newEndpointsControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newEndpointSliceControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newEndpointSliceMirroringControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newReplicationControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPodGarbageCollectorControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newResourceQuotaControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newNamespaceControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newServiceAccountControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newGarbageCollectorControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newDaemonSetControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newJobControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newDeploymentControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newReplicaSetControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newHorizontalPodAutoscalerControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newDisruptionControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newStatefulSetControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newCronJobControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newCertificateSigningRequestSigningControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newCertificateSigningRequestApprovingControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newCertificateSigningRequestCleanerControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newTTLControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newBootstrapSignerControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newTokenCleanerControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newNodeIpamControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newNodeLifecycleControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    register(newServiceLBControllerDescriptor())          // cloud provider controller
-    register(newNodeRouteControllerDescriptor())          // cloud provider controller
-    register(newCloudNodeLifecycleControllerDescriptor()) // cloud provider controller
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newServiceLBControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>          <span class="token comment">// cloud provider controller</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newNodeRouteControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>          <span class="token comment">// cloud provider controller</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newCloudNodeLifecycleControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// cloud provider controller</span>
 
-    register(newPersistentVolumeBinderControllerDescriptor())
-    register(newPersistentVolumeAttachDetachControllerDescriptor())
-    register(newPersistentVolumeExpanderControllerDescriptor())
-    register(newClusterRoleAggregrationControllerDescriptor())
-    register(newPersistentVolumeClaimProtectionControllerDescriptor())
-    register(newPersistentVolumeProtectionControllerDescriptor())
-    register(newVolumeAttributesClassProtectionControllerDescriptor())
-    register(newTTLAfterFinishedControllerDescriptor())
-    register(newRootCACertificatePublisherControllerDescriptor())
-    register(newKubeAPIServerSignerClusterTrustBundledPublisherDescriptor())
-    register(newEphemeralVolumeControllerDescriptor())
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPersistentVolumeBinderControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPersistentVolumeAttachDetachControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPersistentVolumeExpanderControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newClusterRoleAggregrationControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPersistentVolumeClaimProtectionControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newPersistentVolumeProtectionControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newVolumeAttributesClassProtectionControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newTTLAfterFinishedControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newRootCACertificatePublisherControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newKubeAPIServerSignerClusterTrustBundledPublisherDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newEphemeralVolumeControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    // feature gated
-    register(newStorageVersionGarbageCollectorControllerDescriptor())
-    register(newResourceClaimControllerDescriptor())
-    register(newLegacyServiceAccountTokenCleanerControllerDescriptor())
-    register(newValidatingAdmissionPolicyStatusControllerDescriptor())
-    register(newTaintEvictionControllerDescriptor())
-    register(newServiceCIDRsControllerDescriptor())
-    register(newStorageVersionMigratorControllerDescriptor())
-    register(newSELinuxWarningControllerDescriptor())
+    <span class="token comment">// feature gated</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newStorageVersionGarbageCollectorControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newResourceClaimControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newLegacyServiceAccountTokenCleanerControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newValidatingAdmissionPolicyStatusControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newTaintEvictionControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newServiceCIDRsControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newStorageVersionMigratorControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">register</span><span class="token punctuation">(</span><span class="token function">newSELinuxWarningControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    for _, alias := range aliases.UnsortedList() {
-        if _, ok := controllers[alias]; ok {
-            panic(fmt.Sprintf(&quot;alias %q conflicts with a controller name&quot;, alias))
-        }
-    }
-    // &#x8FD4;&#x56DE;ControllerDescriptor&#x96C6;&#x5408;
-    return controllers
-}
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> alias <span class="token operator">:=</span> <span class="token keyword">range</span> aliases<span class="token punctuation">.</span><span class="token function">UnsortedList</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token boolean">_</span><span class="token punctuation">,</span> ok <span class="token operator">:=</span> controllers<span class="token punctuation">[</span>alias<span class="token punctuation">]</span><span class="token punctuation">;</span> ok <span class="token punctuation">{</span>
+            <span class="token function">panic</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Sprintf</span><span class="token punctuation">(</span><span class="token string">&quot;alias %q conflicts with a controller name&quot;</span><span class="token punctuation">,</span> alias<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x8FD4;&#x56DE;ControllerDescriptor&#x96C6;&#x5408;</span>
+    <span class="token keyword">return</span> controllers
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x6240;&#x6709;&#x7684;<code>ControllerDescriptor</code>&#x5143;&#x6570;&#x636E;&#x90FD;&#x521D;&#x59CB;&#x5316;&#x540E;&#xFF0C;&#x66FF;&#x6362;<code>ServiceAccountTokenControllerDescriptor</code>&#x4E3A;&#x6B64;&#x524D;&#x521B;&#x5EFA;&#x7684;&#x5185;&#x5BB9;&#xFF0C;&#x7136;&#x540E;&#x8C03;&#x7528;&#x6838;&#x5FC3;&#x5165;&#x53E3;&#x903B;&#x8F91;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#xFF0C;&#x4E0B;&#x9762;&#x6765;&#x770B;&#x5B83;&#x7684;&#x5B9E;&#x73B0;&#x903B;&#x8F91;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">    run := func(ctx context.Context, controllerDescriptors map[string]*ControllerDescriptor) {
-        // &#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x4E0A;&#x4E0B;&#x6587;
-        controllerContext, err := CreateControllerContext(ctx, c, rootClientBuilder, clientBuilder)
-        if err != nil {
-            logger.Error(err, &quot;Error building controller context&quot;)
-            klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-        }
-        // &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;
-        if err := StartControllers(ctx, controllerContext, controllerDescriptors, unsecuredMux, healthzHandler); err != nil {
-            logger.Error(err, &quot;Error starting controllers&quot;)
-            klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-        }
-        // &#x542F;&#x52A8;SharedInformer&#x5DE5;&#x5382; &#x76D1;&#x63A7;Kubernetes&#x6807;&#x51C6;&#x8D44;&#x6E90;
-        controllerContext.InformerFactory.Start(stopCh)
-        // &#x542F;&#x52A8;MetadataInformerFactory&#x5DE5;&#x5382; &#x76D1;&#x63A7;&#x7C7B;&#x578B;&#x5316;&#x8D44;&#x6E90;&#x5982;CRD
-        controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
-        close(controllerContext.InformersStarted)
+<pre class="language-"><code class="lang-go">    run <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerDescriptors <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x4E0A;&#x4E0B;&#x6587;</span>
+        controllerContext<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">CreateControllerContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> c<span class="token punctuation">,</span> rootClientBuilder<span class="token punctuation">,</span> clientBuilder<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Error building controller context&quot;</span><span class="token punctuation">)</span>
+            klog<span class="token punctuation">.</span><span class="token function">FlushAndExit</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span>ExitFlushTimeout<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;</span>
+        <span class="token keyword">if</span> err <span class="token operator">:=</span> <span class="token function">StartControllers</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerContext<span class="token punctuation">,</span> controllerDescriptors<span class="token punctuation">,</span> unsecuredMux<span class="token punctuation">,</span> healthzHandler<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Error starting controllers&quot;</span><span class="token punctuation">)</span>
+            klog<span class="token punctuation">.</span><span class="token function">FlushAndExit</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span>ExitFlushTimeout<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x542F;&#x52A8;SharedInformer&#x5DE5;&#x5382; &#x76D1;&#x63A7;Kubernetes&#x6807;&#x51C6;&#x8D44;&#x6E90;</span>
+        controllerContext<span class="token punctuation">.</span>InformerFactory<span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span>stopCh<span class="token punctuation">)</span>
+        <span class="token comment">// &#x542F;&#x52A8;MetadataInformerFactory&#x5DE5;&#x5382; &#x76D1;&#x63A7;&#x7C7B;&#x578B;&#x5316;&#x8D44;&#x6E90;&#x5982;CRD</span>
+        controllerContext<span class="token punctuation">.</span>ObjectOrMetadataInformerFactory<span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span>stopCh<span class="token punctuation">)</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>controllerContext<span class="token punctuation">.</span>InformersStarted<span class="token punctuation">)</span>
 
-        &lt;-ctx.Done()
-    }
+        <span class="token operator">&lt;-</span>ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 </code></pre>
 <p>&#x5173;&#x4E8E;<code>CreateControllerContext()</code>&#x51FD;&#x6570;&#xFF0C;&#x5B83;&#x7684;&#x4F5C;&#x7528;&#x662F;</p>
-<pre class="language-"><code class="lang-Go">func CreateControllerContext(ctx context.Context, s *config.CompletedConfig, rootClientBuilder, clientBuilder clientbuilder.ControllerClientBuilder) (ControllerContext, error) {
-    // &#x95ED;&#x5305;&#x51FD;&#x6570; &#x7528;&#x4E8E;&#x88C1;&#x526A;obj&#x5BF9;&#x8C61;&#x7684;ManagedFields&#x5B57;&#x6BB5;&#x6765;&#x63D0;&#x9AD8;&#x5185;&#x5B58;&#x6548;&#x7387;
-    trim := func(obj interface{}) (interface{}, error) {
-        // &#x83B7;&#x53D6;obj&#x5BF9;&#x8C61;&#x5143;&#x6570;&#x636E;
-        if accessor, err := meta.Accessor(obj); err == nil {
-            if accessor.GetManagedFields() != nil {
-                // &#x88C1;&#x526A;ManagedFields&#x5B57;&#x6BB5;
-                accessor.SetManagedFields(nil)
-            }
-        }
-        return obj, nil
-    }
-    // &#x521B;&#x5EFA;SharedInformer&#x5DE5;&#x5382;
-    versionedClient := rootClientBuilder.ClientOrDie(&quot;shared-informers&quot;)
-    sharedInformers := informers.NewSharedInformerFactoryWithOptions(versionedClient, ResyncPeriod(s)(), informers.WithTransform(trim))
-    // &#x521B;&#x5EFA;MetadataInformers&#x5DE5;&#x5382;
-    metadataClient := metadata.NewForConfigOrDie(rootClientBuilder.ConfigOrDie(&quot;metadata-informers&quot;))
-    metadataInformers := metadatainformer.NewSharedInformerFactoryWithOptions(metadataClient, ResyncPeriod(s)(), metadatainformer.WithTransform(trim))
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">CreateControllerContext</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> s <span class="token operator">*</span>config<span class="token punctuation">.</span>CompletedConfig<span class="token punctuation">,</span> rootClientBuilder<span class="token punctuation">,</span> clientBuilder clientbuilder<span class="token punctuation">.</span>ControllerClientBuilder<span class="token punctuation">)</span> <span class="token punctuation">(</span>ControllerContext<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x95ED;&#x5305;&#x51FD;&#x6570; &#x7528;&#x4E8E;&#x88C1;&#x526A;obj&#x5BF9;&#x8C61;&#x7684;ManagedFields&#x5B57;&#x6BB5;&#x6765;&#x63D0;&#x9AD8;&#x5185;&#x5B58;&#x6548;&#x7387;</span>
+    trim <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>obj <span class="token keyword">interface</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token keyword">interface</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x83B7;&#x53D6;obj&#x5BF9;&#x8C61;&#x5143;&#x6570;&#x636E;</span>
+        <span class="token keyword">if</span> accessor<span class="token punctuation">,</span> err <span class="token operator">:=</span> meta<span class="token punctuation">.</span><span class="token function">Accessor</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> accessor<span class="token punctuation">.</span><span class="token function">GetManagedFields</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token comment">// &#x88C1;&#x526A;ManagedFields&#x5B57;&#x6BB5;</span>
+                accessor<span class="token punctuation">.</span><span class="token function">SetManagedFields</span><span class="token punctuation">(</span><span class="token boolean">nil</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> obj<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x521B;&#x5EFA;SharedInformer&#x5DE5;&#x5382;</span>
+    versionedClient <span class="token operator">:=</span> rootClientBuilder<span class="token punctuation">.</span><span class="token function">ClientOrDie</span><span class="token punctuation">(</span><span class="token string">&quot;shared-informers&quot;</span><span class="token punctuation">)</span>
+    sharedInformers <span class="token operator">:=</span> informers<span class="token punctuation">.</span><span class="token function">NewSharedInformerFactoryWithOptions</span><span class="token punctuation">(</span>versionedClient<span class="token punctuation">,</span> <span class="token function">ResyncPeriod</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> informers<span class="token punctuation">.</span><span class="token function">WithTransform</span><span class="token punctuation">(</span>trim<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x521B;&#x5EFA;MetadataInformers&#x5DE5;&#x5382;</span>
+    metadataClient <span class="token operator">:=</span> metadata<span class="token punctuation">.</span><span class="token function">NewForConfigOrDie</span><span class="token punctuation">(</span>rootClientBuilder<span class="token punctuation">.</span><span class="token function">ConfigOrDie</span><span class="token punctuation">(</span><span class="token string">&quot;metadata-informers&quot;</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    metadataInformers <span class="token operator">:=</span> metadatainformer<span class="token punctuation">.</span><span class="token function">NewSharedInformerFactoryWithOptions</span><span class="token punctuation">(</span>metadataClient<span class="token punctuation">,</span> <span class="token function">ResyncPeriod</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> metadatainformer<span class="token punctuation">.</span><span class="token function">WithTransform</span><span class="token punctuation">(</span>trim<span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    // &#x7B49;&#x5F85;ApiServer&#x542F;&#x52A8; &#x8D85;&#x65F6;&#x65F6;&#x95F4;&#x8BBE;&#x7F6E;&#x4E3A;10s
-    if err := genericcontrollermanager.WaitForAPIServer(versionedClient, 10*time.Second); err != nil {
-        return ControllerContext{}, fmt.Errorf(&quot;failed to wait for apiserver being healthy: %v&quot;, err)
-    }
+    <span class="token comment">// &#x7B49;&#x5F85;ApiServer&#x542F;&#x52A8; &#x8D85;&#x65F6;&#x65F6;&#x95F4;&#x8BBE;&#x7F6E;&#x4E3A;10s</span>
+    <span class="token keyword">if</span> err <span class="token operator">:=</span> genericcontrollermanager<span class="token punctuation">.</span><span class="token function">WaitForAPIServer</span><span class="token punctuation">(</span>versionedClient<span class="token punctuation">,</span> <span class="token number">10</span><span class="token operator">*</span>time<span class="token punctuation">.</span>Second<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> ControllerContext<span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;failed to wait for apiserver being healthy: %v&quot;</span><span class="token punctuation">,</span> err<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    // &#x521B;&#x5EFA;Discovery&#x5BA2;&#x6237;&#x7AEF;
-    discoveryClient := rootClientBuilder.DiscoveryClientOrDie(&quot;controller-discovery&quot;)
-    // &#x628A;Discovery&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;
-    cachedClient := cacheddiscovery.NewMemCacheClient(discoveryClient)
-    // &#x518D;&#x628A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;REST&#x6620;&#x5C04;&#x5668;
-    restMapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedClient)
-    // &#x542F;&#x52A8;&#x4E00;&#x4E2A;&#x534F;&#x7A0B;&#x5B9A;&#x65F6;&#x6BCF;30s&#x5237;&#x65B0;REST&#x6620;&#x5C04;&#x5668;&#x7F13;&#x5B58; &#x786E;&#x4FDD;&#x83B7;&#x53D6;&#x6700;&#x65B0;&#x7684;API&#x4FE1;&#x606F;
-    go wait.Until(func() {
-        restMapper.Reset()
-    }, 30*time.Second, ctx.Done())
-    // &#x7EC4;&#x88C5;ControllerContext&#x5BF9;&#x8C61;
-    controllerContext := ControllerContext{
-        ClientBuilder:                   clientBuilder,
-        InformerFactory:                 sharedInformers,
-        ObjectOrMetadataInformerFactory: informerfactory.NewInformerFactory(sharedInformers, metadataInformers),
-        ComponentConfig:                 s.ComponentConfig,
-        RESTMapper:                      restMapper,
-        InformersStarted:                make(chan struct{}),
-        ResyncPeriod:                    ResyncPeriod(s),
-        ControllerManagerMetrics:        controllersmetrics.NewControllerManagerMetrics(&quot;kube-controller-manager&quot;),
-    }
-    // &#x5982;&#x679C;&#x5F00;&#x542F;&#x4E86;GarbageCollectorController&#x5783;&#x573E;&#x56DE;&#x6536;&#x63A7;&#x5236;&#x5668;
-    if controllerContext.ComponentConfig.GarbageCollectorController.EnableGarbageCollector &amp;&amp;
-        controllerContext.IsControllerEnabled(NewControllerDescriptors()[names.GarbageCollectorController]) {
-        ignoredResources := make(map[schema.GroupResource]struct{})
-        for _, r := range controllerContext.ComponentConfig.GarbageCollectorController.GCIgnoredResources {
-            // &#x83B7;&#x53D6;&#x5FFD;&#x7565;&#x8D44;&#x6E90;&#x5217;&#x8868;
-            ignoredResources[schema.GroupResource{Group: r.Group, Resource: r.Resource}] = struct{}{}
-        }
-        // &#x521B;&#x5EFA;GraphBuilder&#x7528;&#x6765;&#x6784;&#x5EFA;&#x8D44;&#x6E90;&#x5173;&#x7CFB;&#x4F9D;&#x8D56;
-        controllerContext.GraphBuilder = garbagecollector.NewDependencyGraphBuilder(
-            ctx,
-            metadataClient,
-            controllerContext.RESTMapper,
-            ignoredResources,
-            controllerContext.ObjectOrMetadataInformerFactory,
-            controllerContext.InformersStarted,
-        )
-    }
-    // &#x6CE8;&#x518C;&#x6307;&#x6807;&#x8BA1;&#x6570;&#x5668;
-    controllersmetrics.Register()
-    return controllerContext, nil
-}
+    <span class="token comment">// &#x521B;&#x5EFA;Discovery&#x5BA2;&#x6237;&#x7AEF;</span>
+    discoveryClient <span class="token operator">:=</span> rootClientBuilder<span class="token punctuation">.</span><span class="token function">DiscoveryClientOrDie</span><span class="token punctuation">(</span><span class="token string">&quot;controller-discovery&quot;</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x628A;Discovery&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;</span>
+    cachedClient <span class="token operator">:=</span> cacheddiscovery<span class="token punctuation">.</span><span class="token function">NewMemCacheClient</span><span class="token punctuation">(</span>discoveryClient<span class="token punctuation">)</span>
+    <span class="token comment">// &#x518D;&#x628A;&#x7F13;&#x5B58;&#x5BA2;&#x6237;&#x7AEF;&#x5305;&#x88C5;&#x6210;&#x4E00;&#x4E2A;REST&#x6620;&#x5C04;&#x5668;</span>
+    restMapper <span class="token operator">:=</span> restmapper<span class="token punctuation">.</span><span class="token function">NewDeferredDiscoveryRESTMapper</span><span class="token punctuation">(</span>cachedClient<span class="token punctuation">)</span>
+    <span class="token comment">// &#x542F;&#x52A8;&#x4E00;&#x4E2A;&#x534F;&#x7A0B;&#x5B9A;&#x65F6;&#x6BCF;30s&#x5237;&#x65B0;REST&#x6620;&#x5C04;&#x5668;&#x7F13;&#x5B58; &#x786E;&#x4FDD;&#x83B7;&#x53D6;&#x6700;&#x65B0;&#x7684;API&#x4FE1;&#x606F;</span>
+    <span class="token keyword">go</span> wait<span class="token punctuation">.</span><span class="token function">Until</span><span class="token punctuation">(</span><span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        restMapper<span class="token punctuation">.</span><span class="token function">Reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">30</span><span class="token operator">*</span>time<span class="token punctuation">.</span>Second<span class="token punctuation">,</span> ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x7EC4;&#x88C5;ControllerContext&#x5BF9;&#x8C61;</span>
+    controllerContext <span class="token operator">:=</span> ControllerContext<span class="token punctuation">{</span>
+        ClientBuilder<span class="token punctuation">:</span>                   clientBuilder<span class="token punctuation">,</span>
+        InformerFactory<span class="token punctuation">:</span>                 sharedInformers<span class="token punctuation">,</span>
+        ObjectOrMetadataInformerFactory<span class="token punctuation">:</span> informerfactory<span class="token punctuation">.</span><span class="token function">NewInformerFactory</span><span class="token punctuation">(</span>sharedInformers<span class="token punctuation">,</span> metadataInformers<span class="token punctuation">)</span><span class="token punctuation">,</span>
+        ComponentConfig<span class="token punctuation">:</span>                 s<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">,</span>
+        RESTMapper<span class="token punctuation">:</span>                      restMapper<span class="token punctuation">,</span>
+        InformersStarted<span class="token punctuation">:</span>                <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">chan</span> <span class="token keyword">struct</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        ResyncPeriod<span class="token punctuation">:</span>                    <span class="token function">ResyncPeriod</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">,</span>
+        ControllerManagerMetrics<span class="token punctuation">:</span>        controllersmetrics<span class="token punctuation">.</span><span class="token function">NewControllerManagerMetrics</span><span class="token punctuation">(</span><span class="token string">&quot;kube-controller-manager&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x5982;&#x679C;&#x5F00;&#x542F;&#x4E86;GarbageCollectorController&#x5783;&#x573E;&#x56DE;&#x6536;&#x63A7;&#x5236;&#x5668;</span>
+    <span class="token keyword">if</span> controllerContext<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>GarbageCollectorController<span class="token punctuation">.</span>EnableGarbageCollector <span class="token operator">&amp;&amp;</span>
+        controllerContext<span class="token punctuation">.</span><span class="token function">IsControllerEnabled</span><span class="token punctuation">(</span><span class="token function">NewControllerDescriptors</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>names<span class="token punctuation">.</span>GarbageCollectorController<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        ignoredResources <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">map</span><span class="token punctuation">[</span>schema<span class="token punctuation">.</span>GroupResource<span class="token punctuation">]</span><span class="token keyword">struct</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> r <span class="token operator">:=</span> <span class="token keyword">range</span> controllerContext<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>GarbageCollectorController<span class="token punctuation">.</span>GCIgnoredResources <span class="token punctuation">{</span>
+            <span class="token comment">// &#x83B7;&#x53D6;&#x5FFD;&#x7565;&#x8D44;&#x6E90;&#x5217;&#x8868;</span>
+            ignoredResources<span class="token punctuation">[</span>schema<span class="token punctuation">.</span>GroupResource<span class="token punctuation">{</span>Group<span class="token punctuation">:</span> r<span class="token punctuation">.</span>Group<span class="token punctuation">,</span> Resource<span class="token punctuation">:</span> r<span class="token punctuation">.</span>Resource<span class="token punctuation">}</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">struct</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">{</span><span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x521B;&#x5EFA;GraphBuilder&#x7528;&#x6765;&#x6784;&#x5EFA;&#x8D44;&#x6E90;&#x5173;&#x7CFB;&#x4F9D;&#x8D56;</span>
+        controllerContext<span class="token punctuation">.</span>GraphBuilder <span class="token operator">=</span> garbagecollector<span class="token punctuation">.</span><span class="token function">NewDependencyGraphBuilder</span><span class="token punctuation">(</span>
+            ctx<span class="token punctuation">,</span>
+            metadataClient<span class="token punctuation">,</span>
+            controllerContext<span class="token punctuation">.</span>RESTMapper<span class="token punctuation">,</span>
+            ignoredResources<span class="token punctuation">,</span>
+            controllerContext<span class="token punctuation">.</span>ObjectOrMetadataInformerFactory<span class="token punctuation">,</span>
+            controllerContext<span class="token punctuation">.</span>InformersStarted<span class="token punctuation">,</span>
+        <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x6CE8;&#x518C;&#x6307;&#x6807;&#x8BA1;&#x6570;&#x5668;</span>
+    controllersmetrics<span class="token punctuation">.</span><span class="token function">Register</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> controllerContext<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x7531;&#x4E8E;<code>ControllerManager</code>&#x7684;&#x8FD0;&#x884C;&#x6240;&#x8C13;&#x7B49;&#x5F85;<code>ApiServer</code>&#x6210;&#x529F;&#x542F;&#x52A8;&#xFF0C;&#x5C31;&#x662F;&#x7B49;&#x5F85;&#x5B83;&#x7684;<code>/healthz</code>&#x7AEF;&#x70B9;&#x8FD4;&#x56DE;<code>OK</code>&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
-    var lastErr error
-    // &#x8F6E;&#x8BE2;&#x5668;&#x6267;&#x884C;&#x76EE;&#x6807;&#x51FD;&#x6570;
-    err := wait.PollImmediate(time.Second, timeout, func() (bool, error) {
-        healthStatus := 0
-        result := client.Discovery().RESTClient().Get().AbsPath(&quot;/healthz&quot;).Do(context.TODO()).StatusCode(&amp;healthStatus)
-        if result.Error() != nil {
-            lastErr = fmt.Errorf(&quot;failed to get apiserver /healthz status: %v&quot;, result.Error())
-            return false, nil
-        }
-        if healthStatus != http.StatusOK {
-            content, _ := result.Raw()
-            lastErr = fmt.Errorf(&quot;APIServer isn&apos;t healthy: %v&quot;, string(content))
-            klog.Warningf(&quot;APIServer isn&apos;t healthy yet: %v. Waiting a little while.&quot;, string(content))
-            return false, nil
-        }
-        // &#x8FD4;&#x56DE;200OK&#x7ED3;&#x675F;&#x8F6E;&#x8BE2;
-        return true, nil
-    })
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">WaitForAPIServer</span><span class="token punctuation">(</span>client clientset<span class="token punctuation">.</span>Interface<span class="token punctuation">,</span> timeout time<span class="token punctuation">.</span>Duration<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> lastErr <span class="token builtin">error</span>
+    <span class="token comment">// &#x8F6E;&#x8BE2;&#x5668;&#x6267;&#x884C;&#x76EE;&#x6807;&#x51FD;&#x6570;</span>
+    err <span class="token operator">:=</span> wait<span class="token punctuation">.</span><span class="token function">PollImmediate</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>Second<span class="token punctuation">,</span> timeout<span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token builtin">bool</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        healthStatus <span class="token operator">:=</span> <span class="token number">0</span>
+        result <span class="token operator">:=</span> client<span class="token punctuation">.</span><span class="token function">Discovery</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">RESTClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">AbsPath</span><span class="token punctuation">(</span><span class="token string">&quot;/healthz&quot;</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span><span class="token function">TODO</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">StatusCode</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>healthStatus<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> result<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            lastErr <span class="token operator">=</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;failed to get apiserver /healthz status: %v&quot;</span><span class="token punctuation">,</span> result<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> healthStatus <span class="token operator">!=</span> http<span class="token punctuation">.</span>StatusOK <span class="token punctuation">{</span>
+            content<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> result<span class="token punctuation">.</span><span class="token function">Raw</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            lastErr <span class="token operator">=</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;APIServer isn&apos;t healthy: %v&quot;</span><span class="token punctuation">,</span> <span class="token function">string</span><span class="token punctuation">(</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            klog<span class="token punctuation">.</span><span class="token function">Warningf</span><span class="token punctuation">(</span><span class="token string">&quot;APIServer isn&apos;t healthy yet: %v. Waiting a little while.&quot;</span><span class="token punctuation">,</span> <span class="token function">string</span><span class="token punctuation">(</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x8FD4;&#x56DE;200OK&#x7ED3;&#x675F;&#x8F6E;&#x8BE2;</span>
+        <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
 
-    if err != nil {
-        return fmt.Errorf(&quot;%v: %v&quot;, err, lastErr)
-    }
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;%v: %v&quot;</span><span class="token punctuation">,</span> err<span class="token punctuation">,</span> lastErr<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
 
-    return nil
-}
+    <span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x5728;<code>CreateControllerContext()</code>&#x51FD;&#x6570;&#x8FD4;&#x56DE;&#x4E86;&#x63A7;&#x5236;&#x5668;&#x7684;&#x516C;&#x5171;&#x914D;&#x7F6E;&#x540E;&#xFF0C;&#x5C31;&#x8FDB;&#x5165;&#x5230;&#x4E0B;&#x4E00;&#x4E2A;&#x91CD;&#x8981;&#x7684;&#x6B65;&#x9AA4;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x9010;&#x4E2A;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668;&#x3002;</p>
 <p>&#x9996;&#x5148;&#x4F1A;&#x542F;&#x52A8;<code>ServiceAccountToken</code>&#x63A7;&#x5236;&#x5668;&#xFF0C;&#x56E0;&#x4E3A;&#x4E0E;<code>ApiServer</code>&#x4EA4;&#x4E92;&#x65F6;&#x4F1A;&#x7528;&#x5230;&#x4EE4;&#x724C;&#x9A8C;&#x8BC1;&#x8EAB;&#x4EFD;&#xFF0C;&#x5982;&#x679C;&#x8BE5;&#x63A7;&#x5236;&#x5668;&#x6CA1;&#x6709;&#x542F;&#x52A8;&#x4F1A;&#x5F71;&#x54CD;&#x5230;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x7684;&#x6B63;&#x5E38;&#x8FD0;&#x884C;&#x3002;&#x7136;&#x540E;&#x518D;&#x904D;&#x5386;<code>ControllerDescriptor</code>&#x96C6;&#x5408;&#x542F;&#x52A8;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func StartControllers(ctx context.Context, controllerCtx ControllerContext, controllerDescriptors map[string]*ControllerDescriptor,
-    unsecuredMux *mux.PathRecorderMux, healthzHandler *controllerhealthz.MutableHealthzHandler) error {
-    var controllerChecks []healthz.HealthChecker
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">StartControllers</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerCtx ControllerContext<span class="token punctuation">,</span> controllerDescriptors <span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">,</span>
+    unsecuredMux <span class="token operator">*</span>mux<span class="token punctuation">.</span>PathRecorderMux<span class="token punctuation">,</span> healthzHandler <span class="token operator">*</span>controllerhealthz<span class="token punctuation">.</span>MutableHealthzHandler<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> controllerChecks <span class="token punctuation">[</span><span class="token punctuation">]</span>healthz<span class="token punctuation">.</span>HealthChecker
 
-    // ServiceAccountTokenController&#x9700;&#x8981;&#x7B2C;&#x4E00;&#x4E2A;&#x88AB;&#x542F;&#x52A8;
-    if serviceAccountTokenControllerDescriptor, ok := controllerDescriptors[names.ServiceAccountTokenController]; ok {
-        check, err := StartController(ctx, controllerCtx, serviceAccountTokenControllerDescriptor, unsecuredMux)
-        if err != nil {
-            return err
-        }
-        if check != nil {
-            // HealthChecker should be present when controller has started
-            controllerChecks = append(controllerChecks, check)
-        }
-    }
+    <span class="token comment">// ServiceAccountTokenController&#x9700;&#x8981;&#x7B2C;&#x4E00;&#x4E2A;&#x88AB;&#x542F;&#x52A8;</span>
+    <span class="token keyword">if</span> serviceAccountTokenControllerDescriptor<span class="token punctuation">,</span> ok <span class="token operator">:=</span> controllerDescriptors<span class="token punctuation">[</span>names<span class="token punctuation">.</span>ServiceAccountTokenController<span class="token punctuation">]</span><span class="token punctuation">;</span> ok <span class="token punctuation">{</span>
+        check<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">StartController</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerCtx<span class="token punctuation">,</span> serviceAccountTokenControllerDescriptor<span class="token punctuation">,</span> unsecuredMux<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> err
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> check <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token comment">// HealthChecker should be present when controller has started</span>
+            controllerChecks <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>controllerChecks<span class="token punctuation">,</span> check<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
 
-    // &#x904D;&#x5386;&#x542F;&#x52A8;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;
-    for _, controllerDesc := range controllerDescriptors {
-        if controllerDesc.RequiresSpecialHandling() {
-            continue
-        }
+    <span class="token comment">// &#x904D;&#x5386;&#x542F;&#x52A8;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> controllerDesc <span class="token operator">:=</span> <span class="token keyword">range</span> controllerDescriptors <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> controllerDesc<span class="token punctuation">.</span><span class="token function">RequiresSpecialHandling</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">continue</span>
+        <span class="token punctuation">}</span>
 
-        check, err := StartController(ctx, controllerCtx, controllerDesc, unsecuredMux)
-        if err != nil {
-            return err
-        }
-        if check != nil {
-            // HealthChecker should be present when controller has started
-            controllerChecks = append(controllerChecks, check)
-        }
-    }
+        check<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">StartController</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> controllerCtx<span class="token punctuation">,</span> controllerDesc<span class="token punctuation">,</span> unsecuredMux<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> err
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> check <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token comment">// HealthChecker should be present when controller has started</span>
+            controllerChecks <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>controllerChecks<span class="token punctuation">,</span> check<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
 
-    healthzHandler.AddHealthChecker(controllerChecks...)
+    healthzHandler<span class="token punctuation">.</span><span class="token function">AddHealthChecker</span><span class="token punctuation">(</span>controllerChecks<span class="token operator">...</span><span class="token punctuation">)</span>
 
-    return nil
-}
+    <span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <h2 id="serviceaccounttoken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;"><a name="serviceaccounttoken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;" class="anchor-navigation-ex-anchor" href="#serviceaccounttoken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;"><i class="fa fa-link" aria-hidden="true"></i></a>3. ServiceAccountToken&#x63A7;&#x5236;&#x5668;&#x7684;&#x521B;&#x5EFA;</h2>
 <p>&#x770B;&#x4E00;&#x4E0B;<code>ServiceAccountTokenController</code>&#x662F;&#x5982;&#x4F55;&#x542F;&#x52A8;&#x7684;&#xFF0C;<code>StartController()</code>&#x662F;&#x8BE5;&#x63A7;&#x5236;&#x5668;&#x542F;&#x52A8;&#x7684;&#x76F4;&#x63A5;&#x6B65;&#x9AA4;&#x3002;&#x7ECF;&#x8FC7;&#x4E00;&#x7CFB;&#x5217;&#x7684;&#x68C0;&#x67E5;&#x540E;&#xFF0C;&#x8C03;&#x7528;&#x6B64;&#x524D;&#x5728;<code>ControllerDescriptor</code>&#x5BF9;&#x8C61;&#x4E2D;&#x6CE8;&#x518C;&#x7684;<code>InitFunc</code>&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x521B;&#x5EFA;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;&#xFF0C;&#x5E76;&#x6CE8;&#x518C;&#x8C03;&#x8BD5;&#x63A5;&#x53E3;&#x548C;&#x521B;&#x5EFA;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x5668;&#x3002;</p>
-<pre class="language-"><code class="lang-Go">func StartController(ctx context.Context, controllerCtx ControllerContext, controllerDescriptor *ControllerDescriptor,
-    unsecuredMux *mux.PathRecorderMux) (healthz.HealthChecker, error) {
-    // &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;
-    logger := klog.FromContext(ctx)
-    controllerName := controllerDescriptor.Name()
-    // &#x6821;&#x9A8C;&#x9700;&#x8981;&#x7684;&#x7279;&#x6027;&#x95E8;&#x63A7;&#x662F;&#x5426;&#x5168;&#x90E8;&#x5F00;&#x542F;
-    for _, featureGate := range controllerDescriptor.GetRequiredFeatureGates() {
-        if !utilfeature.DefaultFeatureGate.Enabled(featureGate) {
-            logger.Info(&quot;Controller is disabled by a feature gate&quot;, &quot;controller&quot;, controllerName, &quot;requiredFeatureGates&quot;, controllerDescriptor.GetRequiredFeatureGates())
-            return nil, nil
-        }
-    }
-    // &#x5982;&#x679C;&#x662F;&#x4E91;&#x5382;&#x5546;&#x63A7;&#x5236;&#x5668;&#x5219;&#x8DF3;&#x8FC7;
-    if controllerDescriptor.IsCloudProviderController() {
-        logger.Info(&quot;Skipping a cloud provider controller&quot;, &quot;controller&quot;, controllerName)
-        return nil, nil
-    }
-    // &#x6821;&#x9A8C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x662F;&#x5426;&#x88AB;&#x542F;&#x7528;
-    if !controllerCtx.IsControllerEnabled(controllerDescriptor) {
-        logger.Info(&quot;Warning: controller is disabled&quot;, &quot;controller&quot;, controllerName)
-        return nil, nil
-    }
-    // &#x968F;&#x673A;&#x5EF6;&#x8FDF;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668; &#x907F;&#x514D;&#x8D44;&#x6E90;&#x7ADE;&#x4E89;
-    time.Sleep(wait.Jitter(controllerCtx.ComponentConfig.Generic.ControllerStartInterval.Duration, ControllerStartJitter))
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">StartController</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerCtx ControllerContext<span class="token punctuation">,</span> controllerDescriptor <span class="token operator">*</span>ControllerDescriptor<span class="token punctuation">,</span>
+    unsecuredMux <span class="token operator">*</span>mux<span class="token punctuation">.</span>PathRecorderMux<span class="token punctuation">)</span> <span class="token punctuation">(</span>healthz<span class="token punctuation">.</span>HealthChecker<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x5668;</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    controllerName <span class="token operator">:=</span> controllerDescriptor<span class="token punctuation">.</span><span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x6821;&#x9A8C;&#x9700;&#x8981;&#x7684;&#x7279;&#x6027;&#x95E8;&#x63A7;&#x662F;&#x5426;&#x5168;&#x90E8;&#x5F00;&#x542F;</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> featureGate <span class="token operator">:=</span> <span class="token keyword">range</span> controllerDescriptor<span class="token punctuation">.</span><span class="token function">GetRequiredFeatureGates</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token operator">!</span>utilfeature<span class="token punctuation">.</span>DefaultFeatureGate<span class="token punctuation">.</span><span class="token function">Enabled</span><span class="token punctuation">(</span>featureGate<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Controller is disabled by a feature gate&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">,</span> <span class="token string">&quot;requiredFeatureGates&quot;</span><span class="token punctuation">,</span> controllerDescriptor<span class="token punctuation">.</span><span class="token function">GetRequiredFeatureGates</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x5982;&#x679C;&#x662F;&#x4E91;&#x5382;&#x5546;&#x63A7;&#x5236;&#x5668;&#x5219;&#x8DF3;&#x8FC7;</span>
+    <span class="token keyword">if</span> controllerDescriptor<span class="token punctuation">.</span><span class="token function">IsCloudProviderController</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Skipping a cloud provider controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x6821;&#x9A8C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x662F;&#x5426;&#x88AB;&#x542F;&#x7528;</span>
+    <span class="token keyword">if</span> <span class="token operator">!</span>controllerCtx<span class="token punctuation">.</span><span class="token function">IsControllerEnabled</span><span class="token punctuation">(</span>controllerDescriptor<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Warning: controller is disabled&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x968F;&#x673A;&#x5EF6;&#x8FDF;&#x542F;&#x52A8;&#x63A7;&#x5236;&#x5668; &#x907F;&#x514D;&#x8D44;&#x6E90;&#x7ADE;&#x4E89;</span>
+    time<span class="token punctuation">.</span><span class="token function">Sleep</span><span class="token punctuation">(</span>wait<span class="token punctuation">.</span><span class="token function">Jitter</span><span class="token punctuation">(</span>controllerCtx<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>Generic<span class="token punctuation">.</span>ControllerStartInterval<span class="token punctuation">.</span>Duration<span class="token punctuation">,</span> ControllerStartJitter<span class="token punctuation">)</span><span class="token punctuation">)</span>
 
-    logger.V(1).Info(&quot;Starting controller&quot;, &quot;controller&quot;, controllerName)
-    // &#x6267;&#x884C;ControllerDescriptor&#x4E2D;&#x7684;InitFunc&#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;
-    initFunc := controllerDescriptor.GetInitFunc()
-    ctrl, started, err := initFunc(klog.NewContext(ctx, klog.LoggerWithName(logger, controllerName)), controllerCtx, controllerName)
-    if err != nil {
-        logger.Error(err, &quot;Error starting controller&quot;, &quot;controller&quot;, controllerName)
-        return nil, err
-    }
-    if !started {
-        logger.Info(&quot;Warning: skipping controller&quot;, &quot;controller&quot;, controllerName)
-        return nil, nil
-    }
+    logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Starting controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+    <span class="token comment">// &#x6267;&#x884C;ControllerDescriptor&#x4E2D;&#x7684;InitFunc&#x521D;&#x59CB;&#x5316;&#x63A7;&#x5236;&#x5668;&#x5B9E;&#x4F8B;</span>
+    initFunc <span class="token operator">:=</span> controllerDescriptor<span class="token punctuation">.</span><span class="token function">GetInitFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    ctrl<span class="token punctuation">,</span> started<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">initFunc</span><span class="token punctuation">(</span>klog<span class="token punctuation">.</span><span class="token function">NewContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">LoggerWithName</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> controllerCtx<span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;Error starting controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token operator">!</span>started <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Warning: skipping controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
 
-    check := controllerhealthz.NamedPingChecker(controllerName)
-    if ctrl != nil {
-        // &#x6CE8;&#x518C;&#x8C03;&#x8BD5;&#x63A5;&#x53E3;
-        if debuggable, ok := ctrl.(controller.Debuggable); ok &amp;&amp; unsecuredMux != nil {
-            if debugHandler := debuggable.DebuggingHandler(); debugHandler != nil {
-                basePath := &quot;/debug/controllers/&quot; + controllerName
-                unsecuredMux.UnlistedHandle(basePath, http.StripPrefix(basePath, debugHandler))
-                unsecuredMux.UnlistedHandlePrefix(basePath+&quot;/&quot;, http.StripPrefix(basePath, debugHandler))
-            }
-        }
-        // &#x521B;&#x5EFA;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x5668;
-        if healthCheckable, ok := ctrl.(controller.HealthCheckable); ok {
-            if realCheck := healthCheckable.HealthChecker(); realCheck != nil {
-                check = controllerhealthz.NamedHealthChecker(controllerName, realCheck)
-            }
-        }
-    }
+    check <span class="token operator">:=</span> controllerhealthz<span class="token punctuation">.</span><span class="token function">NamedPingChecker</span><span class="token punctuation">(</span>controllerName<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> ctrl <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x6CE8;&#x518C;&#x8C03;&#x8BD5;&#x63A5;&#x53E3;</span>
+        <span class="token keyword">if</span> debuggable<span class="token punctuation">,</span> ok <span class="token operator">:=</span> ctrl<span class="token punctuation">.</span><span class="token punctuation">(</span>controller<span class="token punctuation">.</span>Debuggable<span class="token punctuation">)</span><span class="token punctuation">;</span> ok <span class="token operator">&amp;&amp;</span> unsecuredMux <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> debugHandler <span class="token operator">:=</span> debuggable<span class="token punctuation">.</span><span class="token function">DebuggingHandler</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> debugHandler <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                basePath <span class="token operator">:=</span> <span class="token string">&quot;/debug/controllers/&quot;</span> <span class="token operator">+</span> controllerName
+                unsecuredMux<span class="token punctuation">.</span><span class="token function">UnlistedHandle</span><span class="token punctuation">(</span>basePath<span class="token punctuation">,</span> http<span class="token punctuation">.</span><span class="token function">StripPrefix</span><span class="token punctuation">(</span>basePath<span class="token punctuation">,</span> debugHandler<span class="token punctuation">)</span><span class="token punctuation">)</span>
+                unsecuredMux<span class="token punctuation">.</span><span class="token function">UnlistedHandlePrefix</span><span class="token punctuation">(</span>basePath<span class="token operator">+</span><span class="token string">&quot;/&quot;</span><span class="token punctuation">,</span> http<span class="token punctuation">.</span><span class="token function">StripPrefix</span><span class="token punctuation">(</span>basePath<span class="token punctuation">,</span> debugHandler<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x521B;&#x5EFA;&#x5065;&#x5EB7;&#x68C0;&#x67E5;&#x5668;</span>
+        <span class="token keyword">if</span> healthCheckable<span class="token punctuation">,</span> ok <span class="token operator">:=</span> ctrl<span class="token punctuation">.</span><span class="token punctuation">(</span>controller<span class="token punctuation">.</span>HealthCheckable<span class="token punctuation">)</span><span class="token punctuation">;</span> ok <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> realCheck <span class="token operator">:=</span> healthCheckable<span class="token punctuation">.</span><span class="token function">HealthChecker</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> realCheck <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                check <span class="token operator">=</span> controllerhealthz<span class="token punctuation">.</span><span class="token function">NamedHealthChecker</span><span class="token punctuation">(</span>controllerName<span class="token punctuation">,</span> realCheck<span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
 
-    logger.Info(&quot;Started controller&quot;, &quot;controller&quot;, controllerName)
-    return check, nil
-}
+    logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Started controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> check<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>&#x5728;&#x8FD9;&#x91CC;&#x5148;&#x4E0D;&#x5173;&#x6CE8;&#x5404;&#x79CD;&#x63A7;&#x5236;&#x5668;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;&#x7684;&#x5177;&#x4F53;&#x5B9E;&#x73B0;&#xFF0C;&#x540E;&#x7EED;&#x4F1A;&#x5728;&#x5206;&#x6790;&#x6BCF;&#x79CD;&#x5177;&#x4F53;&#x63A7;&#x5236;&#x5668;&#x65F6;&#x4E00;&#x5E76;&#x8BF4;&#x660E;&#xFF0C;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x4E5F;&#x90FD;&#x901A;&#x8FC7;<code>StartController</code>&#x521B;&#x5EFA;&#x51FA;&#x6765;&#x540E;&#xFF0C;&#x7EE7;&#x7EED;&#x56DE;&#x5230;&#x95ED;&#x5305;&#x51FD;&#x6570;<code>run()</code>&#x4E2D;&#xFF0C;&#x5269;&#x4E0B;&#x7684;&#x6700;&#x540E;&#x4E00;&#x4E2A;&#x6B65;&#x9AA4;&#x5C31;&#x662F;&#x901A;&#x8FC7;&#x5DE5;&#x5382;&#x542F;&#x52A8;<code>ControllerContext</code>&#x4E2D;&#x7684;&#x4E24;&#x7C7B;<code>Informer</code>&#xFF0C;&#x6240;&#x6709;<code>Informer</code>&#x5B9E;&#x4F8B;&#x90FD;&#x542F;&#x52A8;&#x540E;&#x5173;&#x95ED;&#x63A7;&#x5236;&#x5668;&#x4E0A;&#x4E0B;&#x6587;&#x4E2D;&#x7684;<code>ControllerContext.InformersStarted</code>&#x901A;&#x9053;&#xFF0C;&#x6700;&#x540E;&#x901A;&#x8FC7;&#x5E38;&#x89C1;&#x7684;&#x65B9;&#x5F0F;<code>&lt;-ctx.Done()</code>&#x6302;&#x8D77;&#x4E3B;&#x7EBF;&#x7A0B;&#xFF0C;&#x76F4;&#x81F3;&#x6536;&#x5230;&#x505C;&#x6B62;&#x4FE1;&#x53F7;&#x540E;&#x4F18;&#x96C5;&#x9000;&#x51FA;&#x3002; </p>
 <footer class="page-footer"><span class="copyright">&#xA9; 2025 lts0609.  all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x6700;&#x540E;&#x66F4;&#x65B0;&#x65F6;&#x95F4;:
-2025-07-25 11:20:03
+2025-07-29 16:04:37
 </span></footer>
 <script>console.log("plugin-popup....");document.onclick = function(e){ e.target.tagName === "IMG" && window.open(e.target.src,e.target.src)}</script><style>img{cursor:pointer}</style> <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css"> <script>     window.klipse_settings = {         selector: ".language-klipse, .lang-eval-clojure",         selector_eval_js: ".lang-eval-js",         selector_eval_python_client: ".lang-eval-python",         selector_eval_php: ".lang-eval-php",         selector_eval_scheme: ".lang-eval-scheme",         selector_eval_ruby: ".lang-eval-ruby",         selector_reagent: ".lang-reagent",        selector_google_charts: ".lang-google-chart",        selector_es2017: ".lang-eval-es2017",        selector_jsx: ".lang-eval-jsx",        selector_transpile_jsx: ".lang-transpile-jsx",        selector_render_jsx: ".lang-render-jsx",        selector_react: ".lang-react",        selector_eval_markdown: ".lang-render-markdown",        selector_eval_lambdaway: ".lang-render-lambdaway",        selector_eval_cpp: ".lang-eval-cpp",        selector_eval_html: ".lang-render-html",        selector_sql: ".lang-eval-sql",        selector_brainfuck: "lang-eval-brainfuck",        selector_js: ".lang-transpile-cljs"    }; </script> <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
                                 
@@ -910,7 +910,7 @@ type ControllerDescriptor struct {
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"next":{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02-DeploymentController原理详解.md","ref":"kube-controller-manager/02-DeploymentController原理详解.md","articles":[]},"previous":{"title":"Controller Manager","level":"1.3","depth":1,"path":"kube-controller-manager/README.md","ref":"kube-controller-manager/README.md","articles":[{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"path":"kube-controller-manager/01-ControllerManager创建流程.md","ref":"kube-controller-manager/01-ControllerManager创建流程.md","articles":[]},{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02-DeploymentController原理详解.md","ref":"kube-controller-manager/02-DeploymentController原理详解.md","articles":[]},{"title":"ReplicaSetController原理详解","level":"1.3.3","depth":2,"path":"kube-controller-manager/03-ReplicaSetController原理详解.md","ref":"kube-controller-manager/03-ReplicaSetController原理详解.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["-highlight","-lunr","-search","-sharing","-sharing-plus","pageview-count","page-treeview","code","chapter-fold","search-pro","popup","scroll-to-top","auto-scroll-table","anchor-navigation-ex","klipse","prism","theme-comscore","tbfed-pagefooter","livereload"],"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"© 2025 lts0609. ","modify_label":"最后更新时间:","modify_format":"YYYY-MM-DD HH:mm:ss"},"page-treeview":{"collapsed":false,"copyright":"","minHeaderCount":"2","minHeaderDeep":"2"},"chapter-fold":{},"prism":{"css":["prismjs/themes/prism-okaidia.css"],"lang":{"go":"go","yaml":"yaml"}},"scroll-to-top":{},"livereload":{},"search-pro":{"multilingual":false,"indexing":{"delay":500,"minLength":2}},"auto-scroll-table":{},"popup":{},"code":{"copyButtons":true},"fontsettings":{"theme":"white","family":"sans","size":2},"anchor-navigation-ex":{"showLevelIcon":false,"mode":"float","pageTop":{"level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"showLevel":true,"tocLevel1Icon":"fa fa-cog","tocLevel2Icon":"fa fa-cog","tocLevel3Icon":"fa fa-cog","showGoTop":true,"printLog":false,"multipleH1":false,"multipleH2":false,"associatedWithSummary":true,"multipleH3":false,"float":{"floatIcon":"fa fa-navicon","level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"multipleH4":false},"theme-comscore":{},"pageview-count":{},"klipse":{"myConfigKey":"it's the default value","languages":["go","yaml"]},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false}},"theme":"default","author":"lts0609","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"Kubernetes Learning","language":"zh-hans","gitbook":"*","description":"Kubernetes源码学习"},"file":{"path":"kube-controller-manager/01-ControllerManager创建流程.md","mtime":"2025-07-25T03:20:03.124Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-29T06:44:26.009Z"},"basePath":"..","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"next":{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02-DeploymentController原理详解.md","ref":"kube-controller-manager/02-DeploymentController原理详解.md","articles":[]},"previous":{"title":"Controller Manager","level":"1.3","depth":1,"path":"kube-controller-manager/README.md","ref":"kube-controller-manager/README.md","articles":[{"title":"ControllerManager创建流程","level":"1.3.1","depth":2,"path":"kube-controller-manager/01-ControllerManager创建流程.md","ref":"kube-controller-manager/01-ControllerManager创建流程.md","articles":[]},{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02-DeploymentController原理详解.md","ref":"kube-controller-manager/02-DeploymentController原理详解.md","articles":[]},{"title":"ReplicaSetController原理详解","level":"1.3.3","depth":2,"path":"kube-controller-manager/03-ReplicaSetController原理详解.md","ref":"kube-controller-manager/03-ReplicaSetController原理详解.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["-highlight","-lunr","-search","-sharing","-sharing-plus","pageview-count","page-treeview","code","chapter-fold","search-pro","popup","scroll-to-top","auto-scroll-table","anchor-navigation-ex","klipse","prism","theme-comscore","tbfed-pagefooter","livereload"],"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"© 2025 lts0609. ","modify_label":"最后更新时间:","modify_format":"YYYY-MM-DD HH:mm:ss"},"page-treeview":{"collapsed":false,"copyright":"","minHeaderCount":"2","minHeaderDeep":"2"},"chapter-fold":{},"prism":{"css":["prismjs/themes/prism-okaidia.css"],"lang":{"go":"go","yaml":"yaml","shell":"shell"}},"scroll-to-top":{},"livereload":{},"search-pro":{"multilingual":false,"indexing":{"delay":500,"minLength":2}},"auto-scroll-table":{},"popup":{},"code":{"copyButtons":true},"fontsettings":{"theme":"white","family":"sans","size":2},"anchor-navigation-ex":{"showLevelIcon":false,"mode":"float","pageTop":{"level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"showLevel":true,"tocLevel1Icon":"fa fa-cog","tocLevel2Icon":"fa fa-cog","tocLevel3Icon":"fa fa-cog","showGoTop":true,"printLog":false,"multipleH1":false,"multipleH2":false,"associatedWithSummary":true,"multipleH3":false,"float":{"floatIcon":"fa fa-navicon","level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"multipleH4":false},"theme-comscore":{},"pageview-count":{},"klipse":{"myConfigKey":"it's the default value","languages":["go","yaml"]},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false}},"theme":"default","author":"lts0609","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"Kubernetes Learning","language":"zh-hans","gitbook":"*","description":"Kubernetes源码学习"},"file":{"path":"kube-controller-manager/01-ControllerManager创建流程.md","mtime":"2025-07-29T08:04:37.704Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-29T07:54:49.910Z"},"basePath":"..","book":{"language":""}});
         });
     </script>
 </div>

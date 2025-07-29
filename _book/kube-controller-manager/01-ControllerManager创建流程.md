@@ -4,7 +4,7 @@
 
 根据在之前调度器学习过程中对`Cobra`框架构建组件的了解，首先就会想到`kube-controller- manager`的创建入口也在`cmd/kube-controller-manager/controller-manager.go`中，其中同样也只包含简单的三行代码。
 
-```Go
+```go
 func main() {
     command := app.NewControllerManagerCommand()
     code := cli.Run(command)
@@ -14,7 +14,7 @@ func main() {
 
 这和调度器中是完全相同的，下面进入`cmd/kube-controller-manager/app/controllermanager.go`路径下去看具体逻辑。还是关注`RunE()`中return的`Run()`函数。
 
-```Go
+```go
 // NewControllerManagerCommand creates a *cobra.Command object with default parameters
 func NewControllerManagerCommand() *cobra.Command {
     // 初始化特性门控
@@ -82,7 +82,7 @@ func NewControllerManagerCommand() *cobra.Command {
 
 `Run()`函数的实现也和调度器十分相似，首先初始化日志记录器，打印基本环境信息，然后初始化事件广播器，注册配置和健康检查设置，启动Server并创建两个不同权限的客户端。这里涉及了一个重要的闭包函数`run()`。
 
-```Go
+```go
 func Run(ctx context.Context, c *config.CompletedConfig) error {
     // 初始化日志记录器
     logger := klog.FromContext(ctx)
@@ -164,7 +164,7 @@ func Run(ctx context.Context, c *config.CompletedConfig) error {
 
 在对`run()`闭包函数以及内部逻辑做解释之前，先了解一个数据结构`ControllerDescriptor`，也就是该函数的入参类型，它用于描述和管理控制器的信息。
 
-```Go
+```go
 type InitFunc func(ctx context.Context, controllerContext ControllerContext, controllerName string) (controller controller.Interface, enabled bool, err error)
 
 type ControllerDescriptor struct {
@@ -187,7 +187,7 @@ type ControllerDescriptor struct {
 
 以不开启选举的流程为例，不涉及选主逻辑会直接启动控制器，首先会初始化`ControllerDescriptor`集合，然后传递给`run()`。
 
-```Go
+```go
     if !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
         controllerDescriptors := NewControllerDescriptors()
         controllerDescriptors[names.ServiceAccountTokenController] = saTokenControllerDescriptor
@@ -198,7 +198,7 @@ type ControllerDescriptor struct {
 
 `NewControllerDescriptors()`函数返回了一个key是控制器名称，value是`ControllerDescriptor`的映射，通过`Descriptor`的包装实现了控制器逻辑与配置的分离。其中有一个需要注意的地方，`ServiceAccountTokenControllerDescriptor`是唯一特殊的控制器，需要最先启动而且使用具有**根权限**的客户端初始化，在之前的代码中已经创建了对象`saTokenControllerDescriptor`，那么为什么在下面这段函数中还要注册呢？主要的原因是`NewControllerDescriptors()`函数没有入参而`ServiceAccountTokenControllerDescriptor`的初始化函数需要传入根权限的客户端，但是要保证和其他控制器元数据创建时的一致性，并且其中`register()`校验了控制器描述符的合法性，虽然后面会被单独创建的`saTokenControllerDescriptor`替换，但是不影响和其他控制器描述符一起初始化一次。
 
-```Go
+```go
 func NewControllerDescriptors() map[string]*ControllerDescriptor {
     // 初始化
     controllers := map[string]*ControllerDescriptor{}
@@ -298,7 +298,7 @@ func NewControllerDescriptors() map[string]*ControllerDescriptor {
 
 所有的`ControllerDescriptor`元数据都初始化后，替换`ServiceAccountTokenControllerDescriptor`为此前创建的内容，然后调用核心入口逻辑闭包函数`run()`，下面来看它的实现逻辑。
 
-```Go
+```go
     run := func(ctx context.Context, controllerDescriptors map[string]*ControllerDescriptor) {
         // 创建控制器上下文
         controllerContext, err := CreateControllerContext(ctx, c, rootClientBuilder, clientBuilder)
@@ -323,7 +323,7 @@ func NewControllerDescriptors() map[string]*ControllerDescriptor {
 
 关于`CreateControllerContext()`函数，它的作用是
 
-```Go
+```go
 func CreateControllerContext(ctx context.Context, s *config.CompletedConfig, rootClientBuilder, clientBuilder clientbuilder.ControllerClientBuilder) (ControllerContext, error) {
     // 闭包函数 用于裁剪obj对象的ManagedFields字段来提高内存效率
     trim := func(obj interface{}) (interface{}, error) {
@@ -395,7 +395,7 @@ func CreateControllerContext(ctx context.Context, s *config.CompletedConfig, roo
 
 由于`ControllerManager`的运行所谓等待`ApiServer`成功启动，就是等待它的`/healthz`端点返回`OK`。
 
-```Go
+```go
 func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
     var lastErr error
     // 轮询器执行目标函数
@@ -428,7 +428,7 @@ func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
 
 首先会启动`ServiceAccountToken`控制器，因为与`ApiServer`交互时会用到令牌验证身份，如果该控制器没有启动会影响到其他控制器的正常运行。然后再遍历`ControllerDescriptor`集合启动其他控制器。
 
-```Go
+```go
 func StartControllers(ctx context.Context, controllerCtx ControllerContext, controllerDescriptors map[string]*ControllerDescriptor,
     unsecuredMux *mux.PathRecorderMux, healthzHandler *controllerhealthz.MutableHealthzHandler) error {
     var controllerChecks []healthz.HealthChecker
@@ -471,7 +471,7 @@ func StartControllers(ctx context.Context, controllerCtx ControllerContext, cont
 
 看一下`ServiceAccountTokenController`是如何启动的，`StartController()`是该控制器启动的直接步骤。经过一系列的检查后，调用此前在`ControllerDescriptor`对象中注册的`InitFunc`初始化函数创建控制器实例，并注册调试接口和创建健康检查器。
 
-```Go
+```go
 func StartController(ctx context.Context, controllerCtx ControllerContext, controllerDescriptor *ControllerDescriptor,
     unsecuredMux *mux.PathRecorderMux) (healthz.HealthChecker, error) {
     // 初始化日志记录器

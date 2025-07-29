@@ -48,7 +48,8 @@
       ],
       "lang": {
         "go": "go",
-        "yaml": "yaml"
+        "yaml": "yaml",
+        "shell": "shell"
       }
     },
     "search-pro": {

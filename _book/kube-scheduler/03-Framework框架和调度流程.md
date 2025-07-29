@@ -40,7 +40,7 @@ profiles:
 
 首先在程序入口`NewSchedulerCommand`处会创建一个`options.Options`对象，并在后续过程中一直被使用和更改。
 
-```Go
+```go
 // cmd路径下的调度器创建入口
 func NewSchedulerCommand(registryOptions ...Option) *cobra.Command {
     ......
@@ -58,7 +58,7 @@ func NewSchedulerCommand(registryOptions ...Option) *cobra.Command {
 
 实际创建逻辑`runCommand`中，`Options`对象被用于生成`CompletedConfig`配置信息和`Scheduler`实例。
 
-```Go
+```go
 func runCommand(cmd *cobra.Command, opts *options.Options, registryOptions ...Option) error {
     ......
     cc, sched, err := Setup(ctx, opts, registryOptions...)
@@ -68,7 +68,7 @@ func runCommand(cmd *cobra.Command, opts *options.Options, registryOptions ...Op
 
 在`Setup`以前，`Options`对象中的配置主要是开关类型，在这个流程中被赋值，然后根据`Options`对象创建`Config`类型并传入到调度器实例的创建参数中。
 
-```Go
+```go
 func Setup(ctx context.Context, opts *options.Options, outOfTreeRegistryOptions ...Option) (*schedulerserverconfig.CompletedConfig, *scheduler.Scheduler, error) {
     // 从这里开始给Options对象注入ComponentConfig字段
     if cfg, err := latest.Default(); err != nil {
@@ -101,7 +101,7 @@ func Setup(ctx context.Context, opts *options.Options, outOfTreeRegistryOptions 
 
 `New()`函数中真正创建了`Framework`对象，也就是`profile.Map`类型的集合，并将其赋值给调度器实例。
 
-```Go
+```go
 var defaultSchedulerOptions = schedulerOptions{
     percentageOfNodesToScore:          schedulerapi.DefaultPercentageOfNodesToScore,
     podInitialBackoffSeconds:          int64(internalqueue.DefaultPodInitialBackoffDuration.Seconds()),
@@ -161,7 +161,7 @@ func New(ctx context.Context,
 
 `NewMap()`函数的实现如下，遍历`KubeSchedulerProfile`对象，生成`Framework`对象作为value，`SchedulerName`作为key，组成一个`Map`对象返回给上层。
 
-```Go
+```go
 type Map map[string]framework.Framework
 
 func NewMap(ctx context.Context, cfgs []config.KubeSchedulerProfile, r frameworkruntime.Registry, recorderFact RecorderFactory,
@@ -194,7 +194,7 @@ func newProfile(ctx context.Context, cfg config.KubeSchedulerProfile, r framewor
 
 `NewFramework`是调度框架的初始化入口，根据`KubeSchedulerProfile`创建`Framework`实例，每个`Framework`对象对应的就是一个调度器的业务逻辑配置。
 
-```Go
+```go
 func NewFramework(ctx context.Context, r Registry, profile *config.KubeSchedulerProfile, opts ...Option) (framework.Framework, error) {
     options := defaultFrameworkOptions(ctx.Done())
     for _, opt := range opts {
@@ -345,7 +345,7 @@ func NewFramework(ctx context.Context, r Registry, profile *config.KubeScheduler
 
 总结配置中的一些核心结构，最顶层的配置结构是`Options`，是进程级别的全局配置参数，在`NewOptions()`函数中解析**命令行参数**并初始化，如`--kubeconfig`和`--port`等，主要承载了调度器组件的启动参数。
 
-```Go
+```go
 type Options struct {
     // 只关注ComponentConfig类型 在Setup阶段被赋值
     ComponentConfig *kubeschedulerconfig.KubeSchedulerConfiguration
@@ -366,7 +366,7 @@ type Options struct {
 
 在`Setup`阶段(更准确地说是在`ApplyTo()`方法)基于`Options`生成了`Config/CompletedConfig`对象，合并了配置文件以及默认配置的内容，并在后续直接使用的是`CompletedConfig`去创建调度器实例，其中`Config`类型我们不特别关注，仍关注其中的字段`ComponentConfig`也就是类型`KubeSchedulerConfiguration`。
 
-```Go
+```go
 type Config struct {
     // 和Options中的ComponentConfig意义完全相同
     ComponentConfig kubeschedulerconfig.KubeSchedulerConfiguration
@@ -387,7 +387,7 @@ type Config struct {
 
 `KubeSchedulerConfiguration`类型的初始化也是在`Setup`中，字段`Profiles`是`KubeSchedulerProfile`的切片类型，所以支持多调度器配置，该结构的来源是调度器配置的**静态文件**，默认配置可以查找`SetDefaults_KubeSchedulerConfiguration()`函数，此函数逻辑在`pkg/scheduler/apis/config/v1/register.go`中的`init()`被调用。
 
-```Go
+```go
 type KubeSchedulerConfiguration struct {
     metav1.TypeMeta
     Parallelism int32
@@ -406,7 +406,7 @@ type KubeSchedulerConfiguration struct {
 
 `KubeSchedulerProfile`类型包含了各阶段`PluginSet`的指针和调度器名称，是在调度框架流程中具体的调度配置。
 
-```Go
+```go
 type KubeSchedulerProfile struct {
     // profile名称
     SchedulerName string
@@ -421,7 +421,7 @@ type KubeSchedulerProfile struct {
 
 在`New()`函数初始化了`schedulerOptions`对象，是根据`KubeSchedulerProfile`而来的核心子集，仅包括调度器核心逻辑参数。
 
-```Go
+```go
 type schedulerOptions struct {
     componentConfigVersion string
     kubeConfig             *restclient.Config
@@ -441,7 +441,7 @@ type schedulerOptions struct {
 
 `NewMap`使用`schedulerOptions.profiles`创建`Map/frameworkImpl`，`frameworkImpl`实现了`Framework`接口，每个`frameworkImpl`就代表一份动态的运行时配置，这也是调度周期中使用到的核心配置。
 
-```Go
+```go
 type Map map[string]framework.Framework
 
 type frameworkImpl struct {
@@ -488,7 +488,7 @@ type frameworkImpl struct {
 
 `Framework`接口定义如下，可以看出主要还是和插件相关。
 
-```Go
+```go
 type Framework interface {
     Handle
 
@@ -592,7 +592,7 @@ type Framework interface {
 
 在`Plugins`结构体的定义中，包含了12个标准阶段的插件集合，以及一个多扩展点插件集合的字段。
 
-```Go
+```go
 type Plugins struct {
     PreEnqueue  PluginSet
     QueueSort   PluginSet
@@ -615,7 +615,7 @@ type Plugins struct {
 
 从上图中可以看出，在`Pod`加入调度队列以后，包含了两个`Cycle`，也就是说在整个调度的过程中，包含两个大的生命周期。在[Scheduler创建流程与调度队列](https://github.com/lts0609/k8s-SourceCode/blob/main/kube-scheduler/01%20Scheduler%E5%88%9B%E5%BB%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E8%B0%83%E5%BA%A6%E9%98%9F%E5%88%97.md)提到过实例启动的最外层逻辑是`Run()`方法。
 
-```Go
+```go
 // Run begins watching and scheduling. It starts scheduling and blocked until the context is done.
 func (sched *Scheduler) Run(ctx context.Context) {
     logger := klog.FromContext(ctx) 
@@ -639,7 +639,7 @@ func (sched *Scheduler) Run(ctx context.Context) {
 
 在本文中，我们重点关注调度的整体流程，也就是通过协程启动的`sched.ScheduleOne()`循环。其中的`wait.UntilWithContext()`函数接收三个参数，分别是上下文对象、循环执行的函数、以及循环的间隔，所以调度时就是不间断地执行`sched.ScheduleOne()`方法。先来简单地了解`ScheduleOne()`的整体实现，有关两个周期的具体实现会在后续深入说明。
 
-```Go
+```go
 func (sched *Scheduler) ScheduleOne(ctx context.Context) {
     logger := klog.FromContext(ctx)
     // 从调度队列Pop出一个QueuedPodInfo对象 用于调度生命周期中

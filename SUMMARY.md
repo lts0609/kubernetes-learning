@@ -14,4 +14,3 @@
     * [ControllerManager创建流程](kube-controller-manager/01-ControllerManager创建流程.md)
     * [DeploymentController原理详解](kube-controller-manager/02-DeploymentController原理详解.md)
     * [ReplicaSetController原理详解](kube-controller-manager/03-ReplicaSetController原理详解.md)
-

@@ -8,7 +8,7 @@
 
 下面先从`DeploymentController`的创建开始学习，它的初始化函数如下，其中包含创建控制器实例和启动控制器两个逻辑。
 
-```Go
+```go
 func startDeploymentController(ctx context.Context, controllerContext ControllerContext, controllerName string) (controller.Interface, bool, error) {
     dc, err := deployment.NewDeploymentController(
         ctx,
@@ -27,7 +27,7 @@ func startDeploymentController(ctx context.Context, controllerContext Controller
 
 `DeploymentController`的实现逻辑都在`pkg/controller/deployment`路径下，`NewDeploymentController()`方法创建了一个控制器实例，根据函数签名来看，它接收上下文参数`ctx`，三种`Informer`对象用来监测`Deployment/ReplicaSet/Pod`资源的变化，以及客户端`client`。照惯例先创建事件广播器和日志记录器，然后初始化`DeploymentController`对象，其中包括客户端、事件广播器、事件记录器、限速工作队列、和用于对`ReplicaSet`对象进行`Patch`的操作器`rsControl`。再通过`AddEventHandler()`注册事件的处理函数，并初始化各种资源的`Lister`
 
-```Go
+```go
 func NewDeploymentController(ctx context.Context, dInformer appsinformers.DeploymentInformer, rsInformer appsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, client clientset.Interface) (*DeploymentController, error) {
     // 初始化事件处理器和日志记录器
     eventBroadcaster := record.NewBroadcaster(record.WithContext(ctx))
@@ -97,7 +97,7 @@ func NewDeploymentController(ctx context.Context, dInformer appsinformers.Deploy
 
 最后就返回了一个完整的`DeploymentController`对象，其结构如下。
 
-```Go
+```go
 type DeploymentController struct {
     // 用于操作ReplicaSet对象
     rsControl controller.RSControlInterface
@@ -130,13 +130,13 @@ type DeploymentController struct {
 
 运行控制器实例的代码如下，另起一个协程，传入上下文控制生命周期，还有一个参数表示允许并发同步的`Deployment`对象数量。
 
-```Go
+```go
 go dc.Run(ctx, int(controllerContext.ComponentConfig.DeploymentController.ConcurrentDeploymentSyncs))
 ```
 
 来看`Run()`方法的具体实现逻辑，首先还是标准的初始化流程和日志打印，然后会通过`WaitForNamedCacheSync()`方法确认`Informer`监听的资源是否同步成功，内部会调用`PollImmediateUntil()`函数阻塞等待`InformerSynced`返回的结果。然后根据传入的`worker`数值启动对应数量的协程去处理事件，最后通过接收`Done`信号的方式阻塞主线程。
 
-```Go
+```go
 func (dc *DeploymentController) Run(ctx context.Context, workers int) {
   // 异常处理 用于捕获panic
     defer utilruntime.HandleCrash()
@@ -168,7 +168,7 @@ func (dc *DeploymentController) Run(ctx context.Context, workers int) {
 
 循环执行的逻辑是`worker()`方法，根据其中方法的命名，很明显它要做的就是不停地处理下一个元素。
 
-```Go
+```go
 func (dc *DeploymentController) worker(ctx context.Context) {
     for dc.processNextWorkItem(ctx) {
     }
@@ -177,7 +177,7 @@ func (dc *DeploymentController) worker(ctx context.Context) {
 
 来看元素是如何被处理的，首先从工作队列中取出一个元素，返回的是一个字符串类型的对象名称，然后交给调谐方法也就是`syncHandler()`去处理。如果获取元素时发现队列已经关闭了就返回一个`false`，`worker`协程也随之关闭。
 
-```Go
+```go
 func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
     // 取出一个元素
     key, quit := dc.queue.Get()
@@ -198,7 +198,7 @@ func (dc *DeploymentController) processNextWorkItem(ctx context.Context) bool {
 
 下面就是控制器中最核心的逻辑了，一般来说会叫做`reconciler()`，此处仅命名不同。在队列中取出`key`的格式为`namespcae/deploymentname`，调谐时会先切分出`namespace`和`name`，然后通过`Lister`从缓存中获取到具体的`Deployment`对象并拷贝，在调度器的学习过程中对于Pod的处理也是要拷贝的，因为缓存中是反映系统实际状态的信息，避免在处理过程中影响原始内容，所以后续操作都要用深拷贝的对象。在开始调谐逻辑之前会先检查`Deployment`对象的`Selector`字段是否为空，如果是则记录错误并跳过当前对象的调谐。
 
-```Go
+```go
 func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) error {
     logger := klog.FromContext(ctx)
     // 获取命名空间和对象名称
@@ -320,7 +320,7 @@ spec:
 
 根据`Deployment`类型为开始层层分析，首先`Deployment`结构体中包含`DeploymentSpec`类型的描述信息，后面如果学习`Operator`开发会了解到，一般定义一个`API`对象，通常会包含`metav1.TypeMeta`、`metav1.ObjectMeta`、`Spec`以及`Status`四个字段。
 
-```Go
+```go
 type Deployment struct {
     metav1.TypeMeta
     // +optional
@@ -371,7 +371,7 @@ spec:
 
 回到`DeploymentSpec`类型中，其`Selector`字段为`metav1.LabelSelector`类型的指针。
 
-```Go
+```go
 type DeploymentSpec struct {
     Replicas int32
     Selector *metav1.LabelSelector
@@ -387,7 +387,7 @@ type DeploymentSpec struct {
 
 继续看`LabelSelector`类型的定义，它正符合在一个`yaml`文件中对于标签选择的定义规范，即：1.选择标签与某个值是匹配的;2.标签和某些值存在`In/NotIn/Exists/DoesNotExist`的关系。
 
-```Go
+```go
 type LabelSelector struct {
     // matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
     // map is equivalent to an element of matchExpressions, whose key field is "key", the
@@ -407,7 +407,7 @@ type LabelSelector struct {
 
 首先对传入的`LabelSelector`对象进行检查，如果是空则表示不匹配标签，不为空但长度是0表示匹配所有标签。首先处理`MatchLabels`字段，这一部分都是期望标签与目标值一致的，所以操作符使用`Equals`。然后遍历处理`MatchExpressions`字段，根据其中`Operator`的值进行转换，然后初始化一个`labels.Selector`接口，然后调用`Add()`方法添加之前处理好的标签，最终`Api`对象中的标签会以`labelkey--operator--labelvalue`切片的内部标签形式统一存在。
 
-```Go
+```go
 func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
     // 对象检查
     if ps == nil {
@@ -460,7 +460,7 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 
 `getReplicaSetsForDeployment()`方法用于获取`Deployment`下属的`ReplicaSet`实例，首先获取命名空间下的所有`ReplocaSet`对象，然后把`Deployment`对象的标签解析为内部形式。基于`rsControl`、`Selector`等封装出一个`ReplicaSetControllerRefManager`结构对象用于处理该`Deployment`与`ReplicaSet`之间的从属关系，最后调用其`ClaimReplicaSets()`方法认领属于当前`Deployment`的`ReplicaSet`对象。
 
-```Go
+```go
 func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context, d *apps.Deployment) ([]*apps.ReplicaSet, error) {
     // 获取命名空间下所有ReplicaSet
     rsList, err := dc.rsLister.ReplicaSets(d.Namespace).List(labels.Everything())
@@ -493,7 +493,7 @@ func (dc *DeploymentController) getReplicaSetsForDeployment(ctx context.Context,
 
 `ReplicaSet`的认领逻辑在`ClaimReplicaSets()`方法中实现，其中定义了三个函数，分别对应`标签选择`、`认领`和`释放`。遍历`ReplicaSet`列表，然后把认领的对象加入`claimed`变量并返回给上层。
 
-```Go
+```go
 func (m *ReplicaSetControllerRefManager) ClaimReplicaSets(ctx context.Context, sets []*apps.ReplicaSet) ([]*apps.ReplicaSet, error) {
     var claimed []*apps.ReplicaSet
     var errlist []error
@@ -537,7 +537,7 @@ func (m *ReplicaSetControllerRefManager) ClaimReplicaSets(ctx context.Context, s
     * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间不匹配，跳过处理;
     * 控制器被删除或标签匹配，`ReplicaSet`对象正常，命名空间匹配，尝试认领;
 
-```Go
+```go
 func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.Object, match func(metav1.Object) bool, adopt, release func(context.Context, metav1.Object) error) (bool, error) {
     controllerRef := metav1.GetControllerOfNoCopy(obj)
     // 有所属控制器
@@ -606,7 +606,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 
 首先进行控制器的标签转换，再获取到同一命名空间下标签匹配的`Pod`列表。在滚动更新过程中，可能存在多个`ReplicaSet`实例，并且每个实例下都还包含`Pod`，所以会先以`ReplicaSet`实例的`UID`为key初始化一个Map，然后遍历所有`Pod`，
 
-```Go
+```go
 func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsList []*apps.ReplicaSet) (map[types.UID][]*v1.Pod, error) {
     // 标签转换
     selector, err := metav1.LabelSelectorAsSelector(d.Spec.Selector)
@@ -654,7 +654,7 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 
 在这种情况下，仅会同步状态，但不做任何可能影响资源状态的操作。
 
-```Go
+```go
 func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
     // 获取新就版本的ReplicaSet
     newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
@@ -670,7 +670,7 @@ func (dc *DeploymentController) syncStatusOnly(ctx context.Context, d *apps.Depl
 
 其中`getAllReplicaSetsAndSyncRevision()`方法用于获取所有新旧版本的`ReplicaSet`对象，是`Deployment Controller`调谐过程中的一个通用方法，在`rolling\rollback\recreate`过程中也被使用。
 
-```Go
+```go
 func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, []*apps.ReplicaSet, error) {
    // 找到所有旧的ReplicaSet
     _, allOldRSs := deploymentutil.FindOldReplicaSets(d, rsList)
@@ -689,7 +689,7 @@ func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Con
 
 这部分的逻辑也比较简单，首先获取新的`ReplicaSet`对象，然后遍历所有`ReplicaSet`并根据`UID`判断是否是旧的对象，并且如果旧的`ReplicaSet`还关联`Pod`，单独存放一份到`requiredRSs`中，返回的两个列表分别是：有`Pod`存在的旧`ReplicaSet`和旧`ReplicaSet`全集。
 
-```Go
+```go
 func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) ([]*apps.ReplicaSet, []*apps.ReplicaSet) {
     var requiredRSs []*apps.ReplicaSet
     var allRSs []*apps.ReplicaSet
@@ -712,7 +712,7 @@ func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) 
 
 来看新的对象是如何获取的，`ReplicaSetsByCreationTimestamp`类型是`[]*apps.ReplicaSet`类型的别名，专门为了实现`ReplicaSet`对象基于创建时间戳的排序而存在。第一步是先对所有的`ReplicaSet`进行排序，按照创建时间戳升序排列。第二步会遍历所有的对象，返回和最新`ReplicaSet`对象的`Template`描述完全一致的最早版本，这是Kubernetes中**确定性原则**的体现：避免了随机选择，并且避免了集群信息中存在多个相同`Template`的`ReplicaSet`情况下的处理异常。
 
-```Go
+```go
 func FindNewReplicaSet(deployment *apps.Deployment, rsList []*apps.ReplicaSet) *apps.ReplicaSet {
   // 按创建时间升序排列ReplicaSet
     sort.Sort(controller.ReplicaSetsByCreationTimestamp(rsList))
@@ -732,7 +732,7 @@ func FindNewReplicaSet(deployment *apps.Deployment, rsList []*apps.ReplicaSet) *
 
 `Template`字段的比较函数如下，先对两个对象做深拷贝，然后删除`ReplicaSet`对象的`pod-template-hash`标签，该标签是在`ReplicaSet`创建时自动添加的根据Pod模板哈希而来的一个`Label`，用于帮助`ReplicaSet`选择并隔离不同版本的`Pod`，此处的一致性判断逻辑关注于用户的配置，删除该标签避免了用户配置相同但哈希结果不同的特殊情况。
 
-```Go
+```go
 func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
     t1Copy := template1.DeepCopy()
     t2Copy := template2.DeepCopy()
@@ -751,7 +751,7 @@ func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
 
 如果预期的`ReplicaSet`对象不存在，就需要去创建它，然后更新`Deployment`对象，最后返回新的`ReplicaSet`对象。
 
-```Go
+```go
 func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.Deployment, rsList, oldRSs []*apps.ReplicaSet, createIfNotExisted bool) (*apps.ReplicaSet, error) {
     logger := klog.FromContext(ctx)
     // 获取最新ReplicaSet
@@ -904,7 +904,7 @@ func (dc *DeploymentController) getNewReplicaSet(ctx context.Context, d *apps.De
 
 `SetNewReplicaSetAnnotations()`方法返回一个`bool`值来表示注解是否被修改。
 
-```Go
+```go
 func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, newRevision string, exists bool, revHistoryLimitInChars int) bool {
     logger := klog.FromContext(ctx)
     // 基于Deployment对象更新注解
@@ -976,7 +976,7 @@ func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deploymen
 
 该流程的最后一步是同步`Deployment`对象的状态，逻辑很简单，首先计算一个预期的`Status`，然后和原始数据做比较，如果不同就向`ApiServer`发送一个更新请求。
 
-```Go
+```go
 func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
     newStatus := calculateStatus(allRSs, newRS, d)
 
@@ -996,7 +996,7 @@ func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs
 在`d.Spec.Paused`的值为`true`时，表示`Deployment`对象被手动暂停，`isScalingEvent()`方法根据`Deployment`对象的`Spec.Replicas`与注释信息`"desired-replicas"`的值是否一致来判断是否要进行扩缩容操作。两种情况的结果都是直接调用`sync()`方法。
 扩缩容的入口`sync()`方法对比`syncStatusOnly()`方法多了两个步骤，一个是执行扩缩容操作`scale()`，另一个差别是判断如果是暂停状态且没有回滚目标，就需要清理旧的`ReplicaSet`对象。
 
-```Go
+```go
 func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
     newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, false)
     if err != nil {
@@ -1024,7 +1024,7 @@ func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rs
 
 #### 扩缩容场景一
 
-```Go
+```go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
     // 场景一：单ReplicaSet活跃
     if activeOrLatest := deploymentutil.FindActiveOrLatest(newRS, oldRSs); activeOrLatest != nil {
@@ -1045,7 +1045,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 #### 扩缩容场景二
 
-```Go
+```go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
     ......
     // 场景二：新ReplicaSet已经饱和 需要缩容旧ReplicaSet
@@ -1071,7 +1071,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 此为多`ReplicaSet`共存的滚动更新中间场景，首先确定策略是否为滚动更新，然后获取所有当前副本数大于0的`ReplicaSet`对象，根据`Replicas`和`MaxSurge`计算本次进行调整的副本总数。需要注意的是，在该滚动更新操作中，扩/缩容的动作是**单向**的，不会有一个对象扩容的同时另一个对象缩容的情况。通过反复`扩容-缩容`的动作，再经过场景二的收尾，最终实际的副本数与期望值相同，并且由新`ReplicaSet`替换了旧的对象。
 
-```Go
+```go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
     ......
     // 场景三：滚动更新进行中
@@ -1146,7 +1146,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 先根据`Deployment`对象检查副本数和注释信息是否有需要调整的，如果需要调整就深拷贝一份最新`ReplicaSet`对象，然后先向`ApiServer`发注释信息的更新请求，然后判断是否有扩/缩容的需要，记录并将标识位返回给上层。
 
-```Go
+```go
 func (dc *DeploymentController) scaleReplicaSet(ctx context.Context, rs *apps.ReplicaSet, newScale int32, deployment *apps.Deployment) (bool, *apps.ReplicaSet, error) {
     // 检查副本数是否需要调整
     sizeNeedsUpdate := *(rs.Spec.Replicas) != newScale
@@ -1187,7 +1187,7 @@ func (dc *DeploymentController) scaleReplicaSet(ctx context.Context, rs *apps.Re
 
 由`GetReplicaSetProportion()`函数返回给外层一个整数，这个数值的绝对值不超过允许值。
 
-```Go
+```go
 func GetReplicaSetProportion(logger klog.Logger, rs *apps.ReplicaSet, d apps.Deployment, deploymentReplicasToAdd, deploymentReplicasAdded int32) int32 {
     if rs == nil || *(rs.Spec.Replicas) == 0 || deploymentReplicasToAdd == 0 || deploymentReplicasToAdd == deploymentReplicasAdded {
         return int32(0)
@@ -1205,7 +1205,7 @@ func GetReplicaSetProportion(logger klog.Logger, rs *apps.ReplicaSet, d apps.Dep
 
 期望更新副本的差额计算逻辑在`getReplicaSetFraction()`函数中实现，如果`Deployment`要把副本数缩容到0，就直接返回当前`ReplicaSet`副本数作为差额。然后检查`ReplicaSet`注释中的最大容量，然后根据公式`期望容量=当前副本数*当前最大容量/上一轮最大容量`，返回本轮要扩/缩容的数量。
 
-```Go
+```go
 func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deployment) int32 {
     // 如果想要缩容至0 直接返回当前的副本数
     if *(d.Spec.Replicas) == int32(0) {
@@ -1238,7 +1238,7 @@ func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deploy
 
 首先获取`ReplicaSet`的信息，然后从注解信息中找出期望回滚的`Revision`版本号，如果是0尝试回滚到最近的一个版本。正常情况下遍历所有的`ReplicaSet`对象，并尝试根据`Revision`进行匹配，然后用`ReplicaSet`的Pod描述也就是`Template`字段更新当前`Deployment`中的内容，同时也更新注释信息，最后向`ApiServer`发送对`Deployment`对象的更新请求并请求回滚注解。
 
-```Go
+```go
 func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
     logger := klog.FromContext(ctx)
     // 获取ReplicaSet对象
@@ -1290,7 +1290,7 @@ func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment
 
 在一开始先获取新旧`ReplicaSet`对象，值得注意的是`getAllReplicaSetsAndSyncRevision()`方法传入一个`false`，因为`Recreate`逻辑严格要求先把旧的实例删掉才能创建新的，如果缩容操作前创建新`ReplicaSet`会导致新旧版本实例共存。然后获取旧版本中有`Pod`实例存在的`ReplicaSet`对象，并修改它们的`Spec.Replicas`为0，然后在直到没有旧版本的`Pod`运行前都对`Deployment`的状态进行同步，缩容操作完成后如果新的`ReplicaSet`不存在，再次调用`getAllReplicaSetsAndSyncRevision()`方法传入`true`，创建该对象。扩容新`ReplicaSet`，扩容完成后清理旧版本对象并同步`Deployment`状态。
 
-```Go
+```go
 func (dc *DeploymentController) rolloutRecreate(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) error {
     // 第四个入参表示如果ReplicaSet不存在是否创建
     // 在缩容阶段避免新旧Pod共存 此处不直接创建
@@ -1342,7 +1342,7 @@ func (dc *DeploymentController) rolloutRecreate(ctx context.Context, d *apps.Dep
 
 `oldPodsRunning()`函数用来检查是否有`Pod`实例在运行中，首先获取所有的`Pod`集合，然后检查其`Status.Phase`字段，该字段表示`Pod`的状态，包括`Pending/Running/Running/Failed/Unknown`，对应各生命周期状态。对于属于新版本`ReplicaSet`管理的跳过处理，该逻辑只确认旧版本的`Pod`是否有仍处于或可能处于运行状态的。
 
-```Go
+```go
 func oldPodsRunning(newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet, podMap map[types.UID][]*v1.Pod) bool {
     if oldPods := util.GetActualReplicaCountForReplicaSets(oldRSs); oldPods > 0 {
         return true
@@ -1373,7 +1373,7 @@ func oldPodsRunning(newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet, podMap ma
 
 `syncRolloutStatus()`方法用来同步缩容的状态，首先会根据当前观测到的`Generation`、`Replicas`、`UpdatedReplicas`、`ReadyReplicas`、`AvailableReplicas`等副本数量信息，判断当前`Deployment`对象的状态是否达成了最低的可用条件，然后更新`CondType`为`DeploymentAvailable`的状态并组装一个最新的`DeploymentStatus`类型的状态信息。然后尝试获取`DeploymentProgressing`的状态信息，并对`Deployment`状态进行判断，如果副本数和新版本副本数相等且状态信息为新`ReplicaSet`可用(`NewReplicaSetAvailable`)表示部署完成。如果结果表示未完成部署，则对结果进行确认并向`ApiServer`发送更新`Deployment`的请求。
 
-```Go
+```go
 func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, d *apps.Deployment) error {
     // 计算Deployment最新状态
     newStatus := calculateStatus(allRSs, newRS, d)
@@ -1449,7 +1449,7 @@ func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []
 
 如果经过判断，更新策略为`RollingUpdate`，则采用滚动更新方式，逻辑入口为`rolloutRolling()`方法。从外层的逻辑来看很清晰，首先获取对象的信息，然后有限尝试扩容新`ReplicaSet`对象，如果扩容则本次调谐返回并更新状态，如果无法进行扩容动作，则对旧`ReplicaSet`进行缩容操作，如果缩容也返回并更新`Deployment`状态，如果两者都没有就根据`Spec`和`Status`的一致性检查`Deployment`对象是否为部署成功的状态，如果是就清理旧`ReplicaSet`对象，最后更新状态。
 
-```Go
+```go
 func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Deployment, rsList []*apps.ReplicaSet) error {
     newRS, oldRSs, err := dc.getAllReplicaSetsAndSyncRevision(ctx, d, rsList, true)
     if err != nil {
@@ -1491,7 +1491,7 @@ func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Depl
 
 对这段逻辑进行简单的解释，首先对`ReplicaSet`和`Deployment`其中的`Spec.Replicas`字段做比较。如果新`ReplicaSet`已经和`Deployment`的期望副本数一致了则不做处理;如果是非预期的新`Replicas`期望副本数大于`Deployment`，则调整`ReplicaSet`的期望副本数为`Deployment`的期望副本数;其他情况就只剩下新`Replicas`期望副本数小于`Deployment`了，计算一下本次调整后的新`ReplicaSet`副本数并执行更新操作。
 
-```Go
+```go
 func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
     if *(newRS.Spec.Replicas) == *(deployment.Spec.Replicas) {
         // Scaling not required.
@@ -1515,7 +1515,7 @@ func (dc *DeploymentController) reconcileNewReplicaSet(ctx context.Context, allR
 
 通过`NewRSNewReplicas()`函数计算出新`ReplicaSet`调整后的副本数量，规则也很简单。如果是`Recreate`策略直接返回`Deployment`的期望值;如果是`RollingUpdate`策略，根据`MaxSurge`计算`Deployment`的副本数量上限，然后根据**Deployment副本数上限与当前总副本数的差值**和**Deployment期望副本数与新ReplicaSet期望副本数的差值**，选择其中较小的加上当前新`ReplicaSet`的期望副本数，返回给上层作为调整后的期望副本数值。
 
-```Go
+```go
 func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet) (int32, error) {
     switch deployment.Spec.Strategy.Type {
     case apps.RollingUpdateDeploymentStrategyType:
@@ -1548,7 +1548,7 @@ func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, ne
 
 缩容旧`ReplicaSet`的过程中首先计算最大可缩容数量，其计算公式为**当前副本数-最小可用副本数-新ReplicaSet不可用副本数**，然后根据最大缩容数量去缩容处理旧版本的`ReplicaSet`，总共会经历两轮缩容，第一次先清理旧`ReplicaSet`中的不健康副本，返回一个数量`cleanupCount`，然后再正常进行缩容，返回一个数量`scaledDownCount`，如果两者的和大于0表示进行了缩容操作。
 
-```Go
+```go
 func (dc *DeploymentController) reconcileOldReplicaSets(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, newRS *apps.ReplicaSet, deployment *apps.Deployment) (bool, error) {
     logger := klog.FromContext(ctx)
     oldPodsCount := deploymentutil.GetReplicaCountForReplicaSets(oldRSs)
@@ -1590,7 +1590,7 @@ func (dc *DeploymentController) reconcileOldReplicaSets(ctx context.Context, all
 
 首先对所有旧版本的副本按创建时间进行排序，优先处理创建更早的副本。遍历所有旧的`ReplicaSet`对象，总共缩容数量不能超过方法中传入的`maxCleanupCount`，每个`ReplicaSet`的缩容选择缩容余额和不健康副本数两者中较小的，更新`ReplicaSet`的副本数为`Spec.Replicas-scaledDownCount`，并更新本地缓存中的`ReplicaSet`对象，每次缩容的值进行累加最终返回给上层。
 
-```Go
+```go
 func (dc *DeploymentController) cleanupUnhealthyReplicas(ctx context.Context, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment, maxCleanupCount int32) ([]*apps.ReplicaSet, int32, error) {
     logger := klog.FromContext(ctx)
     // 根据创建时间从早到晚排序
@@ -1636,7 +1636,7 @@ func (dc *DeploymentController) cleanupUnhealthyReplicas(ctx context.Context, ol
 
 正常缩容的逻辑和处理不健康副本类似，先进行排序，然后相当于是重新计算了最大可缩容副本数，遍历`ReplicaSet`并选择缩容余额和期望副本数中较小的作为缩容数量，更新`ReplicaSet`对象并计数缩容的副本。
 
-```Go
+```go
 func (dc *DeploymentController) scaleDownOldReplicaSetsForRollingUpdate(ctx context.Context, allRSs []*apps.ReplicaSet, oldRSs []*apps.ReplicaSet, deployment *apps.Deployment) (int32, error) {
     logger := klog.FromContext(ctx)
 
