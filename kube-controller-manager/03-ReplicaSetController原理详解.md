@@ -164,8 +164,6 @@ func (rsc *ReplicaSetController) syncReplicaSet(ctx context.Context, key string)
     // Always updates status as pods come up or die.
     updatedRS, err := updateReplicaSetStatus(logger, rsc.kubeClient.AppsV1().ReplicaSets(rs.Namespace), rs, newStatus)
     if err != nil {
-        // Multiple things could lead to this update failing. Requeuing the replica set ensures
-        // Returning an error causes a requeue without forcing a hotloop
         return err
     }
     // Resync the ReplicaSet after MinReadySeconds as a last line of defense to guard against clock-skew.
@@ -347,7 +345,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 }
 ```
 
-### 副本管理(核心逻辑)
+## 副本管理(核心逻辑)
 
 如果当前状态和期望状态不一致，就会调用`manageReplicas()`方法使副本状态趋于期望。根据函数签名，输入参数包括上下文信息、控制器管理的Pod列表`filteredPods`和`ReplicaSet`对象`rs`。
 
@@ -397,24 +395,18 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
             diff = rsc.burstReplicas
         }
         logger.V(2).Info("Too many replicas", "replicaSet", klog.KObj(rs), "need", *(rs.Spec.Replicas), "deleting", diff)
-
+        // 获取关联的Pod
         relatedPods, err := rsc.getIndirectlyRelatedPods(logger, rs)
         utilruntime.HandleError(err)
-
-        // Choose which Pods to delete, preferring those in earlier phases of startup.
+        // 获取要删除的Pod
         podsToDelete := getPodsToDelete(filteredPods, relatedPods, diff)
-
-        // Snapshot the UIDs (ns/name) of the pods we're expecting to see
-        // deleted, so we know to record their expectations exactly once either
-        // when we see it as an update of the deletion timestamp, or as a delete.
-        // Note that if the labels on a pod/rs change in a way that the pod gets
-        // orphaned, the rs will only wake up after the expectations have
-        // expired even if other pods are deleted.
+        // 设置预期删除数量
         rsc.expectations.ExpectDeletions(logger, rsKey, getPodKeys(podsToDelete))
 
         errCh := make(chan error, diff)
         var wg sync.WaitGroup
         wg.Add(diff)
+        // 并发删除Pod
         for _, pod := range podsToDelete {
             go func(targetPod *v1.Pod) {
                 defer wg.Done()
@@ -444,6 +436,8 @@ func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPod
     return nil
 }
 ```
+
+### 需要创建副本
 
 #### 慢启动批量创建
 
@@ -499,3 +493,169 @@ func (r *ControllerExpectations) LowerExpectations(logger klog.Logger, controlle
     }
 }
 ```
+
+### 需要缩容副本
+
+如果实际副本数大于期望副本数，就需要对Pod副本进行缩容。首先设置处理数量，然后找出和当前`ReplicaSet`关联的Pod，再从中选出要删除的Pod副本，最后通过`goroutine`和`channel`实现删除的并发控制。并持续读监听错误通道，如果出现错误数据就中断操作。
+
+```Go
+func (rsc *ReplicaSetController) manageReplicas(ctx context.Context, filteredPods []*v1.Pod, rs *apps.ReplicaSet) error {
+    ......
+    } else if diff > 0 {
+        // 数量限制
+        if diff > rsc.burstReplicas {
+            diff = rsc.burstReplicas
+        }
+        logger.V(2).Info("Too many replicas", "replicaSet", klog.KObj(rs), "need", *(rs.Spec.Replicas), "deleting", diff)
+        // 获取关联的Pod
+        relatedPods, err := rsc.getIndirectlyRelatedPods(logger, rs)
+        utilruntime.HandleError(err)
+        // 选择要删除的Pod
+        podsToDelete := getPodsToDelete(filteredPods, relatedPods, diff)
+        // 设置预期删除数量
+        rsc.expectations.ExpectDeletions(logger, rsKey, getPodKeys(podsToDelete))
+
+        errCh := make(chan error, diff)
+        var wg sync.WaitGroup
+        wg.Add(diff)
+        // 并发删除Pod
+        for _, pod := range podsToDelete {
+            go func(targetPod *v1.Pod) {
+                defer wg.Done()
+                if err := rsc.podControl.DeletePod(ctx, rs.Namespace, targetPod.Name, rs); err != nil {
+                    podKey := controller.PodKey(targetPod)
+                    rsc.expectations.DeletionObserved(logger, rsKey, podKey)
+                    if !apierrors.IsNotFound(err) {
+                        logger.V(2).Info("Failed to delete pod, decremented expectations", "pod", podKey, "kind", rsc.Kind, "replicaSet", klog.KObj(rs))
+                        errCh <- err
+                    }
+                }
+            }(pod)
+        }
+        wg.Wait()
+
+        select {
+        case err := <-errCh:
+            // 如果出现错误中断删除操作
+            if err != nil {
+                return err
+            }
+        default:
+        }
+    }
+
+    return nil
+}
+```
+
+#### 获取间接关联副本
+
+`getIndirectlyRelatedPods()`方法用来找到有间接从属关系的Pod。先初始化一个列表，通过`getReplicaSetsWithSameController()`方法获取和当前`ReplicaSet`有相同上层控制器的所有`ReplicaSet`对象，因为如`Deployment`在滚动更新过程中可能会同时管理多个版本的`ReplicaSet`对象，在管理副本时需要考虑这些场景。
+
+```Go
+func (rsc *ReplicaSetController) getReplicaSetsWithSameController(logger klog.Logger, rs *apps.ReplicaSet) []*apps.ReplicaSet {
+    // 获取OwnerReference
+    controllerRef := metav1.GetControllerOf(rs)
+    if controllerRef == nil {
+        utilruntime.HandleError(fmt.Errorf("ReplicaSet has no controller: %v", rs))
+        return nil
+    }
+    // 根据OwnerReference.UID在rsIndexer中查找对象
+    objects, err := rsc.rsIndexer.ByIndex(controllerUIDIndex, string(controllerRef.UID))
+    if err != nil {
+        utilruntime.HandleError(err)
+        return nil
+    }
+    // 添加ReplicaSet对象到列表并返回
+    relatedRSs := make([]*apps.ReplicaSet, 0, len(objects))
+    for _, obj := range objects {
+        relatedRSs = append(relatedRSs, obj.(*apps.ReplicaSet))
+    }
+
+    if klogV := logger.V(2); klogV.Enabled() {
+        klogV.Info("Found related ReplicaSets", "replicaSet", klog.KObj(rs), "relatedReplicaSets", klog.KObjSlice(relatedRSs))
+    }
+
+    return relatedRSs
+}
+```
+
+`ReplicaSet`对象获取后，开始处理每个对象中管理的Pod副本，遍历所有`ReplicaSet`，通过标签选择器获取标签匹配的Pod，然后添加到关联Pod列表，如果一个Pod被多个`ReplicaSet`管理就跳过处理，仅用日志记录该Pod同时属于多个`ReplicaSet`，最后把和当前`ReplicaSet`对象有关的Pod列表返回给上层。
+
+`relatedPods`是一个扩展的副本集合，不仅有满足当前`ReplicaSet`对象标签选择器的Pod副本，还包含通过兄弟`ReplicaSet`(与当前`ReplicaSet`有相同的上层控制器)标签选择器的Pod副本。
+
+```Go
+func (rsc *ReplicaSetController) getIndirectlyRelatedPods(logger klog.Logger, rs *apps.ReplicaSet) ([]*v1.Pod, error) {
+    // 初始化Pod集合
+    var relatedPods []*v1.Pod
+    seen := make(map[types.UID]*apps.ReplicaSet)
+    // 遍历所有相同上层控制器的ReplicaSet对象
+    for _, relatedRS := range rsc.getReplicaSetsWithSameController(logger, rs) {
+        // 获取ReplicaSet的标签选择器
+        selector, err := metav1.LabelSelectorAsSelector(relatedRS.Spec.Selector)
+        if err != nil {
+            continue
+        }
+        // 通过PodLIster获取满足标签选择器条件的Pod列表
+        pods, err := rsc.podLister.Pods(relatedRS.Namespace).List(selector)
+        if err != nil {
+            return nil, err
+        }
+        // 遍历Pod列表
+        for _, pod := range pods {
+            // 如果映射已经存在 记录日志并跳过处理
+            if otherRS, found := seen[pod.UID]; found {
+                logger.V(5).Info("Pod is owned by both", "pod", klog.KObj(pod), "kind", rsc.Kind, "replicaSets", klog.KObjSlice([]klog.KMetadata{otherRS, relatedRS}))
+                continue
+            }
+            // 添加Pod-ReplicaSet映射
+            seen[pod.UID] = relatedRS
+            relatedPods = append(relatedPods, pod)
+        }
+    }
+    logger.V(4).Info("Found related pods", "kind", rsc.Kind, "replicaSet", klog.KObj(rs), "pods", klog.KObjSlice(relatedPods))
+    return relatedPods, nil
+}
+```
+
+#### 确认要删除的副本
+
+如果差值大于当前`ReplicaSet`管理的副本数，结果就是全部删除。如果差值小于副本数，根据节点上的副本分布情况构造一个`ActivePodsWithRanks`类型的对象，进行排序后截取`diff`长度的数组返回。
+
+```Go
+func getPodsToDelete(filteredPods, relatedPods []*v1.Pod, diff int) []*v1.Pod {
+    // 期望删除数量小于当前副本数
+    if diff < len(filteredPods) {
+        // 构造ActivePodsWithRanks类型对象
+        podsWithRanks := getPodsRankedByRelatedPodsOnSameNode(filteredPods, relatedPods)
+        // 对ActivePodsWithRanks进行排序处理 内部的filteredPods顺序被修改
+        sort.Sort(podsWithRanks)
+        // 指标上报
+        reportSortingDeletionAgeRatioMetric(filteredPods, diff)
+    }
+    // 返回diff长度的Pod列表
+    return filteredPods[:diff]
+}
+```
+
+`getPodsRankedByRelatedPodsOnSameNode()`函数的输入参数包括当前`ReplicaSet`管理的待排序副本列表`podsToRank`和所有满足标签选择器的副本列表`relatedPods`，首先遍历`relatedPods`计算关联副本在节点上的分布情况，然后遍历`podsToRank`并填充`rank`数组，组装成`ActivePodsWithRanks`对象后返回，`ActivePodsWithRanks`中定义了`Swap()`和`Less()`方法，执行`Sort()`排序时传入的`Pods`列表由于是引用传递，底层数组会被直接修改。
+
+```Go
+func getPodsRankedByRelatedPodsOnSameNode(podsToRank, relatedPods []*v1.Pod) controller.ActivePodsWithRanks {
+    // 初始化变量
+    podsOnNode := make(map[string]int)
+    for _, pod := range relatedPods {
+        if controller.IsPodActive(pod) {
+            // 对每个节点上存在的关联Pod计数
+            podsOnNode[pod.Spec.NodeName]++
+        }
+    }
+    ranks := make([]int, len(podsToRank))
+    for i, pod := range podsToRank {
+        // 把计数信息按顺序加载到列表
+        ranks[i] = podsOnNode[pod.Spec.NodeName]
+    }
+    return controller.ActivePodsWithRanks{Pods: podsToRank, Rank: ranks, Now: metav1.Now()}
+}
+```
+
