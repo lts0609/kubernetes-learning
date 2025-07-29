@@ -1,10 +1,10 @@
-## DeploymentController原理详解
+# DeploymentController原理详解
 
 在上一章节中，我们简单了解了ControllerManager的创建，本篇文章中深入学习Kubernetes中最重要的控制器之一`DeploymentController`。
 
 当一个`Deployment`创建的时候，其实总共创建了三种资源对象，分别是`Deployment`、`ReplicaSet`、`Pod`，这是非常重要的，因为`Deployment`资源并不会直接管理`Pod`，而是通过管理`ReplicaSet`对象来间接地管理`Pod`，所以一个无状态负载的`Pod`的直接归属是`ReplicaSet`。这种设计和滚动更新相关，当一个`Deployment`中定义的`Pod`模板发生变化时，会创建出一个新的`ReplicaSet`，再根据一定的规则去替换旧的`ReplicaSet`对象。
 
-# 实例创建
+## 实例创建
 
 下面先从`DeploymentController`的创建开始学习，它的初始化函数如下，其中包含创建控制器实例和启动控制器两个逻辑。
 
@@ -164,7 +164,7 @@ func (dc *DeploymentController) Run(ctx context.Context, workers int) {
 }
 ```
 
-# 调谐基本流程
+## 调谐基本流程
 
 循环执行的逻辑是`worker()`方法，根据其中方法的命名，很明显它要做的就是不停地处理下一个元素。
 
@@ -287,11 +287,9 @@ func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) 
 }
 ```
 
-## 下属资源对象的获取
+### 下属资源对象的获取
 
-我们知道资源对象归属关系的匹配是基于标签选择的，在一个`yaml`文件的声明中，上层资源如`Deployment`、
-
-`StatefulSet`等对下层资源如`Pod`的标签选择常有以下的表示形式：
+我们知道资源对象归属关系的匹配是基于标签选择的，在一个`yaml`文件的声明中，上层资源如`Deployment`、`StatefulSet`等对下层资源如`Pod`的标签选择常有以下的表示形式：
 
 ```yaml
 apiVersion: apps/v1
@@ -318,7 +316,7 @@ spec:
 
 标签的选择规则定义在字段`spec.selector`下，在和下层资源匹配时必须全部满足，所以在内部匹配时会进行一个非常重要的阶段，也就是把规则或一组规则的集合转换为统一的标识方法，然后在所有下层资源中过滤符合所有条件的，即认为两者具有从属关系。
 
-## API资源的描述
+### API资源的描述
 
 根据`Deployment`类型为开始层层分析，首先`Deployment`结构体中包含`DeploymentSpec`类型的描述信息，后面如果学习`Operator`开发会了解到，一般定义一个`API`对象，通常会包含`metav1.TypeMeta`、`metav1.ObjectMeta`、`Spec`以及`Status`四个字段。
 
@@ -403,7 +401,7 @@ type LabelSelector struct {
 }
 ```
 
-## 标签选择的转换
+### 标签选择的转换
 
 上面说到过，在控制器内部进行从属资源选择时，会对上层资源进行标签的转换以匹配所属资，`metav1.LabelSelectorAsSelector()`方法实现了这一逻辑，把`metav1.LabelSelector`类型转换为`labels.Selector`对象，下面来看它的实现。
 
@@ -456,9 +454,9 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 }
 ```
 
-## Deployment下属资源的获取
+### Deployment下属资源的获取
 
-### ReplicaSet的获取
+#### ReplicaSet的获取
 
 `getReplicaSetsForDeployment()`方法用于获取`Deployment`下属的`ReplicaSet`实例，首先获取命名空间下的所有`ReplocaSet`对象，然后把`Deployment`对象的标签解析为内部形式。基于`rsControl`、`Selector`等封装出一个`ReplicaSetControllerRefManager`结构对象用于处理该`Deployment`与`ReplicaSet`之间的从属关系，最后调用其`ClaimReplicaSets()`方法认领属于当前`Deployment`的`ReplicaSet`对象。
 
@@ -602,7 +600,7 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 }
 ```
 
-### Pod的获取
+#### Pod的获取
 
 确认了`Deployment`下属的`ReplicaSet`列表后，使用`getPodMapForDeployment()`方法获取`Pod`的列表。根据函数签名，入参是`Deployment`和`ReplicaSet`列表，返回的是一个以`ReplicaSet`的`UID`为key，`Pod`对象为value的列表。
 
@@ -640,7 +638,7 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 }
 ```
 
-# 调谐的具体动作
+## 调谐的具体动作
 
 根据不同的场景会有不同的调谐动作，场景大概可以分为几类：
 
@@ -652,7 +650,7 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 
 下面根据几种场景，结合代码分别进行详细的说明。
 
-## Deployment对象正在删除中
+### Deployment对象正在删除中
 
 在这种情况下，仅会同步状态，但不做任何可能影响资源状态的操作。
 
@@ -687,7 +685,7 @@ func (dc *DeploymentController) getAllReplicaSetsAndSyncRevision(ctx context.Con
 }
 ```
 
-### 获取旧的ReplicaSet对象
+#### 获取旧的ReplicaSet对象
 
 这部分的逻辑也比较简单，首先获取新的`ReplicaSet`对象，然后遍历所有`ReplicaSet`并根据`UID`判断是否是旧的对象，并且如果旧的`ReplicaSet`还关联`Pod`，单独存放一份到`requiredRSs`中，返回的两个列表分别是：有`Pod`存在的旧`ReplicaSet`和旧`ReplicaSet`全集。
 
@@ -710,7 +708,7 @@ func FindOldReplicaSets(deployment *apps.Deployment, rsList []*apps.ReplicaSet) 
 }
 ```
 
-### 获取新的ReplicaSet对象
+#### 获取新的ReplicaSet对象
 
 来看新的对象是如何获取的，`ReplicaSetsByCreationTimestamp`类型是`[]*apps.ReplicaSet`类型的别名，专门为了实现`ReplicaSet`对象基于创建时间戳的排序而存在。第一步是先对所有的`ReplicaSet`进行排序，按照创建时间戳升序排列。第二步会遍历所有的对象，返回和最新`ReplicaSet`对象的`Template`描述完全一致的最早版本，这是Kubernetes中**确定性原则**的体现：避免了随机选择，并且避免了集群信息中存在多个相同`Template`的`ReplicaSet`情况下的处理异常。
 
@@ -745,7 +743,7 @@ func EqualIgnoreHash(template1, template2 *v1.PodTemplateSpec) bool {
 }
 ```
 
-### 处理新的ReplicaSet对象
+#### 处理新的ReplicaSet对象
 
 在`getAllReplicaSetsAndSyncRevision()`方法中，新`ReplicaSet`对象是由`getNewReplicaSet()`方法返回的，用于生成和管理滚动更新过程中的`ReplicaSet`新对象。
 
@@ -974,7 +972,7 @@ func SetNewReplicaSetAnnotations(ctx context.Context, deployment *apps.Deploymen
 }
 ```
 
-### 同步Deployment对象的状态
+#### 同步Deployment对象的状态
 
 该流程的最后一步是同步`Deployment`对象的状态，逻辑很简单，首先计算一个预期的`Status`，然后和原始数据做比较，如果不同就向`ApiServer`发送一个更新请求。
 
@@ -993,7 +991,7 @@ func (dc *DeploymentController) syncDeploymentStatus(ctx context.Context, allRSs
 }
 ```
 
-## Deployment对象需要扩缩容或被手动暂停
+### Deployment对象需要扩缩容或被手动暂停
 
 在`d.Spec.Paused`的值为`true`时，表示`Deployment`对象被手动暂停，`isScalingEvent()`方法根据`Deployment`对象的`Spec.Replicas`与注释信息`"desired-replicas"`的值是否一致来判断是否要进行扩缩容操作。两种情况的结果都是直接调用`sync()`方法。
 扩缩容的入口`sync()`方法对比`syncStatusOnly()`方法多了两个步骤，一个是执行扩缩容操作`scale()`，另一个差别是判断如果是暂停状态且没有回滚目标，就需要清理旧的`ReplicaSet`对象。
@@ -1022,11 +1020,9 @@ func (dc *DeploymentController) sync(ctx context.Context, d *apps.Deployment, rs
 }
 ```
 
-### 扩缩容逻辑
-
 `scale()`是管理`ReplicaSet`副本数的核心方法，其中包含三个实际场景以及处理逻辑。
 
-#### 场景一
+#### 扩缩容场景一
 
 ```Go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
@@ -1047,7 +1043,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 首先获取活跃的`ReplicaSet`对象，所谓活跃就是副本数大于0。其内部逻辑是在所有的`ReplicaSet`中查找副本数大于0的对象，如果结果是1个直接返回;如果是0个，先看最新的`ReplicaSet`对象是否存在，如果存在就返回它，不存在就返回列表中第一个旧的`ReplicaSet`对象;如果超过1个表示正在滚动更新过程中，返回`nil`。如果`activeOrLatest`不为空，对比活跃`ReplicaSet`对象的副本数和`Deployment`对象中是否是一致的，如果一致则不做处理。数量不一致则调用`scaleReplicaSetAndRecordEvent()`方法调整副本数，保证在后续逻辑开始前`ReplicaSet`副本实际状态和预期状态的一致性。
 
-#### 场景二
+#### 扩缩容场景二
 
 ```Go
 func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Deployment, newRS *apps.ReplicaSet, oldRSs []*apps.ReplicaSet) error {
@@ -1071,7 +1067,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 
 执行的动作就是找出旧的`ReplicaSet`中副本数不为0的对象，然后调用`scaleReplicaSetAndRecordEvent()`方法把它们的期望值更新为0，和场景一的处理方式基本相同。
 
-#### 场景三(核心场景)
+#### 扩缩容场景三(核心场景)
 
 此为多`ReplicaSet`共存的滚动更新中间场景，首先确定策略是否为滚动更新，然后获取所有当前副本数大于0的`ReplicaSet`对象，根据`Replicas`和`MaxSurge`计算本次进行调整的副本总数。需要注意的是，在该滚动更新操作中，扩/缩容的动作是**单向**的，不会有一个对象扩容的同时另一个对象缩容的情况。通过反复`扩容-缩容`的动作，再经过场景二的收尾，最终实际的副本数与期望值相同，并且由新`ReplicaSet`替换了旧的对象。
 
@@ -1146,7 +1142,7 @@ func (dc *DeploymentController) scale(ctx context.Context, deployment *apps.Depl
 }
 ```
 
-#### 扩缩容调整ReplicaSet对象的比例
+##### 调整ReplicaSet对象的比例
 
 先根据`Deployment`对象检查副本数和注释信息是否有需要调整的，如果需要调整就深拷贝一份最新`ReplicaSet`对象，然后先向`ApiServer`发注释信息的更新请求，然后判断是否有扩/缩容的需要，记录并将标识位返回给上层。
 
@@ -1187,7 +1183,7 @@ func (dc *DeploymentController) scaleReplicaSet(ctx context.Context, rs *apps.Re
 }
 ```
 
-#### 滚动更新数量计算规则
+##### 滚动更新数量计算规则
 
 由`GetReplicaSetProportion()`函数返回给外层一个整数，这个数值的绝对值不超过允许值。
 
@@ -1236,7 +1232,7 @@ func getReplicaSetFraction(logger klog.Logger, rs apps.ReplicaSet, d apps.Deploy
 }
 ```
 
-## Deployment对象需要回滚
+### Deployment对象需要回滚
 
 根据`Deployment`对象`Annotation`中`"deprecated.deployment.rollback.to"`的值来显式指定回滚的版本，会在未来被逐渐弃用并使用`kubectl rollback`命令控制回滚，修改资源对象是不被推荐的行为，该回滚逻辑的代码在`rollback()`方法中实现。
 
@@ -1286,9 +1282,9 @@ func (dc *DeploymentController) rollback(ctx context.Context, d *apps.Deployment
 }
 ```
 
-## Deployment对象滚动更新
+### Deployment对象滚动更新
 
-### Recreate策略
+#### Recreate策略
 
 如果经过判断，滚动更新的策略为`Recreate`，其更新的处理方式为先终止旧的`Pod`，再启动新的`Pod`，在代码中由`rolloutRecreate()`方法为入口进入后续逻辑，一些核心的逻辑在之前的扩缩容部分已经有所涉及，下面分析该部分代码。
 
@@ -1449,7 +1445,7 @@ func (dc *DeploymentController) syncRolloutStatus(ctx context.Context, allRSs []
 }
 ```
 
-### RollingUpdate策略
+#### RollingUpdate策略
 
 如果经过判断，更新策略为`RollingUpdate`，则采用滚动更新方式，逻辑入口为`rolloutRolling()`方法。从外层的逻辑来看很清晰，首先获取对象的信息，然后有限尝试扩容新`ReplicaSet`对象，如果扩容则本次调谐返回并更新状态，如果无法进行扩容动作，则对旧`ReplicaSet`进行缩容操作，如果缩容也返回并更新`Deployment`状态，如果两者都没有就根据`Spec`和`Status`的一致性检查`Deployment`对象是否为部署成功的状态，如果是就清理旧`ReplicaSet`对象，最后更新状态。
 
@@ -1491,7 +1487,7 @@ func (dc *DeploymentController) rolloutRolling(ctx context.Context, d *apps.Depl
 }
 ```
 
-#### 尝试扩容新ReplicaSet
+##### 尝试扩容新ReplicaSet
 
 对这段逻辑进行简单的解释，首先对`ReplicaSet`和`Deployment`其中的`Spec.Replicas`字段做比较。如果新`ReplicaSet`已经和`Deployment`的期望副本数一致了则不做处理;如果是非预期的新`Replicas`期望副本数大于`Deployment`，则调整`ReplicaSet`的期望副本数为`Deployment`的期望副本数;其他情况就只剩下新`Replicas`期望副本数小于`Deployment`了，计算一下本次调整后的新`ReplicaSet`副本数并执行更新操作。
 
@@ -1548,7 +1544,7 @@ func NewRSNewReplicas(deployment *apps.Deployment, allRSs []*apps.ReplicaSet, ne
 }
 ```
 
-#### 尝试缩容旧ReplicaSet
+##### 尝试缩容旧ReplicaSet
 
 缩容旧`ReplicaSet`的过程中首先计算最大可缩容数量，其计算公式为**当前副本数-最小可用副本数-新ReplicaSet不可用副本数**，然后根据最大缩容数量去缩容处理旧版本的`ReplicaSet`，总共会经历两轮缩容，第一次先清理旧`ReplicaSet`中的不健康副本，返回一个数量`cleanupCount`，然后再正常进行缩容，返回一个数量`scaledDownCount`，如果两者的和大于0表示进行了缩容操作。
 

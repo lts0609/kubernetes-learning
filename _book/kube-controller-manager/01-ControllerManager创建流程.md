@@ -1,6 +1,6 @@
 # ControllerManager创建流程
 
-# 控制器创建入口函数
+## 控制器创建入口函数
 
 根据在之前调度器学习过程中对`Cobra`框架构建组件的了解，首先就会想到`kube-controller- manager`的创建入口也在`cmd/kube-controller-manager/controller-manager.go`中，其中同样也只包含简单的三行代码。
 
@@ -196,7 +196,7 @@ type ControllerDescriptor struct {
     }
 ```
 
-`NewControllerDescriptors()`函数返回了一个key是控制器名称，value是`ControllerDescriptor`的映射，其中有一个需要注意的地方，`ServiceAccountTokenControllerDescriptor`是唯一特殊的控制器，需要最先启动而且使用具有**根权限**的客户端初始化，在之前的代码中以及创建了对象`saTokenControllerDescriptor`，那么为什么在下面这段函数中还要注册呢？主要的原因是`NewControllerDescriptors()`函数没有入参而`ServiceAccountTokenControllerDescriptor`的初始化函数需要传入根权限的客户端，但是要保证和其他控制器元数据创建时的一致性，并且其中`register()`校验了控制器描述符的合法性，虽然后面会被单独创建的`saTokenControllerDescriptor`替换，但是不影响和其他控制器描述符一起初始化一次。
+`NewControllerDescriptors()`函数返回了一个key是控制器名称，value是`ControllerDescriptor`的映射，通过`Descriptor`的包装实现了控制器逻辑与配置的分离。其中有一个需要注意的地方，`ServiceAccountTokenControllerDescriptor`是唯一特殊的控制器，需要最先启动而且使用具有**根权限**的客户端初始化，在之前的代码中已经创建了对象`saTokenControllerDescriptor`，那么为什么在下面这段函数中还要注册呢？主要的原因是`NewControllerDescriptors()`函数没有入参而`ServiceAccountTokenControllerDescriptor`的初始化函数需要传入根权限的客户端，但是要保证和其他控制器元数据创建时的一致性，并且其中`register()`校验了控制器描述符的合法性，虽然后面会被单独创建的`saTokenControllerDescriptor`替换，但是不影响和其他控制器描述符一起初始化一次。
 
 ```Go
 func NewControllerDescriptors() map[string]*ControllerDescriptor {
