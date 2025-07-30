@@ -1,0 +1,1082 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>ReplicaSetController原理详解 · Kubernetes Learning</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        <meta name="author" content="lts0609">
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-pageview-count/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-page-treeview/style.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-chapter-fold/chapter-fold.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search-pro/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-auto-scroll-table/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-anchor-navigation-ex/style/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-prism/prism-okaidia.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-tbfed-pagefooter/footer.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-theme-comscore/test.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    
+    <link rel="prev" href="02-DeploymentController原理详解.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Kubernetes源码学习
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../kube-scheduler/">
+            
+                <a href="../kube-scheduler/">
+            
+                    
+                    Scheduler
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../kube-scheduler/01-Scheduler创建流程与调度队列.html">
+            
+                <a href="../kube-scheduler/01-Scheduler创建流程与调度队列.html">
+            
+                    
+                    Scheduler创建流程与调度队列
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../kube-scheduler/02-调度器缓存Cache的实现.html">
+            
+                <a href="../kube-scheduler/02-调度器缓存Cache的实现.html">
+            
+                    
+                    调度器缓存Cache的实现
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../kube-scheduler/03-Framework框架和调度流程.html">
+            
+                <a href="../kube-scheduler/03-Framework框架和调度流程.html">
+            
+                    
+                    Framework框架和调度流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.4" data-path="../kube-scheduler/04-详解调度周期SchedulingCycle-上.html">
+            
+                <a href="../kube-scheduler/04-详解调度周期SchedulingCycle-上.html">
+            
+                    
+                    详解调度周期SchedulingCycle(上)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.5" data-path="../kube-scheduler/05-详解调度周期SchedulingCycle-下.html">
+            
+                <a href="../kube-scheduler/05-详解调度周期SchedulingCycle-下.html">
+            
+                    
+                    详解调度周期SchedulingCycle(下)
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.6" data-path="../kube-scheduler/06-详解绑定周期BindingCycle.html">
+            
+                <a href="../kube-scheduler/06-详解绑定周期BindingCycle.html">
+            
+                    
+                    详解绑定周期BindingCycle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.7" data-path="../kube-scheduler/07-失败处理与抢占调度Preemption.html">
+            
+                <a href="../kube-scheduler/07-失败处理与抢占调度Preemption.html">
+            
+                    
+                    失败处理与抢占调度Preemption
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.8" data-path="../kube-scheduler/08-调度器扩展与实践.html">
+            
+                <a href="../kube-scheduler/08-调度器扩展与实践.html">
+            
+                    
+                    调度器扩展与实践
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Controller Manager
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="01-ControllerManager创建流程.html">
+            
+                <a href="01-ControllerManager创建流程.html">
+            
+                    
+                    ControllerManager创建流程
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="02-DeploymentController原理详解.html">
+            
+                <a href="02-DeploymentController原理详解.html">
+            
+                    
+                    DeploymentController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.3.3" data-path="03-ReplicaSetController原理详解.html">
+            
+                <a href="03-ReplicaSetController原理详解.html">
+            
+                    
+                    ReplicaSetController原理详解
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >ReplicaSetController原理详解</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <div id="anchor-navigation-ex-navbar"><i class="fa fa-navicon"></i><ul><li><span class="title-icon "></span><a href="#replicasetcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;"><b> </b>ReplicaSetController&#x539F;&#x7406;&#x8BE6;&#x89E3;</a></li><ul><li><span class="title-icon "></span><a href="#&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;"><b>1. </b>&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;</a></li><ul><li><span class="title-icon "></span><a href="#&#x542F;&#x52A8;"><b>1.1. </b>&#x542F;&#x52A8;</a></li></ul><li><span class="title-icon "></span><a href="#&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;"><b>2. </b>&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;</a></li><ul><li><span class="title-icon "></span><a href="#&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;"><b>2.1. </b>&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;</a></li><li><span class="title-icon "></span><a href="#&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;pod"><b>2.2. </b>&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;Pod</a></li></ul><li><span class="title-icon "></span><a href="#&#x526F;&#x672C;&#x7BA1;&#x7406;&#x6838;&#x5FC3;&#x903B;&#x8F91;"><b>3. </b>&#x526F;&#x672C;&#x7BA1;&#x7406;(&#x6838;&#x5FC3;&#x903B;&#x8F91;)</a></li><ul><li><span class="title-icon "></span><a href="#&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;"><b>3.1. </b>&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;</a></li><li><span class="title-icon "></span><a href="#&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;"><b>3.2. </b>&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;</a></li></ul></ul></ul></div><a href="#replicasetcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;" id="anchorNavigationExGoTop"><i class="fa fa-arrow-up"></i></a><div class="treeview__container"><ul>
+<li><div><a href="#&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;">&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x542F;&#x52A8;">&#x542F;&#x52A8;</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;">&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;">&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;</a><i></i></div></li>
+<li><div><a href="#&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;pod">&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;Pod</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#&#x526F;&#x672C;&#x7BA1;&#x7406;&#x6838;&#x5FC3;&#x903B;&#x8F91;">&#x526F;&#x672C;&#x7BA1;&#x7406;(&#x6838;&#x5FC3;&#x903B;&#x8F91;)</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;">&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;">&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;</a><i></i></div></li>
+<li><div><a href="#&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;eventhandler">&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;EventHandler</a><i></i></div></li>
+</ul></li>
+<li><div><a href="#&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;">&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;</a><i class="level__parent level__item level__parent--opened" state="opened" onclick="var curState = this.getAttribute(&apos;state&apos;);var nextState = curState === &apos;opened&apos; ? &apos;hidden&apos; : &apos;opened&apos;;this.setAttribute(&apos;state&apos;, nextState);this.className = this.className.split(curState).join(nextState);var list = this.parentNode.nextElementSibling;if (nextState === &apos;hidden&apos;) {    list.style.display = &apos;none&apos;;} else {    list.style.display = &apos;block&apos;;}"></i></div>
+<ul>
+<li><div><a href="#&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;">&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;</a><i></i></div></li>
+<li><div><a href="#&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;">&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;</a><i></i></div></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+
+<h1 id="replicasetcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;"><a name="replicasetcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;" class="anchor-navigation-ex-anchor" href="#replicasetcontroller&#x539F;&#x7406;&#x8BE6;&#x89E3;"><i class="fa fa-link" aria-hidden="true"></i></a> ReplicaSetController&#x539F;&#x7406;&#x8BE6;&#x89E3;</h1>
+<h2 id="&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;"><a name="&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;" class="anchor-navigation-ex-anchor" href="#&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;"><i class="fa fa-link" aria-hidden="true"></i></a>1. &#x5B9E;&#x4F8B;&#x521B;&#x5EFA;</h2>
+<p>&#x5B9E;&#x4F8B;&#x521B;&#x5EFA;&#x7684;&#x90E8;&#x5206;&#x5C5E;&#x4E8E;&#x901A;&#x7528;&#x57FA;&#x672C;&#x903B;&#x8F91;&#xFF0C;&#x521B;&#x5EFA;<code>Pod</code>&#x548C;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x7684;Informer&#xFF0C;GVK&#x6807;&#x8BC6;&#x4E3A;{Group: apps, Version: v1, Kind: ReplicaSet}&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token comment">// &#x521B;&#x5EFA;ReplicaSetController&#x7684;Descriptor</span>
+<span class="token keyword">func</span> <span class="token function">newReplicaSetControllerDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span>ControllerDescriptor <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token operator">&amp;</span>ControllerDescriptor<span class="token punctuation">{</span>
+        name<span class="token punctuation">:</span>     names<span class="token punctuation">.</span>ReplicaSetController<span class="token punctuation">,</span>
+        aliases<span class="token punctuation">:</span>  <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">{</span><span class="token string">&quot;replicaset&quot;</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+        initFunc<span class="token punctuation">:</span> startReplicaSetController<span class="token punctuation">,</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// ReplicaSetController&#x7684;&#x521D;&#x59CB;&#x5316;&#x51FD;&#x6570;</span>
+<span class="token keyword">func</span> <span class="token function">startReplicaSetController</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> controllerContext ControllerContext<span class="token punctuation">,</span> controllerName <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>controller<span class="token punctuation">.</span>Interface<span class="token punctuation">,</span> <span class="token builtin">bool</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">go</span> replicaset<span class="token punctuation">.</span><span class="token function">NewReplicaSetController</span><span class="token punctuation">(</span>
+        ctx<span class="token punctuation">,</span>
+        controllerContext<span class="token punctuation">.</span>InformerFactory<span class="token punctuation">.</span><span class="token function">Apps</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">V1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">ReplicaSets</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        controllerContext<span class="token punctuation">.</span>InformerFactory<span class="token punctuation">.</span><span class="token function">Core</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">V1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Pods</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        controllerContext<span class="token punctuation">.</span>ClientBuilder<span class="token punctuation">.</span><span class="token function">ClientOrDie</span><span class="token punctuation">(</span><span class="token string">&quot;replicaset-controller&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        replicaset<span class="token punctuation">.</span>BurstReplicas<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> <span class="token function">int</span><span class="token punctuation">(</span>controllerContext<span class="token punctuation">.</span>ComponentConfig<span class="token punctuation">.</span>ReplicaSetController<span class="token punctuation">.</span>ConcurrentRSSyncs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// &#x521B;&#x5EFA;ReplicaSetController&#x5B9E;&#x4F8B;</span>
+<span class="token keyword">func</span> <span class="token function">NewReplicaSetController</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> rsInformer appsinformers<span class="token punctuation">.</span>ReplicaSetInformer<span class="token punctuation">,</span> podInformer coreinformers<span class="token punctuation">.</span>PodInformer<span class="token punctuation">,</span> kubeClient clientset<span class="token punctuation">.</span>Interface<span class="token punctuation">,</span> burstReplicas <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token operator">*</span>ReplicaSetController <span class="token punctuation">{</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    eventBroadcaster <span class="token operator">:=</span> record<span class="token punctuation">.</span><span class="token function">NewBroadcaster</span><span class="token punctuation">(</span>record<span class="token punctuation">.</span><span class="token function">WithContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">:=</span> metrics<span class="token punctuation">.</span><span class="token function">Register</span><span class="token punctuation">(</span>legacyregistry<span class="token punctuation">.</span>Register<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Error</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> <span class="token string">&quot;unable to register metrics&quot;</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> <span class="token function">NewBaseController</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsInformer<span class="token punctuation">,</span> podInformer<span class="token punctuation">,</span> kubeClient<span class="token punctuation">,</span> burstReplicas<span class="token punctuation">,</span>
+        apps<span class="token punctuation">.</span>SchemeGroupVersion<span class="token punctuation">.</span><span class="token function">WithKind</span><span class="token punctuation">(</span><span class="token string">&quot;ReplicaSet&quot;</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token string">&quot;replicaset_controller&quot;</span><span class="token punctuation">,</span>
+        <span class="token string">&quot;replicaset&quot;</span><span class="token punctuation">,</span>
+        controller<span class="token punctuation">.</span>RealPodControl<span class="token punctuation">{</span>
+            KubeClient<span class="token punctuation">:</span> kubeClient<span class="token punctuation">,</span>
+            Recorder<span class="token punctuation">:</span>   eventBroadcaster<span class="token punctuation">.</span><span class="token function">NewRecorder</span><span class="token punctuation">(</span>scheme<span class="token punctuation">.</span>Scheme<span class="token punctuation">,</span> v1<span class="token punctuation">.</span>EventSource<span class="token punctuation">{</span>Component<span class="token punctuation">:</span> <span class="token string">&quot;replicaset-controller&quot;</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        eventBroadcaster<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// &#x542F;&#x52A8;ReplicaSetController</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">Run</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> workers <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">defer</span> utilruntime<span class="token punctuation">.</span><span class="token function">HandleCrash</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment">// Start events processing pipeline.</span>
+    rsc<span class="token punctuation">.</span>eventBroadcaster<span class="token punctuation">.</span><span class="token function">StartStructuredLogging</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span>
+    rsc<span class="token punctuation">.</span>eventBroadcaster<span class="token punctuation">.</span><span class="token function">StartRecordingToSink</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>v1core<span class="token punctuation">.</span>EventSinkImpl<span class="token punctuation">{</span>Interface<span class="token punctuation">:</span> rsc<span class="token punctuation">.</span>kubeClient<span class="token punctuation">.</span><span class="token function">CoreV1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Events</span><span class="token punctuation">(</span><span class="token string">&quot;&quot;</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token keyword">defer</span> rsc<span class="token punctuation">.</span>eventBroadcaster<span class="token punctuation">.</span><span class="token function">Shutdown</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">defer</span> rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">ShutDown</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    controllerName <span class="token operator">:=</span> strings<span class="token punctuation">.</span><span class="token function">ToLower</span><span class="token punctuation">(</span>rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">)</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Starting controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;name&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+    <span class="token keyword">defer</span> logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Shutting down controller&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;name&quot;</span><span class="token punctuation">,</span> controllerName<span class="token punctuation">)</span>
+
+    <span class="token keyword">if</span> <span class="token operator">!</span>cache<span class="token punctuation">.</span><span class="token function">WaitForNamedCacheSync</span><span class="token punctuation">(</span>rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>podListerSynced<span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>rsListerSynced<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">for</span> i <span class="token operator">:=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> workers<span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x6BCF;&#x79D2;&#x5FAA;&#x73AF;&#x6267;&#x884C;</span>
+        <span class="token keyword">go</span> wait<span class="token punctuation">.</span><span class="token function">UntilWithContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>worker<span class="token punctuation">,</span> time<span class="token punctuation">.</span>Second<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token operator">&lt;-</span>ctx<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="&#x542F;&#x52A8;"><a name="&#x542F;&#x52A8;" class="anchor-navigation-ex-anchor" href="#&#x542F;&#x52A8;"><i class="fa fa-link" aria-hidden="true"></i></a>1.1. &#x542F;&#x52A8;</h3>
+<p>&#x8FD9;&#x90E8;&#x5206;&#x4EE3;&#x7801;&#x662F;&#x6807;&#x51C6;&#x5316;&#x7684;&#xFF0C;&#x548C;&#x5176;&#x4ED6;&#x6240;&#x6709;&#x63A7;&#x5236;&#x5668;&#x90FD;&#x76F8;&#x540C;&#xFF0C;<code>syncHandler()</code>&#x65B9;&#x6CD5;&#x5728;&#x521B;&#x5EFA;&#x5B9E;&#x4F8B;&#x7684;<code>NewBaseController()</code>&#x51FD;&#x6570;&#x4E2D;&#x6CE8;&#x518C;&#xFF0C;&#x5B9E;&#x9645;&#x4E3A;<code>syncReplicaSet()</code>&#x65B9;&#x6CD5;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">worker</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">for</span> rsc<span class="token punctuation">.</span><span class="token function">processNextWorkItem</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">processNextWorkItem</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token builtin">bool</span> <span class="token punctuation">{</span>
+    key<span class="token punctuation">,</span> quit <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> quit <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">defer</span> rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+    <span class="token comment">// &#x6267;&#x884C;&#x8C03;&#x8C10;</span>
+    err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span><span class="token function">syncHandler</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">Forget</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span>
+
+    utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;sync %q failed with %v&quot;</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> err<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">AddRateLimited</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> <span class="token boolean">true</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;"><a name="&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;" class="anchor-navigation-ex-anchor" href="#&#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;"><i class="fa fa-link" aria-hidden="true"></i></a>2. &#x63A7;&#x5236;&#x5668;&#x8C03;&#x8C10;&#x903B;&#x8F91;</h2>
+<p><code>Informer</code>&#x76D1;&#x6D4B;&#x5230;&#x53D8;&#x5316;&#x65F6;<code>object</code>&#x5BF9;&#x8C61;&#x662F;&#x4EE5;key&#x4E3A;<code>namespace/name</code>&#x7684;&#x5F62;&#x5F0F;&#x52A0;&#x5165;&#x5DE5;&#x4F5C;&#x961F;&#x5217;&#x7684;&#xFF0C;&#x8C03;&#x8C10;&#x903B;&#x8F91;&#x5904;&#x7406;&#x65F6;&#x8981;&#x901A;&#x8FC7;<code>key</code>&#x518D;&#x628A;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x548C;&#x5BF9;&#x8C61;&#x540D;&#x79F0;&#x5206;&#x79BB;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">syncReplicaSet</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    startTime <span class="token operator">:=</span> time<span class="token punctuation">.</span><span class="token function">Now</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">defer</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Finished syncing&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;key&quot;</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token string">&quot;duration&quot;</span><span class="token punctuation">,</span> time<span class="token punctuation">.</span><span class="token function">Since</span><span class="token punctuation">(</span>startTime<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x5206;&#x5272;&#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x548C;&#x540D;&#x79F0;</span>
+    namespace<span class="token punctuation">,</span> name<span class="token punctuation">,</span> err <span class="token operator">:=</span> cache<span class="token punctuation">.</span><span class="token function">SplitMetaNamespaceKey</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x6839;&#x636E;&#x4FE1;&#x606F;&#x83B7;&#x53D6;RS&#x5BF9;&#x8C61;</span>
+    rs<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>rsLister<span class="token punctuation">.</span><span class="token function">ReplicaSets</span><span class="token punctuation">(</span>namespace<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> apierrors<span class="token punctuation">.</span><span class="token function">IsNotFound</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;deleted&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;key&quot;</span><span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+        rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">DeleteExpectations</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x68C0;&#x67E5;&#x671F;&#x671B;&#x72B6;&#x6001;&#x662F;&#x5426;&#x5DF2;&#x7ECF;&#x8FBE;&#x6210;</span>
+    rsNeedsSync <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">SatisfiedExpectations</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+    <span class="token comment">// &#x83B7;&#x53D6;&#x5BF9;&#x8C61;&#x7684;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;</span>
+    selector<span class="token punctuation">,</span> err <span class="token operator">:=</span> metav1<span class="token punctuation">.</span><span class="token function">LabelSelectorAsSelector</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Selector<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;error converting pod selector to selector for rs %v/%v: %v&quot;</span><span class="token punctuation">,</span> namespace<span class="token punctuation">,</span> name<span class="token punctuation">,</span> err<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// &#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x7684;&#x6240;&#x6709;Pod</span>
+    allPods<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>podLister<span class="token punctuation">.</span><span class="token function">Pods</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">List</span><span class="token punctuation">(</span>labels<span class="token punctuation">.</span><span class="token function">Everything</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x8FC7;&#x6EE4;&#x51FA;Running&#x7684;Pod</span>
+    filteredPods <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">FilterActivePods</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> allPods<span class="token punctuation">)</span>
+    <span class="token comment">// &#x5728;&#x6B64;&#x8FC7;&#x6EE4;&#x51FA;&#x7531;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;&#x7684;Pod</span>
+    filteredPods<span class="token punctuation">,</span> err <span class="token operator">=</span> rsc<span class="token punctuation">.</span><span class="token function">claimPods</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rs<span class="token punctuation">,</span> selector<span class="token punctuation">,</span> filteredPods<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">var</span> manageReplicasErr <span class="token builtin">error</span>
+    <span class="token comment">// &#x9700;&#x8981;&#x8FDB;&#x884C;&#x526F;&#x672C;&#x7BA1;&#x7406;&#x64CD;&#x4F5C;</span>
+    <span class="token keyword">if</span> rsNeedsSync <span class="token operator">&amp;&amp;</span> rs<span class="token punctuation">.</span>DeletionTimestamp <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        manageReplicasErr <span class="token operator">=</span> rsc<span class="token punctuation">.</span><span class="token function">manageReplicas</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> filteredPods<span class="token punctuation">,</span> rs<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x66F4;&#x65B0;ReplicaSet&#x5BF9;&#x8C61;&#x72B6;&#x6001;</span>
+    rs <span class="token operator">=</span> rs<span class="token punctuation">.</span><span class="token function">DeepCopy</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    newStatus <span class="token operator">:=</span> <span class="token function">calculateStatus</span><span class="token punctuation">(</span>rs<span class="token punctuation">,</span> filteredPods<span class="token punctuation">,</span> manageReplicasErr<span class="token punctuation">)</span>
+
+    <span class="token comment">// Always updates status as pods come up or die.</span>
+    updatedRS<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">updateReplicaSetStatus</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>kubeClient<span class="token punctuation">.</span><span class="token function">AppsV1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">ReplicaSets</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">)</span><span class="token punctuation">,</span> rs<span class="token punctuation">,</span> newStatus<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span>
+    <span class="token comment">// Resync the ReplicaSet after MinReadySeconds as a last line of defense to guard against clock-skew.</span>
+    <span class="token keyword">if</span> manageReplicasErr <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token operator">&amp;&amp;</span> updatedRS<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>MinReadySeconds <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span>
+        updatedRS<span class="token punctuation">.</span>Status<span class="token punctuation">.</span>ReadyReplicas <span class="token operator">==</span> <span class="token operator">*</span><span class="token punctuation">(</span>updatedRS<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+        updatedRS<span class="token punctuation">.</span>Status<span class="token punctuation">.</span>AvailableReplicas <span class="token operator">!=</span> <span class="token operator">*</span><span class="token punctuation">(</span>updatedRS<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        rsc<span class="token punctuation">.</span>queue<span class="token punctuation">.</span><span class="token function">AddAfter</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> time<span class="token punctuation">.</span><span class="token function">Duration</span><span class="token punctuation">(</span>updatedRS<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>MinReadySeconds<span class="token punctuation">)</span><span class="token operator">*</span>time<span class="token punctuation">.</span>Second<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> manageReplicasErr
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;"><a name="&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;" class="anchor-navigation-ex-anchor" href="#&#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;"><i class="fa fa-link" aria-hidden="true"></i></a>2.1. &#x671F;&#x671B;&#x526F;&#x672C;&#x72B6;&#x6001;&#x5224;&#x65AD;</h3>
+<p><code>SatisfiedExpectations()</code>&#x65B9;&#x6CD5;&#x7528;&#x6765;&#x68C0;&#x67E5;&#x5BF9;&#x8C61;&#x7684;&#x5F53;&#x524D;&#x72B6;&#x6001;&#x548C;&#x671F;&#x671B;&#x72B6;&#x6001;&#x662F;&#x5426;&#x9700;&#x8981;&#x8FDB;&#x884C;&#x540C;&#x6B65;&#xFF0C;&#x7528;&#x4E8E;<code>ReplicaSetController</code>&#x3001;<code>DaemonSetController</code>&#x3001;<code>JobController</code>&#x8FD9;&#x51E0;&#x4E2A;&#x5B58;&#x5728;&#x526F;&#x672C;&#x671F;&#x671B;&#x7684;&#x63A7;&#x5236;&#x5668;&#x4E2D;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>r <span class="token operator">*</span>ControllerExpectations<span class="token punctuation">)</span> <span class="token function">SatisfiedExpectations</span><span class="token punctuation">(</span>logger klog<span class="token punctuation">.</span>Logger<span class="token punctuation">,</span> controllerKey <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">bool</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> exp<span class="token punctuation">,</span> exists<span class="token punctuation">,</span> err <span class="token operator">:=</span> r<span class="token punctuation">.</span><span class="token function">GetExpectations</span><span class="token punctuation">(</span>controllerKey<span class="token punctuation">)</span><span class="token punctuation">;</span> exists <span class="token punctuation">{</span>
+        <span class="token comment">// &#x68C0;&#x67E5;&#x671F;&#x671B;&#x6570;&#x91CF;&#x662F;&#x5426;&#x6EE1;&#x8DB3;</span>
+        <span class="token keyword">if</span> exp<span class="token punctuation">.</span><span class="token function">Fulfilled</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Controller expectations fulfilled&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;expectations&quot;</span><span class="token punctuation">,</span> exp<span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span>
+        <span class="token comment">// &#x68C0;&#x67E5;&#x671F;&#x671B;&#x662F;&#x5426;&#x8FC7;&#x671F;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> exp<span class="token punctuation">.</span><span class="token function">isExpired</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Controller expectations expired&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;expectations&quot;</span><span class="token punctuation">,</span> exp<span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Controller still waiting on expectations&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;expectations&quot;</span><span class="token punctuation">,</span> exp<span class="token punctuation">)</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Error encountered while checking expectations, forcing sync&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;err&quot;</span><span class="token punctuation">,</span> err<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Controller either never recorded expectations, or the ttl expired&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;controller&quot;</span><span class="token punctuation">,</span> controllerKey<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> <span class="token boolean">true</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>e <span class="token operator">*</span>ControlleeExpectations<span class="token punctuation">)</span> <span class="token function">Fulfilled</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">bool</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x671F;&#x671B;&#x521B;&#x5EFA;&#x548C;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;&#x6570;&#x90FD;&#x4E0D;&#x5927;&#x4E8E;0&#x8868;&#x793A;&#x6EE1;&#x8DB3;</span>
+    <span class="token keyword">return</span> atomic<span class="token punctuation">.</span><span class="token function">LoadInt64</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>e<span class="token punctuation">.</span>add<span class="token punctuation">)</span> <span class="token operator">&lt;=</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> atomic<span class="token punctuation">.</span><span class="token function">LoadInt64</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>e<span class="token punctuation">.</span>del<span class="token punctuation">)</span> <span class="token operator">&lt;=</span> <span class="token number">0</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>&#x671F;&#x671B;&#x72B6;&#x6001;&#x7684;&#x68C0;&#x67E5;&#x53D1;&#x751F;&#x5728;&#x6BCF;&#x6B21;&#x8C03;&#x8C10;&#x7684;&#x5F00;&#x59CB;&#xFF0C;&#x5982;&#x679C;<code>SatisfiedExpectations()</code>&#x65B9;&#x6CD5;&#x8FD4;&#x56DE;&#x4E86;<code>false</code>&#xFF0C;&#x90A3;&#x5C31;&#x610F;&#x5473;&#x7740;<code>manageReplicas()</code>&#x65B9;&#x6CD5;&#x4E0D;&#x4F1A;&#x88AB;&#x6267;&#x884C;&#xFF0C;&#x4F1A;&#x5BFC;&#x81F4;&#x8BE5;&#x5BF9;&#x8C61;&#x5728;&#x63A7;&#x5236;&#x5668;&#x4E2D;&#x903B;&#x8F91;&#x88AB;&#x963B;&#x585E;&#x3002;</p>
+<h3 id="&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;pod"><a name="&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;pod" class="anchor-navigation-ex-anchor" href="#&#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;pod"><i class="fa fa-link" aria-hidden="true"></i></a>2.2. &#x8FC7;&#x6EE4;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;Pod</h3>
+<p>&#x9996;&#x5148;&#x901A;&#x8FC7;<code>PodLister</code>&#x83B7;&#x53D6;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x4E0B;&#x7684;&#x6240;&#x6709;Pod&#xFF0C;&#x7136;&#x540E;&#x8C03;&#x7528;<code>claimPods()</code>&#x65B9;&#x6CD5;&#x8FDB;&#x884C;&#x5904;&#x7406;&#x3002;&#x8BE5;&#x65B9;&#x6CD5;&#x4F1A;&#x5148;&#x521B;&#x5EFA;&#x4E00;&#x4E2A;<code>PodControllerRefManager</code>&#x5BF9;&#x8C61;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x8BF4;&#x5728;&#x6BCF;&#x6B21;&#x8C03;&#x8C10;&#x65F6;&#x90FD;&#x4F1A;&#x7ED9;&#x76EE;&#x6807;<code>ReplicaSet</code>&#x521B;&#x5EFA;&#x4E00;&#x4E2A;<code>PodControllerRefManager</code>&#x7528;&#x6765;&#x8BA4;&#x9886;Pod&#xFF0C;&#x5B83;&#x4F5C;&#x4E3A;&#x5C40;&#x90E8;&#x53D8;&#x91CF;&#x751F;&#x547D;&#x5468;&#x671F;&#x968F;<code>claimPods()</code>&#x65B9;&#x6CD5;&#x4E00;&#x540C;&#x7ED3;&#x675F;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">claimPods</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> rs <span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">,</span> selector labels<span class="token punctuation">.</span>Selector<span class="token punctuation">,</span> filteredPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Pod&#x8BA4;&#x9886;&#x5224;&#x65AD;&#x51FD;&#x6570;</span>
+    canAdoptFunc <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">RecheckDeletionTimestamp</span><span class="token punctuation">(</span><span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">(</span>metav1<span class="token punctuation">.</span>Object<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        fresh<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>kubeClient<span class="token punctuation">.</span><span class="token function">AppsV1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">ReplicaSets</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Name<span class="token punctuation">,</span> metav1<span class="token punctuation">.</span>GetOptions<span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> fresh<span class="token punctuation">.</span>UID <span class="token operator">!=</span> rs<span class="token punctuation">.</span>UID <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;original %v %v/%v is gone: got uid %v, wanted %v&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Name<span class="token punctuation">,</span> fresh<span class="token punctuation">.</span>UID<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>UID<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> fresh<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x521B;&#x5EFA;PodControllerRefManager</span>
+    cm <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">NewPodControllerRefManager</span><span class="token punctuation">(</span>rsc<span class="token punctuation">.</span>podControl<span class="token punctuation">,</span> rs<span class="token punctuation">,</span> selector<span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>GroupVersionKind<span class="token punctuation">,</span> canAdoptFunc<span class="token punctuation">)</span>
+    <span class="token comment">// &#x5904;&#x7406;Pod</span>
+    <span class="token keyword">return</span> cm<span class="token punctuation">.</span><span class="token function">ClaimPods</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> filteredPods<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>&#x5BF9;&#x8C61;&#x521B;&#x5EFA;&#x540E;&#x53EA;&#x6709;&#x4E00;&#x4E2A;&#x4EFB;&#x52A1;&#xFF0C;&#x8C03;&#x7528;<code>ClaimPods()</code>&#x65B9;&#x6CD5;&#x8FC7;&#x6EE4;&#x5C5E;&#x4E8E;&#x8FD9;&#x4E2A;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x7684;Pod&#x3002;&#x5728;&#x8FD9;&#x4E2A;&#x8FC7;&#x7A0B;&#x4E2D;&#x8981;&#x5339;&#x914D;Pod&#x6807;&#x7B7E;&#x548C;<code>ReplicaSet</code>&#x7684;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#xFF0C;&#x6240;&#x4EE5;&#x8F93;&#x5165;&#x53C2;&#x6570;&#x9664;&#x4E86;&#x4E0A;&#x4E0B;&#x6587;&#x4FE1;&#x606F;&#x53EA;&#x4F20;&#x5165;&#x4E86;Pod&#x5217;&#x8868;&#xFF0C;&#x5B9E;&#x9645;&#x4E0A;&#x8FD8;&#x53EF;&#x4EE5;&#x6839;&#x636E;&#x9700;&#x8981;&#x4F20;&#x9012;&#x8FC7;&#x6EE4;&#x51FD;&#x6570;<code>filters</code>&#x3002;&#x5176;&#x4E2D;&#x5B9A;&#x4E49;&#x4E86;<code>match</code>&#x3001;<code>adopt</code>&#x3001;<code>release</code>&#x4E09;&#x79CD;&#x65B9;&#x6CD5;&#x7528;&#x4E8E;&#x5728;&#x5BF9;&#x5E94;&#x7684;&#x60C5;&#x51B5;&#x4E0B;&#x5904;&#x7406;Pod&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>m <span class="token operator">*</span>PodControllerRefManager<span class="token punctuation">)</span> <span class="token function">ClaimPods</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> pods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> filters <span class="token operator">...</span><span class="token keyword">func</span><span class="token punctuation">(</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span> <span class="token builtin">bool</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> claimed <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod
+    <span class="token keyword">var</span> errlist <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">error</span>
+    <span class="token comment">// &#x7B5B;&#x9009;&#x51FD;&#x6570;</span>
+    match <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>obj metav1<span class="token punctuation">.</span>Object<span class="token punctuation">)</span> <span class="token builtin">bool</span> <span class="token punctuation">{</span>
+        pod <span class="token operator">:=</span> obj<span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span>
+        <span class="token comment">// &#x5339;&#x914D;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;</span>
+        <span class="token keyword">if</span> <span class="token operator">!</span>m<span class="token punctuation">.</span>Selector<span class="token punctuation">.</span><span class="token function">Matches</span><span class="token punctuation">(</span>labels<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span>pod<span class="token punctuation">.</span>Labels<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x5339;&#x914D;&#x81EA;&#x5B9A;&#x4E49;&#x8FC7;&#x6EE4;&#x51FD;&#x6570;</span>
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> filter <span class="token operator">:=</span> <span class="token keyword">range</span> filters <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token operator">!</span><span class="token function">filter</span><span class="token punctuation">(</span>pod<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> <span class="token boolean">false</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x8BA4;&#x9886;&#x51FD;&#x6570;</span>
+    adopt <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> obj metav1<span class="token punctuation">.</span>Object<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> m<span class="token punctuation">.</span><span class="token function">AdoptPod</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> obj<span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x91CA;&#x653E;&#x51FD;&#x6570;</span>
+    release <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> obj metav1<span class="token punctuation">.</span>Object<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> m<span class="token punctuation">.</span><span class="token function">ReleasePod</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> obj<span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x904D;&#x5386;Pod&#x5217;&#x8868;</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> pods <span class="token punctuation">{</span>
+        ok<span class="token punctuation">,</span> err <span class="token operator">:=</span> m<span class="token punctuation">.</span><span class="token function">ClaimObject</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> pod<span class="token punctuation">,</span> match<span class="token punctuation">,</span> adopt<span class="token punctuation">,</span> release<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            errlist <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>errlist<span class="token punctuation">,</span> err<span class="token punctuation">)</span>
+            <span class="token keyword">continue</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x6536;&#x96C6;&#x8BA4;&#x9886;&#x6210;&#x529F;&#x7684;Pod</span>
+        <span class="token keyword">if</span> ok <span class="token punctuation">{</span>
+            claimed <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>claimed<span class="token punctuation">,</span> pod<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> claimed<span class="token punctuation">,</span> utilerrors<span class="token punctuation">.</span><span class="token function">NewAggregate</span><span class="token punctuation">(</span>errlist<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>&#x5904;&#x7406;&#x5355;&#x4E2A;Pod&#x7684;&#x5177;&#x4F53;&#x52A8;&#x4F5C;&#x7531;<code>ClaimObject()</code>&#x65B9;&#x6CD5;&#x5B8C;&#x6210;&#xFF0C;&#x9996;&#x5148;&#x68C0;&#x67E5;Pod&#x662F;&#x5426;&#x5B58;&#x5728;<code>OwnerReference</code>&#xFF0C;&#x5982;&#x679C;&#x4E0D;&#x5B58;&#x5728;&#x90A3;&#x4E48;&#x5F53;&#x524D;&#x5B83;&#x662F;&#x4E00;&#x4E2A;&#x5B64;&#x513F;&#x5BF9;&#x8C61;&#xFF0C;&#x68C0;&#x67E5;Pod&#x662F;&#x5426;&#x6B63;&#x5904;&#x4E8E;&#x5220;&#x9664;&#x72B6;&#x6001;&#x4EE5;&#x53CA;&#x5B83;&#x7684;&#x547D;&#x540D;&#x7A7A;&#x95F4;&#x548C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x7684;&#x662F;&#x5426;&#x76F8;&#x540C;&#xFF0C;&#x7136;&#x540E;&#x5C1D;&#x8BD5;&#x8BA4;&#x9886;&#x8BE5;Pod;&#x5982;&#x679C;&#x5B58;&#x5728;&#xFF0C;&#x68C0;&#x67E5;<code>OwnerReference</code>&#x7684;<code>UID</code>&#x548C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x662F;&#x5426;&#x76F8;&#x540C;&#xFF0C;<code>UID</code>&#x5982;&#x679C;&#x76F8;&#x540C;&#x8FD8;&#x9700;&#x8981;&#x786E;&#x8BA4;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x662F;&#x5426;&#x6EE1;&#x8DB3;&#xFF0C;&#x7136;&#x540E;&#x8FD4;&#x56DE;&#x7ED3;&#x679C;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>m <span class="token operator">*</span>BaseControllerRefManager<span class="token punctuation">)</span> <span class="token function">ClaimObject</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> obj metav1<span class="token punctuation">.</span>Object<span class="token punctuation">,</span> match <span class="token keyword">func</span><span class="token punctuation">(</span>metav1<span class="token punctuation">.</span>Object<span class="token punctuation">)</span> <span class="token builtin">bool</span><span class="token punctuation">,</span> adopt<span class="token punctuation">,</span> release <span class="token keyword">func</span><span class="token punctuation">(</span>context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> metav1<span class="token punctuation">.</span>Object<span class="token punctuation">)</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token builtin">bool</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x83B7;&#x53D6;Pod&#x7684;OwnerReference&#x5BF9;&#x8C61;</span>
+    controllerRef <span class="token operator">:=</span> metav1<span class="token punctuation">.</span><span class="token function">GetControllerOfNoCopy</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span>
+    <span class="token comment">// OwnerReference&#x5B58;&#x5728;</span>
+    <span class="token keyword">if</span> controllerRef <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x68C0;&#x67E5;OwnerReference&#x7684;UID&#x548C;&#x5F53;&#x524D;&#x63A7;&#x5236;&#x5668;&#x662F;&#x5426;&#x76F8;&#x540C;</span>
+        <span class="token keyword">if</span> controllerRef<span class="token punctuation">.</span>UID <span class="token operator">!=</span> m<span class="token punctuation">.</span>Controller<span class="token punctuation">.</span><span class="token function">GetUID</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// &#x5C5E;&#x4E8E;&#x5176;&#x4ED6;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token function">match</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// &#x53EA;&#x8981;&#x6EE1;&#x8DB3;&#x6761;&#x4EF6;&#x5C31;&#x8FD4;&#x56DE;&#x6210;&#x529F;</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// OwnerReference&#x7684;UID&#x76F8;&#x540C;&#x4F46;&#x4E0D;&#x6EE1;&#x8DB3;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x7684;&#x6761;&#x4EF6;</span>
+        <span class="token comment">// &#x68C0;&#x67E5;&#x662F;&#x5426;&#x6B63;&#x5728;&#x88AB;&#x5220;&#x9664;</span>
+        <span class="token keyword">if</span> m<span class="token punctuation">.</span>Controller<span class="token punctuation">.</span><span class="token function">GetDeletionTimestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x5982;&#x679C;&#x6CA1;&#x6709;&#x5728;&#x5220;&#x9664;&#x4E2D; &#x8C03;&#x7528;release&#x65B9;&#x6CD5;&#x91CA;&#x653E;Pod</span>
+        <span class="token keyword">if</span> err <span class="token operator">:=</span> <span class="token function">release</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> obj<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token comment">// If the pod no longer exists, ignore the error.</span>
+            <span class="token keyword">if</span> errors<span class="token punctuation">.</span><span class="token function">IsNotFound</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+            <span class="token punctuation">}</span>
+            <span class="token comment">// Either someone else released it, or there was a transient error.</span>
+            <span class="token comment">// The controller should requeue and try again if it&apos;s still stale.</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> err
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x91CA;&#x653E;&#x6210;&#x529F;&#x8FD4;&#x56DE;false</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// OwnerReference&#x4E0D;&#x5B58;&#x5728; &#x5B64;&#x513F;&#x5BF9;&#x8C61;&#x5904;&#x7406;&#x5206;&#x652F;</span>
+    <span class="token keyword">if</span> m<span class="token punctuation">.</span>Controller<span class="token punctuation">.</span><span class="token function">GetDeletionTimestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token operator">||</span> <span class="token operator">!</span><span class="token function">match</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// Ignore if we&apos;re being deleted or selector doesn&apos;t match.</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x662F;&#x5426;&#x6B63;&#x5728;&#x5220;&#x9664;&#x4E2D;</span>
+    <span class="token keyword">if</span> obj<span class="token punctuation">.</span><span class="token function">GetDeletionTimestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x547D;&#x540D;&#x7A7A;&#x95F4;&#x68C0;&#x67E5;</span>
+    <span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>m<span class="token punctuation">.</span>Controller<span class="token punctuation">.</span><span class="token function">GetNamespace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> m<span class="token punctuation">.</span>Controller<span class="token punctuation">.</span><span class="token function">GetNamespace</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> obj<span class="token punctuation">.</span><span class="token function">GetNamespace</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// &#x8C03;&#x7528;adopt&#x65B9;&#x6CD5;&#x8BA4;&#x9886;Pod</span>
+    <span class="token keyword">if</span> err <span class="token operator">:=</span> <span class="token function">adopt</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> obj<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        <span class="token comment">// If the pod no longer exists, ignore the error.</span>
+        <span class="token keyword">if</span> errors<span class="token punctuation">.</span><span class="token function">IsNotFound</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// Either someone else claimed it first, or there was a transient error.</span>
+        <span class="token comment">// The controller should requeue and try again if it&apos;s still orphaned.</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">,</span> err
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x8BA4;&#x9886;&#x6210;&#x529F;&#x8FD4;&#x56DE;true</span>
+    <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="&#x526F;&#x672C;&#x7BA1;&#x7406;&#x6838;&#x5FC3;&#x903B;&#x8F91;"><a name="&#x526F;&#x672C;&#x7BA1;&#x7406;&#x6838;&#x5FC3;&#x903B;&#x8F91;" class="anchor-navigation-ex-anchor" href="#&#x526F;&#x672C;&#x7BA1;&#x7406;&#x6838;&#x5FC3;&#x903B;&#x8F91;"><i class="fa fa-link" aria-hidden="true"></i></a>3. &#x526F;&#x672C;&#x7BA1;&#x7406;(&#x6838;&#x5FC3;&#x903B;&#x8F91;)</h2>
+<p>&#x5982;&#x679C;&#x5F53;&#x524D;&#x72B6;&#x6001;&#x548C;&#x671F;&#x671B;&#x72B6;&#x6001;&#x4E0D;&#x4E00;&#x81F4;&#xFF0C;&#x5C31;&#x4F1A;&#x8C03;&#x7528;<code>manageReplicas()</code>&#x65B9;&#x6CD5;&#x4F7F;&#x526F;&#x672C;&#x72B6;&#x6001;&#x8D8B;&#x4E8E;&#x671F;&#x671B;&#x3002;&#x6839;&#x636E;&#x51FD;&#x6570;&#x7B7E;&#x540D;&#xFF0C;&#x8F93;&#x5165;&#x53C2;&#x6570;&#x5305;&#x62EC;&#x4E0A;&#x4E0B;&#x6587;&#x4FE1;&#x606F;&#x3001;&#x63A7;&#x5236;&#x5668;&#x7BA1;&#x7406;&#x7684;Pod&#x5217;&#x8868;<code>filteredPods</code>&#x548C;<code>ReplicaSet</code>&#x5BF9;&#x8C61;<code>rs</code>&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">manageReplicas</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> filteredPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> rs <span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x8BA1;&#x7B97;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#x548C;&#x5B9E;&#x9645;&#x526F;&#x672C;&#x6570;&#x7684;&#x5DEE;&#x503C;</span>
+    diff <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">int</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token comment">// &#x7ECF;&#x8FC7;KeyFunc&#x83B7;&#x53D6;ReplicaSet&#x5BF9;&#x8C61;&#x7684;obj key</span>
+    rsKey<span class="token punctuation">,</span> err <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">KeyFunc</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;couldn&apos;t get key for %v %#v: %v&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> rs<span class="token punctuation">,</span> err<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    logger <span class="token operator">:=</span> klog<span class="token punctuation">.</span><span class="token function">FromContext</span><span class="token punctuation">(</span>ctx<span class="token punctuation">)</span>
+    <span class="token comment">// &#x5B9E;&#x9645;&#x526F;&#x672C;&#x6570;&#x5C0F;&#x4E8E;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;</span>
+    <span class="token keyword">if</span> diff <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+        diff <span class="token operator">*=</span> <span class="token operator">-</span><span class="token number">1</span>
+        <span class="token comment">// &#x9650;&#x5236;&#x53D8;&#x5316;&#x6570;&#x91CF;&#x4E0A;&#x9650;</span>
+        <span class="token keyword">if</span> diff <span class="token operator">&gt;</span> rsc<span class="token punctuation">.</span>burstReplicas <span class="token punctuation">{</span>
+            diff <span class="token operator">=</span> rsc<span class="token punctuation">.</span>burstReplicas
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x8BB0;&#x5F55;&#x9884;&#x671F;&#x521B;&#x5EFA;&#x6570;&#x91CF; &#x4E0E;Informer&#x534F;&#x540C;&#x4F5C;&#x7528;</span>
+        rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">ExpectCreations</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Too few replicas&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;need&quot;</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;creating&quot;</span><span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x521B;&#x5EFA;&#x671F;&#x671B;&#x6570;&#x91CF;&#x7684;Pod</span>
+        successfulCreations<span class="token punctuation">,</span> err <span class="token operator">:=</span> <span class="token function">slowStartBatch</span><span class="token punctuation">(</span>diff<span class="token punctuation">,</span> controller<span class="token punctuation">.</span>SlowStartInitialBatchSize<span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+            err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>podControl<span class="token punctuation">.</span><span class="token function">CreatePods</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">,</span> <span class="token operator">&amp;</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Template<span class="token punctuation">,</span> rs<span class="token punctuation">,</span> metav1<span class="token punctuation">.</span><span class="token function">NewControllerRef</span><span class="token punctuation">(</span>rs<span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>GroupVersionKind<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token keyword">if</span> apierrors<span class="token punctuation">.</span><span class="token function">HasStatusCause</span><span class="token punctuation">(</span>err<span class="token punctuation">,</span> v1<span class="token punctuation">.</span>NamespaceTerminatingCause<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                    <span class="token keyword">return</span> <span class="token boolean">nil</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">return</span> err
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token comment">// &#x5B58;&#x5728;Pod&#x521B;&#x5EFA;&#x5931;&#x8D25;</span>
+        <span class="token keyword">if</span> skippedPods <span class="token operator">:=</span> diff <span class="token operator">-</span> successfulCreations<span class="token punctuation">;</span> skippedPods <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+            logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Slow-start failure. Skipping creation of pods, decrementing expectations&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;podsSkipped&quot;</span><span class="token punctuation">,</span> skippedPods<span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">for</span> i <span class="token operator">:=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> skippedPods<span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">{</span>
+                <span class="token comment">// &#x4FEE;&#x6539;&#x671F;&#x671B;&#x521B;&#x5EFA;&#x6570;&#x91CF;</span>
+                rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">CreationObserved</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> err
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> diff <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x5B9E;&#x9645;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;</span>
+        <span class="token keyword">if</span> diff <span class="token operator">&gt;</span> rsc<span class="token punctuation">.</span>burstReplicas <span class="token punctuation">{</span>
+            diff <span class="token operator">=</span> rsc<span class="token punctuation">.</span>burstReplicas
+        <span class="token punctuation">}</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Too many replicas&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;need&quot;</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;deleting&quot;</span><span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x83B7;&#x53D6;&#x5173;&#x8054;&#x7684;Pod</span>
+        relatedPods<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span><span class="token function">getIndirectlyRelatedPods</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rs<span class="token punctuation">)</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span>
+        <span class="token comment">// &#x83B7;&#x53D6;&#x8981;&#x5220;&#x9664;&#x7684;Pod</span>
+        podsToDelete <span class="token operator">:=</span> <span class="token function">getPodsToDelete</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">,</span> relatedPods<span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x8BBE;&#x7F6E;&#x9884;&#x671F;&#x5220;&#x9664;&#x6570;&#x91CF;</span>
+        rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">ExpectDeletions</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">,</span> <span class="token function">getPodKeys</span><span class="token punctuation">(</span>podsToDelete<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+        errCh <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">chan</span> <span class="token builtin">error</span><span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token keyword">var</span> wg sync<span class="token punctuation">.</span>WaitGroup
+        wg<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x5E76;&#x53D1;&#x5220;&#x9664;Pod</span>
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> podsToDelete <span class="token punctuation">{</span>
+            <span class="token keyword">go</span> <span class="token keyword">func</span><span class="token punctuation">(</span>targetPod <span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">defer</span> wg<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>podControl<span class="token punctuation">.</span><span class="token function">DeletePod</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">,</span> targetPod<span class="token punctuation">.</span>Name<span class="token punctuation">,</span> rs<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                    <span class="token comment">// Decrement the expected number of deletes because the informer won&apos;t observe this deletion</span>
+                    podKey <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">PodKey</span><span class="token punctuation">(</span>targetPod<span class="token punctuation">)</span>
+                    rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">DeletionObserved</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">,</span> podKey<span class="token punctuation">)</span>
+                    <span class="token keyword">if</span> <span class="token operator">!</span>apierrors<span class="token punctuation">.</span><span class="token function">IsNotFound</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Failed to delete pod, decremented expectations&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;pod&quot;</span><span class="token punctuation">,</span> podKey<span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+                        errCh <span class="token operator">&lt;-</span> err
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">(</span>pod<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        wg<span class="token punctuation">.</span><span class="token function">Wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">select</span> <span class="token punctuation">{</span>
+        <span class="token keyword">case</span> err <span class="token operator">:=</span> <span class="token operator">&lt;-</span>errCh<span class="token punctuation">:</span>
+            <span class="token comment">// all errors have been reported before and they&apos;re likely to be the same, so we&apos;ll only return the first one we hit.</span>
+            <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> err
+            <span class="token punctuation">}</span>
+        <span class="token keyword">default</span><span class="token punctuation">:</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;"><a name="&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;" class="anchor-navigation-ex-anchor" href="#&#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;"><i class="fa fa-link" aria-hidden="true"></i></a>3.1. &#x9700;&#x8981;&#x521B;&#x5EFA;&#x526F;&#x672C;</h3>
+<h4 id="&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;"><a name="&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;" class="anchor-navigation-ex-anchor" href="#&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x6162;&#x542F;&#x52A8;&#x6279;&#x91CF;&#x521B;&#x5EFA;</h4>
+<p>&#x4F7F;&#x7528;<code>slowStartBatch()</code>&#x51FD;&#x6570;&#x6279;&#x91CF;&#x521B;&#x5EFA;Pod&#xFF0C;&#x51FD;&#x6570;&#x540D;&#x4E3A;&#x6162;&#x542F;&#x52A8;&#x6279;&#x5904;&#x7406;&#xFF0C;&#x7528;&#x4E8E;&#x63A7;&#x5236;&#x5E76;&#x53D1;&#x7684;&#x901F;&#x7387;&#xFF0C;&#x907F;&#x514D;&#x4E00;&#x6B21;&#x6027;&#x53D1;&#x8D77;&#x8FC7;&#x591A;&#x8BF7;&#x6C42;&#x9020;&#x6210;&#x7684;&#x7CFB;&#x7EDF;&#x538B;&#x529B;&#x3002;&#x63A5;&#x6536;&#x5904;&#x7406;&#x603B;&#x6570;<code>count</code>&#x3001;&#x521D;&#x59CB;&#x6279;&#x5904;&#x7406;&#x5927;&#x5C0F;<code>initialBatchSize</code>&#x548C;&#x903B;&#x8F91;&#x51FD;&#x6570;<code>fn</code>&#x3002;&#x5FAA;&#x73AF;&#x6267;&#x884C;&#x8F93;&#x5165;&#x7684;&#x903B;&#x8F91;&#x51FD;&#x6570;&#xFF0C;&#x521D;&#x59CB;&#x6279;&#x5904;&#x7406;&#x5927;&#x5C0F;&#x4E3A;1&#xFF0C;&#x901A;&#x8FC7;<code>channel</code>&#x63A7;&#x5236;&#x5E76;&#x53D1;&#xFF0C;&#x6BCF;&#x4E00;&#x8F6E;&#x5FAA;&#x73AF;&#x540E;&#x66F4;&#x65B0;&#x8BA1;&#x6570;&#x548C;&#x6279;&#x5904;&#x7406;&#x5927;&#x5C0F;&#xFF0C;&#x6700;&#x540E;&#x8FD4;&#x56DE;&#x6210;&#x529F;&#x6570;&#x91CF;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">slowStartBatch</span><span class="token punctuation">(</span>count <span class="token builtin">int</span><span class="token punctuation">,</span> initialBatchSize <span class="token builtin">int</span><span class="token punctuation">,</span> fn <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x5269;&#x4F59;&#x5904;&#x7406;&#x6B21;&#x6570;</span>
+    remaining <span class="token operator">:=</span> count
+    successes <span class="token operator">:=</span> <span class="token number">0</span>
+    <span class="token comment">// &#x5FAA;&#x73AF;&#x6267;&#x884C;&#x903B;&#x8F91; &#x6279;&#x5904;&#x7406;&#x6570;&#x91CF;&#x9010;&#x6B65;&#x589E;&#x52A0;</span>
+    <span class="token keyword">for</span> batchSize <span class="token operator">:=</span> <span class="token function">min</span><span class="token punctuation">(</span>remaining<span class="token punctuation">,</span> initialBatchSize<span class="token punctuation">)</span><span class="token punctuation">;</span> batchSize <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">;</span> batchSize <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token operator">*</span>batchSize<span class="token punctuation">,</span> remaining<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        errCh <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">chan</span> <span class="token builtin">error</span><span class="token punctuation">,</span> batchSize<span class="token punctuation">)</span>
+        <span class="token keyword">var</span> wg sync<span class="token punctuation">.</span>WaitGroup
+        <span class="token comment">// &#x5E76;&#x53D1;&#x63A7;&#x5236;</span>
+        wg<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>batchSize<span class="token punctuation">)</span>
+        <span class="token keyword">for</span> i <span class="token operator">:=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> batchSize<span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">{</span>
+            <span class="token keyword">go</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">defer</span> wg<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> err <span class="token operator">:=</span> <span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                    errCh <span class="token operator">&lt;-</span> err
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        wg<span class="token punctuation">.</span><span class="token function">Wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token comment">// &#x66F4;&#x65B0;&#x8BA1;&#x6570;</span>
+        curSuccesses <span class="token operator">:=</span> batchSize <span class="token operator">-</span> <span class="token function">len</span><span class="token punctuation">(</span>errCh<span class="token punctuation">)</span>
+        successes <span class="token operator">+=</span> curSuccesses
+        <span class="token comment">// &#x6709;&#x5931;&#x8D25;&#x4E8B;&#x4EF6;&#x76F4;&#x63A5;&#x8FD4;&#x56DE;</span>
+        <span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>errCh<span class="token punctuation">)</span> <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> successes<span class="token punctuation">,</span> <span class="token operator">&lt;-</span>errCh
+        <span class="token punctuation">}</span>
+        remaining <span class="token operator">-=</span> batchSize
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> successes<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;eventhandler"><a name="&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;eventhandler" class="anchor-navigation-ex-anchor" href="#&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;eventhandler"><i class="fa fa-link" aria-hidden="true"></i></a>&#x521B;&#x5EFA;&#x5931;&#x8D25;&#x5904;&#x7406;&#x548C;EventHandler</h4>
+<p>&#x5728;&#x4E0A;&#x9762;&#x7684;&#x6D41;&#x7A0B;&#x4E2D;&#x66FE;&#x8C03;&#x7528;<code>expectations.ExpectCreations()</code>&#x65B9;&#x6CD5;&#x8BBE;&#x7F6E;&#x671F;&#x671B;&#x521B;&#x5EFA;/&#x5220;&#x9664;&#x526F;&#x672C;&#x6570;&#x91CF;&#xFF0C;&#x671F;&#x671B;&#x503C;<code>expectations</code>&#x5145;&#x5F53;&#x7F13;&#x51B2;&#x8BA1;&#x6570;&#x5668;&#xFF0C;&#x5E76;&#x4E14;&#x4F1A;&#x4F20;&#x9012;&#x5230;&#x540E;&#x9762;&#x7684;&#x5468;&#x671F;&#xFF0C;&#x63A7;&#x5236;&#x5668;&#x5728;&#x542F;&#x52A8;&#x65F6;&#x7684;<code>SatisfiedExpectations()</code>&#x65B9;&#x6CD5;&#x5C31;&#x662F;&#x5BF9;&#x671F;&#x671B;&#x503C;&#x8FDB;&#x884C;&#x68C0;&#x67E5;&#xFF0C;&#x4E3A;&#x4E86;&#x4FDD;&#x8BC1;&#x6838;&#x5FC3;&#x903B;&#x8F91;&#x7684;&#x987A;&#x5229;&#x6267;&#x884C;&#xFF0C;&#x4F1A;&#x671F;&#x671B;&#x6BCF;&#x6B21;&#x68C0;&#x67E5;&#x65F6;&#x7684;<code>ControlleeExpectations.add</code>&#x548C;<code>ControlleeExpectations.del</code>&#x90FD;&#x4E0D;&#x5927;&#x4E8E;0&#x3002;&#x8FD9;&#x4F9D;&#x8D56;<code>PodInformer</code>&#x548C;<code>CreationObserved()</code>&#x7684;&#x534F;&#x540C;&#x5904;&#x7406;&#xFF0C;&#x5728;&#x6CE8;&#x518C;&#x7684;<code>EventHandler</code>&#x4E2D;&#xFF0C;&#x6BCF;&#x89C2;&#x6D4B;&#x5230;&#x521B;&#x5EFA;&#x4E86;&#x4E00;&#x4E2A;&#x5C5E;&#x4E8E;&#x8BE5;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x7684;Pod&#x526F;&#x672C;&#xFF0C;&#x5C31;&#x4F1A;&#x8C03;&#x7528;<code>CreationObserved()&#x65B9;&#x6CD5;&#x4F7F;</code>&#x8BA1;&#x6570;&#x5668;&#x7684;<code>add</code>&#x5B57;&#x6BB5;&#x503C;&#x51CF;&#x4E00;&#xFF0C;&#x4E5F;&#x5C31;&#x662F;&#x8BF4;&#x5982;&#x679C;&#x6240;&#x6709;&#x7684;&#x521B;&#x5EFA;&#x64CD;&#x4F5C;&#x90FD;&#x6267;&#x884C;&#x6210;&#x529F;&#xFF0C;&#x90A3;&#x4E0B;&#x4E00;&#x6B21;&#x7684;&#x671F;&#x671B;&#x68C0;&#x67E5;&#x5C31;&#x4F1A;&#x901A;&#x8FC7;&#xFF0C;&#x7136;&#x540E;&#x91CD;&#x65B0;&#x5728;<code>manageReplicas()</code>&#x65B9;&#x6CD5;&#x4E2D;&#x8BA1;&#x7B97;&#x5DEE;&#x503C;&#x5E76;&#x8FDB;&#x884C;&#x521B;&#x5EFA;/&#x5220;&#x9664;&#x3002;&#x5F53;&#x521B;&#x5EFA;&#x8FC7;&#x7A0B;&#x4E2D;&#x53D1;&#x751F;&#x9519;&#x8BEF;&#xFF0C;&#x90A3;&#x4E48;&#x5C31;&#x4F1A;&#x8C03;&#x7528;<code>CreationObserved()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x6267;&#x884C;<code>&#x671F;&#x671B;&#x6269;&#x5BB9;&#x6570;-&#x6210;&#x529F;&#x6269;&#x5BB9;&#x6570;</code>&#x7684;&#x6B21;&#x6570;&#xFF0C;&#x6700;&#x7EC8;&#x4F7F;&#x8BA1;&#x6570;&#x5668;&#x6E05;&#x96F6;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>r <span class="token operator">*</span>ControllerExpectations<span class="token punctuation">)</span> <span class="token function">CreationObserved</span><span class="token punctuation">(</span>logger klog<span class="token punctuation">.</span>Logger<span class="token punctuation">,</span> controllerKey <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    r<span class="token punctuation">.</span><span class="token function">LowerExpectations</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> controllerKey<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>r <span class="token operator">*</span>ControllerExpectations<span class="token punctuation">)</span> <span class="token function">LowerExpectations</span><span class="token punctuation">(</span>logger klog<span class="token punctuation">.</span>Logger<span class="token punctuation">,</span> controllerKey <span class="token builtin">string</span><span class="token punctuation">,</span> add<span class="token punctuation">,</span> del <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> exp<span class="token punctuation">,</span> exists<span class="token punctuation">,</span> err <span class="token operator">:=</span> r<span class="token punctuation">.</span><span class="token function">GetExpectations</span><span class="token punctuation">(</span>controllerKey<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token operator">&amp;&amp;</span> exists <span class="token punctuation">{</span>
+        exp<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token function">int64</span><span class="token punctuation">(</span><span class="token operator">-</span>add<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">int64</span><span class="token punctuation">(</span><span class="token operator">-</span>del<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token comment">// The expectations might&apos;ve been modified since the update on the previous line.</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Lowered expectations&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;expectations&quot;</span><span class="token punctuation">,</span> exp<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;"><a name="&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;" class="anchor-navigation-ex-anchor" href="#&#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;"><i class="fa fa-link" aria-hidden="true"></i></a>3.2. &#x9700;&#x8981;&#x7F29;&#x5BB9;&#x526F;&#x672C;</h3>
+<p>&#x5982;&#x679C;&#x5B9E;&#x9645;&#x526F;&#x672C;&#x6570;&#x5927;&#x4E8E;&#x671F;&#x671B;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x5C31;&#x9700;&#x8981;&#x5BF9;Pod&#x526F;&#x672C;&#x8FDB;&#x884C;&#x7F29;&#x5BB9;&#x3002;&#x9996;&#x5148;&#x8BBE;&#x7F6E;&#x5904;&#x7406;&#x6570;&#x91CF;&#xFF0C;&#x7136;&#x540E;&#x627E;&#x51FA;&#x548C;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x5173;&#x8054;&#x7684;Pod&#xFF0C;&#x518D;&#x4ECE;&#x4E2D;&#x9009;&#x51FA;&#x8981;&#x5220;&#x9664;&#x7684;Pod&#x526F;&#x672C;&#xFF0C;&#x6700;&#x540E;&#x901A;&#x8FC7;<code>goroutine</code>&#x548C;<code>channel</code>&#x5B9E;&#x73B0;&#x5220;&#x9664;&#x7684;&#x5E76;&#x53D1;&#x63A7;&#x5236;&#x3002;&#x5E76;&#x6301;&#x7EED;&#x8BFB;&#x76D1;&#x542C;&#x9519;&#x8BEF;&#x901A;&#x9053;&#xFF0C;&#x5982;&#x679C;&#x51FA;&#x73B0;&#x9519;&#x8BEF;&#x6570;&#x636E;&#x5C31;&#x4E2D;&#x65AD;&#x64CD;&#x4F5C;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">manageReplicas</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> filteredPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> rs <span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span>
+    <span class="token operator">...</span><span class="token operator">...</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> diff <span class="token operator">&gt;</span> <span class="token number">0</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x6570;&#x91CF;&#x9650;&#x5236;</span>
+        <span class="token keyword">if</span> diff <span class="token operator">&gt;</span> rsc<span class="token punctuation">.</span>burstReplicas <span class="token punctuation">{</span>
+            diff <span class="token operator">=</span> rsc<span class="token punctuation">.</span>burstReplicas
+        <span class="token punctuation">}</span>
+        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Too many replicas&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;need&quot;</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Replicas<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;deleting&quot;</span><span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x83B7;&#x53D6;&#x5173;&#x8054;&#x7684;Pod</span>
+        relatedPods<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span><span class="token function">getIndirectlyRelatedPods</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rs<span class="token punctuation">)</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span>
+        <span class="token comment">// &#x9009;&#x62E9;&#x8981;&#x5220;&#x9664;&#x7684;Pod</span>
+        podsToDelete <span class="token operator">:=</span> <span class="token function">getPodsToDelete</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">,</span> relatedPods<span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x8BBE;&#x7F6E;&#x9884;&#x671F;&#x5220;&#x9664;&#x6570;&#x91CF;</span>
+        rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">ExpectDeletions</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">,</span> <span class="token function">getPodKeys</span><span class="token punctuation">(</span>podsToDelete<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+        errCh <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">chan</span> <span class="token builtin">error</span><span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+        <span class="token keyword">var</span> wg sync<span class="token punctuation">.</span>WaitGroup
+        wg<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>diff<span class="token punctuation">)</span>
+        <span class="token comment">// &#x5E76;&#x53D1;&#x5220;&#x9664;Pod</span>
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> podsToDelete <span class="token punctuation">{</span>
+            <span class="token keyword">go</span> <span class="token keyword">func</span><span class="token punctuation">(</span>targetPod <span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">defer</span> wg<span class="token punctuation">.</span><span class="token function">Done</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>podControl<span class="token punctuation">.</span><span class="token function">DeletePod</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> rs<span class="token punctuation">.</span>Namespace<span class="token punctuation">,</span> targetPod<span class="token punctuation">.</span>Name<span class="token punctuation">,</span> rs<span class="token punctuation">)</span><span class="token punctuation">;</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                    podKey <span class="token operator">:=</span> controller<span class="token punctuation">.</span><span class="token function">PodKey</span><span class="token punctuation">(</span>targetPod<span class="token punctuation">)</span>
+                    rsc<span class="token punctuation">.</span>expectations<span class="token punctuation">.</span><span class="token function">DeletionObserved</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rsKey<span class="token punctuation">,</span> podKey<span class="token punctuation">)</span>
+                    <span class="token keyword">if</span> <span class="token operator">!</span>apierrors<span class="token punctuation">.</span><span class="token function">IsNotFound</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                        logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Failed to delete pod, decremented expectations&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;pod&quot;</span><span class="token punctuation">,</span> podKey<span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+                        errCh <span class="token operator">&lt;-</span> err
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">(</span>pod<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+        wg<span class="token punctuation">.</span><span class="token function">Wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">select</span> <span class="token punctuation">{</span>
+        <span class="token keyword">case</span> err <span class="token operator">:=</span> <span class="token operator">&lt;-</span>errCh<span class="token punctuation">:</span>
+            <span class="token comment">// &#x5982;&#x679C;&#x51FA;&#x73B0;&#x9519;&#x8BEF;&#x4E2D;&#x65AD;&#x5220;&#x9664;&#x64CD;&#x4F5C;</span>
+            <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> err
+            <span class="token punctuation">}</span>
+        <span class="token keyword">default</span><span class="token punctuation">:</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;"><a name="&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;" class="anchor-navigation-ex-anchor" href="#&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x83B7;&#x53D6;&#x95F4;&#x63A5;&#x5173;&#x8054;&#x526F;&#x672C;</h4>
+<p><code>getIndirectlyRelatedPods()</code>&#x65B9;&#x6CD5;&#x7528;&#x6765;&#x627E;&#x5230;&#x6709;&#x95F4;&#x63A5;&#x4ECE;&#x5C5E;&#x5173;&#x7CFB;&#x7684;Pod&#x3002;&#x5148;&#x521D;&#x59CB;&#x5316;&#x4E00;&#x4E2A;&#x5217;&#x8868;&#xFF0C;&#x901A;&#x8FC7;<code>getReplicaSetsWithSameController()</code>&#x65B9;&#x6CD5;&#x83B7;&#x53D6;&#x548C;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x6709;&#x76F8;&#x540C;&#x4E0A;&#x5C42;&#x63A7;&#x5236;&#x5668;&#x7684;&#x6240;&#x6709;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x56E0;&#x4E3A;&#x5982;<code>Deployment</code>&#x5728;&#x6EDA;&#x52A8;&#x66F4;&#x65B0;&#x8FC7;&#x7A0B;&#x4E2D;&#x53EF;&#x80FD;&#x4F1A;&#x540C;&#x65F6;&#x7BA1;&#x7406;&#x591A;&#x4E2A;&#x7248;&#x672C;&#x7684;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#xFF0C;&#x5728;&#x7BA1;&#x7406;&#x526F;&#x672C;&#x65F6;&#x9700;&#x8981;&#x8003;&#x8651;&#x8FD9;&#x4E9B;&#x573A;&#x666F;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">getReplicaSetsWithSameController</span><span class="token punctuation">(</span>logger klog<span class="token punctuation">.</span>Logger<span class="token punctuation">,</span> rs <span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet <span class="token punctuation">{</span>
+    <span class="token comment">// &#x83B7;&#x53D6;OwnerReference</span>
+    controllerRef <span class="token operator">:=</span> metav1<span class="token punctuation">.</span><span class="token function">GetControllerOf</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> controllerRef <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">&quot;ReplicaSet has no controller: %v&quot;</span><span class="token punctuation">,</span> rs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x6839;&#x636E;OwnerReference.UID&#x5728;rsIndexer&#x4E2D;&#x67E5;&#x627E;&#x5BF9;&#x8C61;</span>
+    objects<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>rsIndexer<span class="token punctuation">.</span><span class="token function">ByIndex</span><span class="token punctuation">(</span>controllerUIDIndex<span class="token punctuation">,</span> <span class="token function">string</span><span class="token punctuation">(</span>controllerRef<span class="token punctuation">.</span>UID<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+        utilruntime<span class="token punctuation">.</span><span class="token function">HandleError</span><span class="token punctuation">(</span>err<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token boolean">nil</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x6DFB;&#x52A0;ReplicaSet&#x5BF9;&#x8C61;&#x5230;&#x5217;&#x8868;&#x5E76;&#x8FD4;&#x56DE;</span>
+    relatedRSs <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>objects<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> obj <span class="token operator">:=</span> <span class="token keyword">range</span> objects <span class="token punctuation">{</span>
+        relatedRSs <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>relatedRSs<span class="token punctuation">,</span> obj<span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span> klogV <span class="token operator">:=</span> logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span> klogV<span class="token punctuation">.</span><span class="token function">Enabled</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        klogV<span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Found related ReplicaSets&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;relatedReplicaSets&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObjSlice</span><span class="token punctuation">(</span>relatedRSs<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">return</span> relatedRSs
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x83B7;&#x53D6;&#x540E;&#xFF0C;&#x5F00;&#x59CB;&#x5904;&#x7406;&#x6BCF;&#x4E2A;&#x5BF9;&#x8C61;&#x4E2D;&#x7BA1;&#x7406;&#x7684;Pod&#x526F;&#x672C;&#xFF0C;&#x904D;&#x5386;&#x6240;&#x6709;<code>ReplicaSet</code>&#xFF0C;&#x901A;&#x8FC7;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x83B7;&#x53D6;&#x6807;&#x7B7E;&#x5339;&#x914D;&#x7684;Pod&#xFF0C;&#x7136;&#x540E;&#x6DFB;&#x52A0;&#x5230;&#x5173;&#x8054;Pod&#x5217;&#x8868;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x4E2A;Pod&#x88AB;&#x591A;&#x4E2A;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x5C31;&#x8DF3;&#x8FC7;&#x5904;&#x7406;&#xFF0C;&#x4EC5;&#x7528;&#x65E5;&#x5FD7;&#x8BB0;&#x5F55;&#x8BE5;Pod&#x540C;&#x65F6;&#x5C5E;&#x4E8E;&#x591A;&#x4E2A;<code>ReplicaSet</code>&#xFF0C;&#x6700;&#x540E;&#x628A;&#x548C;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6709;&#x5173;&#x7684;Pod&#x5217;&#x8868;&#x8FD4;&#x56DE;&#x7ED9;&#x4E0A;&#x5C42;&#x3002;</p>
+<p><code>relatedPods</code>&#x662F;&#x4E00;&#x4E2A;&#x6269;&#x5C55;&#x7684;&#x526F;&#x672C;&#x96C6;&#x5408;&#xFF0C;&#x4E0D;&#x4EC5;&#x6709;&#x6EE1;&#x8DB3;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x5BF9;&#x8C61;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x7684;Pod&#x526F;&#x672C;&#xFF0C;&#x8FD8;&#x5305;&#x542B;&#x901A;&#x8FC7;&#x5144;&#x5F1F;<code>ReplicaSet</code>(&#x4E0E;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x6709;&#x76F8;&#x540C;&#x7684;&#x4E0A;&#x5C42;&#x63A7;&#x5236;&#x5668;)&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x7684;Pod&#x526F;&#x672C;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>rsc <span class="token operator">*</span>ReplicaSetController<span class="token punctuation">)</span> <span class="token function">getIndirectlyRelatedPods</span><span class="token punctuation">(</span>logger klog<span class="token punctuation">.</span>Logger<span class="token punctuation">,</span> rs <span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;Pod&#x96C6;&#x5408;</span>
+    <span class="token keyword">var</span> relatedPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod
+    seen <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">map</span><span class="token punctuation">[</span>types<span class="token punctuation">.</span>UID<span class="token punctuation">]</span><span class="token operator">*</span>apps<span class="token punctuation">.</span>ReplicaSet<span class="token punctuation">)</span>
+    <span class="token comment">// &#x904D;&#x5386;&#x6240;&#x6709;&#x76F8;&#x540C;&#x4E0A;&#x5C42;&#x63A7;&#x5236;&#x5668;&#x7684;ReplicaSet&#x5BF9;&#x8C61;</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> relatedRS <span class="token operator">:=</span> <span class="token keyword">range</span> rsc<span class="token punctuation">.</span><span class="token function">getReplicaSetsWithSameController</span><span class="token punctuation">(</span>logger<span class="token punctuation">,</span> rs<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x83B7;&#x53D6;ReplicaSet&#x7684;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;</span>
+        selector<span class="token punctuation">,</span> err <span class="token operator">:=</span> metav1<span class="token punctuation">.</span><span class="token function">LabelSelectorAsSelector</span><span class="token punctuation">(</span>relatedRS<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>Selector<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">continue</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x901A;&#x8FC7;PodLIster&#x83B7;&#x53D6;&#x6EE1;&#x8DB3;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x6761;&#x4EF6;&#x7684;Pod&#x5217;&#x8868;</span>
+        pods<span class="token punctuation">,</span> err <span class="token operator">:=</span> rsc<span class="token punctuation">.</span>podLister<span class="token punctuation">.</span><span class="token function">Pods</span><span class="token punctuation">(</span>relatedRS<span class="token punctuation">.</span>Namespace<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">List</span><span class="token punctuation">(</span>selector<span class="token punctuation">)</span>
+        <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+        <span class="token punctuation">}</span>
+        <span class="token comment">// &#x904D;&#x5386;Pod&#x5217;&#x8868;</span>
+        <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> pods <span class="token punctuation">{</span>
+            <span class="token comment">// &#x5982;&#x679C;&#x6620;&#x5C04;&#x5DF2;&#x7ECF;&#x5B58;&#x5728; &#x8BB0;&#x5F55;&#x65E5;&#x5FD7;&#x5E76;&#x8DF3;&#x8FC7;&#x5904;&#x7406;</span>
+            <span class="token keyword">if</span> otherRS<span class="token punctuation">,</span> found <span class="token operator">:=</span> seen<span class="token punctuation">[</span>pod<span class="token punctuation">.</span>UID<span class="token punctuation">]</span><span class="token punctuation">;</span> found <span class="token punctuation">{</span>
+                logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Pod is owned by both&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;pod&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>pod<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;replicaSets&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObjSlice</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span>klog<span class="token punctuation">.</span>KMetadata<span class="token punctuation">{</span>otherRS<span class="token punctuation">,</span> relatedRS<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token keyword">continue</span>
+            <span class="token punctuation">}</span>
+            <span class="token comment">// &#x6DFB;&#x52A0;Pod-ReplicaSet&#x6620;&#x5C04;</span>
+            seen<span class="token punctuation">[</span>pod<span class="token punctuation">.</span>UID<span class="token punctuation">]</span> <span class="token operator">=</span> relatedRS
+            relatedPods <span class="token operator">=</span> <span class="token function">append</span><span class="token punctuation">(</span>relatedPods<span class="token punctuation">,</span> pod<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    logger<span class="token punctuation">.</span><span class="token function">V</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Info</span><span class="token punctuation">(</span><span class="token string">&quot;Found related pods&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;kind&quot;</span><span class="token punctuation">,</span> rsc<span class="token punctuation">.</span>Kind<span class="token punctuation">,</span> <span class="token string">&quot;replicaSet&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObj</span><span class="token punctuation">(</span>rs<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">&quot;pods&quot;</span><span class="token punctuation">,</span> klog<span class="token punctuation">.</span><span class="token function">KObjSlice</span><span class="token punctuation">(</span>relatedPods<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> relatedPods<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;"><a name="&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;" class="anchor-navigation-ex-anchor" href="#&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;"><i class="fa fa-link" aria-hidden="true"></i></a>&#x786E;&#x8BA4;&#x8981;&#x5220;&#x9664;&#x7684;&#x526F;&#x672C;</h4>
+<p>&#x5982;&#x679C;&#x5DEE;&#x503C;&#x5927;&#x4E8E;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x7684;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x7ED3;&#x679C;&#x5C31;&#x662F;&#x5168;&#x90E8;&#x5220;&#x9664;&#x3002;&#x5982;&#x679C;&#x5DEE;&#x503C;&#x5C0F;&#x4E8E;&#x526F;&#x672C;&#x6570;&#xFF0C;&#x6839;&#x636E;&#x8282;&#x70B9;&#x4E0A;&#x7684;&#x526F;&#x672C;&#x5206;&#x5E03;&#x60C5;&#x51B5;&#x6784;&#x9020;&#x4E00;&#x4E2A;<code>ActivePodsWithRanks</code>&#x7C7B;&#x578B;&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#x540E;&#x622A;&#x53D6;<code>diff</code>&#x957F;&#x5EA6;&#x7684;&#x6570;&#x7EC4;&#x8FD4;&#x56DE;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">getPodsToDelete</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">,</span> relatedPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">,</span> diff <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod <span class="token punctuation">{</span>
+    <span class="token comment">// &#x671F;&#x671B;&#x5220;&#x9664;&#x6570;&#x91CF;&#x5C0F;&#x4E8E;&#x5F53;&#x524D;&#x526F;&#x672C;&#x6570;</span>
+    <span class="token keyword">if</span> diff <span class="token operator">&lt;</span> <span class="token function">len</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// &#x6784;&#x9020;ActivePodsWithRanks&#x7C7B;&#x578B;&#x5BF9;&#x8C61;</span>
+        podsWithRanks <span class="token operator">:=</span> <span class="token function">getPodsRankedByRelatedPodsOnSameNode</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">,</span> relatedPods<span class="token punctuation">)</span>
+        <span class="token comment">// &#x5BF9;ActivePodsWithRanks&#x8FDB;&#x884C;&#x6392;&#x5E8F;&#x5904;&#x7406; &#x5185;&#x90E8;&#x7684;filteredPods&#x987A;&#x5E8F;&#x88AB;&#x4FEE;&#x6539;</span>
+        sort<span class="token punctuation">.</span><span class="token function">Sort</span><span class="token punctuation">(</span>podsWithRanks<span class="token punctuation">)</span>
+        <span class="token comment">// &#x6307;&#x6807;&#x4E0A;&#x62A5;</span>
+        <span class="token function">reportSortingDeletionAgeRatioMetric</span><span class="token punctuation">(</span>filteredPods<span class="token punctuation">,</span> diff<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// &#x8FD4;&#x56DE;diff&#x957F;&#x5EA6;&#x7684;Pod&#x5217;&#x8868;</span>
+    <span class="token keyword">return</span> filteredPods<span class="token punctuation">[</span><span class="token punctuation">:</span>diff<span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>getPodsRankedByRelatedPodsOnSameNode()</code>&#x51FD;&#x6570;&#x7684;&#x8F93;&#x5165;&#x53C2;&#x6570;&#x5305;&#x62EC;&#x5F53;&#x524D;<code>ReplicaSet</code>&#x7BA1;&#x7406;&#x7684;&#x5F85;&#x6392;&#x5E8F;&#x526F;&#x672C;&#x5217;&#x8868;<code>podsToRank</code>&#x548C;&#x6240;&#x6709;&#x6EE1;&#x8DB3;&#x6807;&#x7B7E;&#x9009;&#x62E9;&#x5668;&#x7684;&#x526F;&#x672C;&#x5217;&#x8868;<code>relatedPods</code>&#xFF0C;&#x9996;&#x5148;&#x904D;&#x5386;<code>relatedPods</code>&#x8BA1;&#x7B97;&#x5173;&#x8054;&#x526F;&#x672C;&#x5728;&#x8282;&#x70B9;&#x4E0A;&#x7684;&#x5206;&#x5E03;&#x60C5;&#x51B5;&#xFF0C;&#x7136;&#x540E;&#x904D;&#x5386;<code>podsToRank</code>&#x5E76;&#x586B;&#x5145;<code>rank</code>&#x6570;&#x7EC4;&#xFF0C;&#x7EC4;&#x88C5;&#x6210;<code>ActivePodsWithRanks</code>&#x5BF9;&#x8C61;&#x540E;&#x8FD4;&#x56DE;&#xFF0C;<code>ActivePodsWithRanks</code>&#x4E2D;&#x5B9A;&#x4E49;&#x4E86;<code>Swap()</code>&#x548C;<code>Less()</code>&#x65B9;&#x6CD5;&#xFF0C;&#x6267;&#x884C;<code>Sort()</code>&#x6392;&#x5E8F;&#x65F6;&#x4F20;&#x5165;&#x7684;<code>Pods</code>&#x5217;&#x8868;&#x7531;&#x4E8E;&#x662F;&#x5F15;&#x7528;&#x4F20;&#x9012;&#xFF0C;&#x5E95;&#x5C42;&#x6570;&#x7EC4;&#x4F1A;&#x88AB;&#x76F4;&#x63A5;&#x4FEE;&#x6539;&#x3002;</p>
+<pre class="language-"><code class="lang-go"><span class="token keyword">func</span> <span class="token function">getPodsRankedByRelatedPodsOnSameNode</span><span class="token punctuation">(</span>podsToRank<span class="token punctuation">,</span> relatedPods <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>v1<span class="token punctuation">.</span>Pod<span class="token punctuation">)</span> controller<span class="token punctuation">.</span>ActivePodsWithRanks <span class="token punctuation">{</span>
+    <span class="token comment">// &#x521D;&#x59CB;&#x5316;&#x53D8;&#x91CF;</span>
+    podsOnNode <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> relatedPods <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> controller<span class="token punctuation">.</span><span class="token function">IsPodActive</span><span class="token punctuation">(</span>pod<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// &#x5BF9;&#x6BCF;&#x4E2A;&#x8282;&#x70B9;&#x4E0A;&#x5B58;&#x5728;&#x7684;&#x5173;&#x8054;Pod&#x8BA1;&#x6570;</span>
+            podsOnNode<span class="token punctuation">[</span>pod<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>NodeName<span class="token punctuation">]</span><span class="token operator">++</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    ranks <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>podsToRank<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> i<span class="token punctuation">,</span> pod <span class="token operator">:=</span> <span class="token keyword">range</span> podsToRank <span class="token punctuation">{</span>
+        <span class="token comment">// &#x628A;&#x8BA1;&#x6570;&#x4FE1;&#x606F;&#x6309;&#x987A;&#x5E8F;&#x52A0;&#x8F7D;&#x5230;&#x5217;&#x8868;</span>
+        ranks<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> podsOnNode<span class="token punctuation">[</span>pod<span class="token punctuation">.</span>Spec<span class="token punctuation">.</span>NodeName<span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> controller<span class="token punctuation">.</span>ActivePodsWithRanks<span class="token punctuation">{</span>Pods<span class="token punctuation">:</span> podsToRank<span class="token punctuation">,</span> Rank<span class="token punctuation">:</span> ranks<span class="token punctuation">,</span> Now<span class="token punctuation">:</span> metav1<span class="token punctuation">.</span><span class="token function">Now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<footer class="page-footer"><span class="copyright">&#xA9; 2025 lts0609.  all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x6700;&#x540E;&#x66F4;&#x65B0;&#x65F6;&#x95F4;:
+2025-07-29 16:04:37
+</span></footer>
+<script>console.log("plugin-popup....");document.onclick = function(e){ e.target.tagName === "IMG" && window.open(e.target.src,e.target.src)}</script><style>img{cursor:pointer}</style> <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css"> <script>     window.klipse_settings = {         selector: ".language-klipse, .lang-eval-clojure",         selector_eval_js: ".lang-eval-js",         selector_eval_python_client: ".lang-eval-python",         selector_eval_php: ".lang-eval-php",         selector_eval_scheme: ".lang-eval-scheme",         selector_eval_ruby: ".lang-eval-ruby",         selector_reagent: ".lang-reagent",        selector_google_charts: ".lang-google-chart",        selector_es2017: ".lang-eval-es2017",        selector_jsx: ".lang-eval-jsx",        selector_transpile_jsx: ".lang-transpile-jsx",        selector_render_jsx: ".lang-render-jsx",        selector_react: ".lang-react",        selector_eval_markdown: ".lang-render-markdown",        selector_eval_lambdaway: ".lang-render-lambdaway",        selector_eval_cpp: ".lang-eval-cpp",        selector_eval_html: ".lang-render-html",        selector_sql: ".lang-eval-sql",        selector_brainfuck: "lang-eval-brainfuck",        selector_js: ".lang-transpile-cljs"    }; </script> <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="02-DeploymentController原理详解.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: DeploymentController原理详解">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"ReplicaSetController原理详解","level":"1.3.3","depth":2,"previous":{"title":"DeploymentController原理详解","level":"1.3.2","depth":2,"path":"kube-controller-manager/02-DeploymentController原理详解.md","ref":"kube-controller-manager/02-DeploymentController原理详解.md","articles":[]},"dir":"ltr"},"config":{"plugins":["-highlight","-lunr","-search","-sharing","-sharing-plus","pageview-count","page-treeview","code","chapter-fold","search-pro","popup","scroll-to-top","auto-scroll-table","anchor-navigation-ex","klipse","prism","theme-comscore","tbfed-pagefooter","livereload"],"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"© 2025 lts0609. ","modify_label":"最后更新时间:","modify_format":"YYYY-MM-DD HH:mm:ss"},"page-treeview":{"collapsed":false,"copyright":"","minHeaderCount":"2","minHeaderDeep":"2"},"chapter-fold":{},"prism":{"css":["prismjs/themes/prism-okaidia.css"],"lang":{"go":"go","yaml":"yaml","shell":"shell"}},"scroll-to-top":{},"livereload":{},"search-pro":{"multilingual":false,"indexing":{"delay":500,"minLength":2}},"auto-scroll-table":{},"popup":{},"code":{"copyButtons":true},"fontsettings":{"theme":"white","family":"sans","size":2},"anchor-navigation-ex":{"showLevelIcon":false,"mode":"float","pageTop":{"level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"showLevel":true,"tocLevel1Icon":"fa fa-cog","tocLevel2Icon":"fa fa-cog","tocLevel3Icon":"fa fa-cog","showGoTop":true,"printLog":false,"multipleH1":false,"multipleH2":false,"associatedWithSummary":true,"multipleH3":false,"float":{"floatIcon":"fa fa-navicon","level1Icon":"","level2Icon":"","level3Icon":"","showLevelIcon":false},"multipleH4":false},"theme-comscore":{},"pageview-count":{},"klipse":{"myConfigKey":"it's the default value","languages":["go","yaml"]},"theme-default":{"styles":{"pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css","website":"styles/website.css"},"showLevel":false}},"theme":"default","author":"lts0609","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"Kubernetes Learning","language":"zh-hans","gitbook":"*","description":"Kubernetes源码学习"},"file":{"path":"kube-controller-manager/03-ReplicaSetController原理详解.md","mtime":"2025-07-29T08:04:37.709Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2025-07-30T09:31:41.891Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-pageview-count/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-chapter-fold/chapter-fold.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/jquery.mark.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search-pro/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-scroll-to-top/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-auto-scroll-table/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-livereload/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-theme-comscore/test.js"></script>
+        
+    
+
+    </body>
+</html>
+
