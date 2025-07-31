@@ -1,6 +1,5 @@
 {
   "title": "Kubernetes Learning",
-  "description": "Kubernetes源码学习",
   "author": "lts0609",
   "language": "zh-hans",
   "structure": {
@@ -16,7 +15,6 @@
     "-search",
     "-sharing",
     "-sharing-plus",
-    "pageview-count",
     "page-treeview",
     "code",
     "chapter-fold",
@@ -25,10 +23,10 @@
     "scroll-to-top",
     "auto-scroll-table",
     "anchor-navigation-ex",
-    "klipse",
     "prism",
     "theme-comscore",
-    "tbfed-pagefooter"
+    "tbfed-pagefooter",
+    "change_girls"
   ],
   "pluginsConfig": {
     "anchor-navigation-ex": {
@@ -69,10 +67,10 @@
       "minHeaderCount": "2",
       "minHeaderDeep": "2"
     },
-    "klipse": {
-      "languages": [
-        "go",
-        "yaml"
+    "change_girls": {
+      "time" : 5,
+      "urls" : [
+        "https://wallpaperaccess.com/full/8173067.jpg", "https://wallpaperaccess.com/full/6129736.jpg"
       ]
     }
   }
